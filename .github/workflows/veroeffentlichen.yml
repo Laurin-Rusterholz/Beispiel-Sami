@@ -8,6 +8,11 @@
 # Unterverzeichnis. SITE_BASE zieht die seiteninternen Adressen der Website
 # dorthin; alles andere (Rahmen, Verwaltung) läuft ohnehin mit relativen
 # Adressen und braucht nichts.
+#
+# EINMALIG NÖTIG: unter Settings → Pages die Quelle auf "GitHub Actions"
+# stellen. Das kann ein Workflow nicht selbst tun — dafür fehlt seinem Token
+# die Berechtigung. Ohne diesen Schritt baut alles sauber durch, nur der
+# letzte Schritt (Veröffentlichen) schlägt fehl.
 name: Präsentation veröffentlichen
 
 on:
@@ -37,28 +42,27 @@ jobs:
         with:
           node-version: 22
 
-      - name: Pages einrichten
-        id: pages
-        uses: actions/configure-pages@v5
-        with:
-          # Schaltet Pages beim ersten Lauf selbst ein, falls noch nicht getan.
-          enablement: true
-
       - name: Website bauen
         env:
           SITE_BASE: /${{ github.event.repository.name }}/site
           CONTENT_API_URL: https://jupidu-36804-default-rtdb.europe-west1.firebasedatabase.app/samsparking/content.json
         run: node site/scripts/build.mjs
 
+      # Der Bau greift auf eine fremde Datenbank zu und kann still auf den
+      # eingecheckten Stand zurückfallen. Hier wird geprüft, dass wirklich
+      # herauskam, was herauskommen sollte — sonst ginge ein Stand live,
+      # dessen Adressen ins Leere zeigen.
       - name: Nachsehen, ob die Adressen stimmen
         env:
           BASIS: /${{ github.event.repository.name }}/site
         run: |
           echo "Erwartete Basis: $BASIS"
+          test -f index.html            || { echo "Rahmen fehlt";      exit 1; }
+          test -f verwaltung/index.html || { echo "Verwaltung fehlt";  exit 1; }
           grep -o 'href="[^"]*assets/site.css"' site/index.html
-          test -f index.html && test -f verwaltung/index.html
           grep -q "href=\"$BASIS/assets/site.css\"" site/index.html \
             || { echo "Website-Adressen zeigen nicht auf $BASIS"; exit 1; }
+          echo "Sieht gut aus."
 
       - uses: actions/upload-pages-artifact@v3
         with:
@@ -73,3 +77,15 @@ jobs:
     steps:
       - id: deploy
         uses: actions/deploy-pages@v4
+
+      # Schlägt der Schritt davor fehl, liegt es fast immer an der noch nicht
+      # umgestellten Quelle. Das hier sagt es beim Namen, statt eine
+      # API-Fehlermeldung stehen zu lassen.
+      - name: Hinweis, falls Pages noch aus ist
+        if: failure()
+        run: |
+          echo "::error::Veröffentlichen fehlgeschlagen. Sehr wahrscheinlich ist"
+          echo "::error::GitHub Pages für dieses Repo noch nicht eingeschaltet."
+          echo "::error::Settings → Pages → Source auf 'GitHub Actions' stellen,"
+          echo "::error::danach diesen Workflow erneut starten (Re-run jobs)."
+          exit 1
