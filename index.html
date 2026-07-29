@@ -5,10 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Sam Sparkling — Präsentation</title>
   <meta name="robots" content="noindex, nofollow">
-  <meta name="theme-color" content="#05070e">
+  <meta name="theme-color" content="#070a13">
   <meta name="description" content="Vorführ-Fassung: Website und Verwaltung nebeneinander, mit direktem Anpassungswunsch aus der Seite heraus.">
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' fill='%2305070e'/%3E%3Cpath d='M36 6 14 38h14l-4 20 26-34H34z' fill='%232e6bff'/%3E%3C/svg%3E">
-  <link rel="stylesheet" href="/praesentation/shell.css">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' fill='%23070a13'/%3E%3Cpath d='M36 6 14 38h14l-4 20 26-34H34z' fill='%233b7bff'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="praesentation/shell.css">
 </head>
 <body>
 
@@ -43,6 +43,9 @@
     <button class="knopf wunsch" type="button" id="wunsch-schalter" aria-pressed="false">
       Anpassungswunsch
     </button>
+    <button class="knopf leise nur-schmal" type="button" id="leiste-auf" aria-expanded="false">
+      Änderungen <span class="zahl-chip" id="zahl-chip">0</span>
+    </button>
   </div>
 </header>
 
@@ -57,33 +60,50 @@
   <span class="band-ziel" id="band-ziel"></span>
 </div>
 
-<main class="buehne" id="buehne">
-  <div class="rahmen" id="rahmen-website">
-    <iframe id="frame-website" src="/site/" title="Website Sam Sparkling"></iframe>
-  </div>
-  <div class="rahmen" id="rahmen-verwaltung" hidden>
-    <iframe id="frame-verwaltung" src="/verwaltung/" title="Verwaltung Sam Sparkling"></iframe>
-  </div>
-</main>
+<div class="werk">
+  <main class="buehne" id="buehne">
+    <div class="rahmen" id="rahmen-website">
+      <iframe id="frame-website" src="site/" title="Website Sam Sparkling"></iframe>
+    </div>
+    <div class="rahmen" id="rahmen-verwaltung" hidden>
+      <iframe id="frame-verwaltung" src="verwaltung/" title="Verwaltung Sam Sparkling"></iframe>
+    </div>
+  </main>
 
-<!-- Liste der abgeschickten Wünsche -->
-<aside class="wunschliste" id="wunschliste" hidden aria-label="Abgeschickte Wünsche">
-  <div class="wl-kopf">
-    <strong>Wünsche dieser Sitzung</strong>
-    <button class="knopf leise sm" type="button" id="wl-zu" aria-label="Liste schliessen">✕</button>
-  </div>
-  <div class="wl-inhalt" id="wl-inhalt"></div>
-  <p class="wl-fuss">Landet als Aufgabe im Projekt <code id="wl-projekt">PRJ-YWRM4</code> in Quantus.</p>
-</aside>
+  <!-- Seitenleiste: alle Änderungswünsche dieser Sitzung -->
+  <aside class="seitenleiste" id="seitenleiste" aria-label="Änderungen">
+    <div class="sl-kopf">
+      <div class="sl-titel">
+        <strong>Änderungen</strong>
+        <span class="zahl-chip" id="sl-zahl">0</span>
+      </div>
+      <button class="knopf leise sm nur-schmal" type="button" id="leiste-zu" aria-label="Seitenleiste schliessen">✕</button>
+    </div>
 
-<button class="wl-auf" id="wl-auf" hidden type="button">
-  Wünsche <span class="wl-zahl" id="wl-zahl">0</span>
-</button>
+    <div class="sl-filter" role="group" aria-label="Filter">
+      <button class="fil-knopf an" type="button" data-filter="alle">Alle</button>
+      <button class="fil-knopf" type="button" data-filter="Website">Website</button>
+      <button class="fil-knopf" type="button" data-filter="Verwaltung">Verwaltung</button>
+    </div>
+
+    <div class="sl-inhalt" id="sl-inhalt"></div>
+
+    <div class="sl-fuss">
+      <div class="sl-fuss-zeile">
+        <span class="sl-punkt ok"></span>
+        <span id="sl-bilanz">Noch nichts abgeschickt</span>
+      </div>
+      <p class="sl-hinweis">
+        Jede Änderung wird eine Aufgabe im Projekt <code id="sl-projekt">PRJ-YWRM4</code> in Quantus.
+      </p>
+    </div>
+  </aside>
+</div>
 
 <noscript>
   <p style="padding:40px;font-family:sans-serif;color:#fff">Diese Präsentation braucht JavaScript.</p>
 </noscript>
 
-<script type="module" src="/praesentation/shell.js"></script>
+<script type="module" src="praesentation/shell.js"></script>
 </body>
 </html>

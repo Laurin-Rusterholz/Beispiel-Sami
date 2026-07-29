@@ -26,6 +26,17 @@ getroffen wurde, und eine Leiste von der kleinsten bis zur grössten Auswahl
 (Wort → Absatz → Bereich → ganzer Abschnitt → ganze Seite) — damit sich auch
 nachträglich sagen lässt: nein, der ganze Shop.
 
+## Seitenleiste „Änderungen“
+
+Rechts stehen alle Wünsche dieser Sitzung, neueste zuoberst: aus welcher
+Ansicht, an welcher Stelle, was gewünscht wurde und wie weit die Aufgabe ist.
+Filtern lässt sich nach Website und Verwaltung. Ein Klick auf einen Eintrag
+springt zurück an genau die Stelle, um die es ging — auch über den
+Ansichtswechsel hinweg; dort blitzt sie kurz auf. Gibt es die Stelle nicht
+mehr (Ansicht neu aufgebaut, Inhalt geändert), sagt die Präsentation das.
+
+Auf schmalen Bildschirmen klappt die Leiste über die Bühne statt daneben.
+
 Daraus entsteht eine Aufgabe im Projekt **PRJ-YWRM4** in Quantus (ai-sync).
 Die Aufgabe enthält den Wunsch selbst und dazu, wo er hingehört: Ansicht,
 Abschnitt, Art und Text des angewählten Elements, seine Stelle im Aufbau, der
@@ -57,6 +68,19 @@ im Browser und sind nach dem Neuladen weg. Anfragen (mit Personendaten) und
 Einstellungen werden gar nicht erst geladen.
 
 Erkennbar ist das an der Marke **Vorführ-Modus** oben in der Verwaltung.
+
+## Veröffentlichen
+
+Zwei Wege, beide eingerichtet:
+
+**GitHub Pages** — läuft von selbst. `.github/workflows/veroeffentlichen.yml`
+baut bei jedem Push und stellt online unter
+`https://<benutzer>.github.io/<repo>/`. Weil Pages in einem Unterverzeichnis
+ausliefert, setzt der Workflow `SITE_BASE` auf `/<repo>/site`; alles andere
+läuft mit relativen Adressen und braucht nichts.
+
+**Netlify** — `netlify.toml` liegt bereit (`SITE_BASE = "/site"`). Eine neue
+Site auf dieses Repo zeigen lassen, sonst nichts.
 
 ## Woher der Inhalt kommt
 

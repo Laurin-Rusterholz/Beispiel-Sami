@@ -66,7 +66,7 @@ export const DEMO = true;
 export const STORAGE_PREFIX = `${ROOT}/media`;
 
 /** Fallback, solange unter Einstellungen keine Website-URL gesetzt ist. */
-export const DEFAULT_SITE_URL = "/site";
+export const DEFAULT_SITE_URL = "../site";
 
 /** Grösse pro Datei. Muss zu den Storage-Regeln passen (firebase/storage.rules). */
 export const MAX_UPLOAD_BYTES = 250 * 1024 * 1024; // 250 MB

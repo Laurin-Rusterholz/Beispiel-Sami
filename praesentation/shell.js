@@ -6,6 +6,10 @@
    von derselben Herkunft, deshalb darf der Rahmen das Auswahl-Werkzeug
    (picker.js) direkt in ihnen betreiben.
 
+   Rechts steht die Seitenleiste mit allen gewünschten Änderungen dieser
+   Sitzung. Ein Klick auf einen Eintrag springt zurück an die Stelle, um die es
+   ging — auch wenn sie in der anderen Ansicht liegt.
+
    Weg eines Wunsches:
 
      Auswahl in der Ansicht ──▶ Dialog ──▶ RTDB /quantus_task_inbox
@@ -17,6 +21,9 @@
 
    Genau dieses Verschwinden ist die Rückmeldung: solange der Eintrag steht,
    war Quantus noch nicht offen; ist er weg, existiert die Aufgabe.
+
+   Alle Adressen sind bewusst relativ — die Präsentation läuft damit an der
+   Wurzel einer Domain genauso wie in einem Unterverzeichnis (GitHub Pages).
    ========================================================================== */
 
 import { installPicker } from "./picker.js";
@@ -32,10 +39,10 @@ const INBOX = "quantus_task_inbox";
 /** Projekt in Quantus, dem die Wünsche zugeordnet werden. */
 const PROJEKT = "PRJ-YWRM4";
 
-/** Adressen der beiden Ansichten. */
+/** Adressen der beiden Ansichten, relativ zu dieser Seite. */
 const SEITEN = {
-  website: { "": "/site/", de: "/site/de/", fr: "/site/fr/" },
-  verwaltung: "/verwaltung/",
+  website: { "": "site/", de: "site/de/", fr: "site/fr/" },
+  verwaltung: "verwaltung/",
 };
 
 /* -------------------------------------------------------------------- hilfen */
@@ -68,6 +75,14 @@ function meldung(text, art = "") {
   meldungTimer = setTimeout(() => n.remove(), 5200);
 }
 
+/** "gerade eben", "vor 3 Min." — kurz genug für die Seitenleiste. */
+function vorWieLange(iso) {
+  const s = Math.max(0, (Date.now() - new Date(iso).getTime()) / 1000);
+  if (s < 45) return "gerade eben";
+  if (s < 3600) return `vor ${Math.round(s / 60)} Min.`;
+  return `vor ${Math.round(s / 3600)} Std.`;
+}
+
 /* -------------------------------------------------------------------- zustand */
 
 const Z = {
@@ -76,6 +91,7 @@ const Z = {
   handy: false,
   wunschAn: false,
   genauigkeit: "element",
+  filter: "alle",
 };
 
 /** Ansicht → { frame, rahmen, picker } */
@@ -84,7 +100,8 @@ const ansichten = {
   verwaltung: { frame: $("#frame-verwaltung"), rahmen: $("#rahmen-verwaltung"), picker: null },
 };
 
-const aktuellerPicker = () => ansichten[Z.ansicht].picker;
+/** Ansichtsname, wie ihn der Picker meldet ("Website") → Schlüssel oben. */
+const schluesselVon = (name) => (name === "Verwaltung" ? "verwaltung" : "website");
 
 /* --------------------------------------------------------- auswahl-werkzeug */
 
@@ -255,9 +272,7 @@ function oeffneDialog(auswahl, picker) {
       },
     },
     [
-      el("div", { class: "dialog-kopf" }, [
-        el("h2", {}, "Anpassungswunsch"),
-      ]),
+      el("div", { class: "dialog-kopf" }, [el("h2", {}, "Anpassungswunsch")]),
       el("div", { class: "dialog-koerper" }, [
         zielKarte,
         stufen.length > 1
@@ -333,6 +348,7 @@ async function sendeWunsch(info, text) {
   if (info.lang) zeilen.push(`Sprache: ${info.lang}`);
   if (info.url) zeilen.push(`Seite: ${info.url}`);
 
+  const jetzt = new Date().toISOString();
   const eintrag = {
     title: `Website-Wunsch: ${stelle} — ${zusatzVon(info)}`.slice(0, 200),
     description: zeilen.join("\n"),
@@ -342,7 +358,7 @@ async function sendeWunsch(info, text) {
     type: "anpassungswunsch",
     projectExternalId: PROJEKT,
     tags: ["Website", "Sam Sparkling"],
-    createdAt: new Date().toISOString(),
+    createdAt: jetzt,
     createdBy: "Präsentation",
   };
 
@@ -353,41 +369,129 @@ async function sendeWunsch(info, text) {
   });
   if (!res.ok) throw new Error(`Datenbank antwortet ${res.status}`);
   const { name: key } = await res.json();
-  return { key, stelle, text, stand: "wartet" };
+
+  return {
+    key,
+    stelle,
+    text,
+    stand: "wartet",
+    zeit: jetzt,
+    ansicht: info.ansicht,
+    art: info.art,
+    label: info.label,
+    selektor: info.selektor,
+    sprache: info.lang,
+  };
 }
 
-/* ------------------------------------------------------------------ liste */
+/* --------------------------------------------------------- seitenleiste */
 
 const gesendet = [];
 
-function zeichneListe() {
-  const host = $("#wl-inhalt");
-  host.textContent = "";
-  $("#wl-zahl").textContent = String(gesendet.length);
-  $("#wl-auf").hidden = gesendet.length === 0 || !$("#wunschliste").hidden;
+/** Zurück zu der Stelle, um die es in diesem Eintrag ging. */
+function springeZu(eintrag) {
+  const schluessel = schluesselVon(eintrag.ansicht);
 
-  if (!gesendet.length) {
-    host.appendChild(el("p", { class: "wl-leer" }, "Noch nichts abgeschickt."));
-    return;
+  const hin = () => {
+    const picker = ansichten[schluessel].picker;
+    if (!picker) return meldung("Die Ansicht ist noch nicht bereit.", "fehler");
+    if (!picker.zeigeStelle(eintrag.selektor))
+      meldung("Diese Stelle gibt es so nicht mehr — die Ansicht hat sich geändert.", "fehler");
+  };
+
+  if (Z.ansicht !== schluessel) {
+    zeigeAnsicht(schluessel);
+    // Der Ansichtswechsel blendet nur um; kurz warten, bis gerechnet ist.
+    setTimeout(hin, 120);
+  } else {
+    hin();
   }
-  gesendet.forEach((g) => {
-    const stand =
-      g.stand === "ok" ? "in Quantus angelegt" : g.stand === "fehler" ? "unklar" : "wartet auf Quantus";
+}
+
+function eintragKnoten(eintrag, nummer) {
+  const springbar = !!eintrag.selektor;
+  const stand =
+    eintrag.stand === "ok"
+      ? "in Quantus angelegt"
+      : eintrag.stand === "fehler"
+      ? "Quantus war nicht offen"
+      : "wartet auf Quantus";
+
+  return el(
+    springbar ? "button" : "div",
+    {
+      class: "eintrag" + (springbar ? " springbar" : ""),
+      type: springbar ? "button" : null,
+      title: springbar ? "Zur Stelle springen" : null,
+      onclick: springbar ? () => springeZu(eintrag) : null,
+    },
+    [
+      el("div", { class: "ei-kopf" }, [
+        el("span", { class: "ei-quelle " + eintrag.ansicht }, eintrag.ansicht),
+        el("span", { class: "ei-nummer" }, "#" + nummer),
+      ]),
+      el("div", { class: "ei-stelle" }, eintrag.stelle),
+      el(
+        "div",
+        { class: "ei-art", title: eintrag.label || "" },
+        `${eintrag.art}: ${eintrag.label || "—"}`
+      ),
+      el("div", { class: "ei-text" }, eintrag.text),
+      el("div", { class: "ei-fuss" }, [
+        el("span", { class: "ei-stand " + eintrag.stand }, stand),
+        el("span", { class: "ei-zeit" }, vorWieLange(eintrag.zeit)),
+      ]),
+    ]
+  );
+}
+
+function zeichneListe() {
+  const host = $("#sl-inhalt");
+  host.textContent = "";
+
+  $("#sl-zahl").textContent = String(gesendet.length);
+  $("#zahl-chip").textContent = String(gesendet.length);
+
+  const sichtbar =
+    Z.filter === "alle" ? gesendet : gesendet.filter((g) => g.ansicht === Z.filter);
+
+  if (!sichtbar.length) {
     host.appendChild(
-      el("div", { class: "wl-eintrag" }, [
-        el("div", { class: "wl-eintrag-kopf" }, [
-          el("span", { class: "wl-stelle", title: g.stelle }, g.stelle),
-          el("span", { class: "wl-stand " + g.stand }, stand),
-        ]),
-        el("p", { class: "wl-text" }, g.text),
+      el("div", { class: "sl-leer" }, [
+        el("strong", {}, gesendet.length ? "Nichts unter diesem Filter" : "Noch keine Änderung"),
+        el(
+          "span",
+          {},
+          gesendet.length
+            ? "In der anderen Ansicht liegt etwas."
+            : "Oben „Anpassungswunsch“ einschalten und in der Vorschau auf die Stelle tippen, die anders werden soll."
+        ),
       ])
     );
-  });
+  } else {
+    // Neueste zuoberst; die Nummer zählt trotzdem in der Reihenfolge des Abschickens.
+    sichtbar.forEach((g) => host.appendChild(eintragKnoten(g, gesendet.length - gesendet.indexOf(g))));
+  }
+
+  const offen = gesendet.filter((g) => g.stand === "wartet").length;
+  const fertig = gesendet.filter((g) => g.stand === "ok").length;
+  const punkt = $(".sl-punkt");
+  const bilanz = $("#sl-bilanz");
+  if (!gesendet.length) {
+    punkt.className = "sl-punkt";
+    bilanz.textContent = "Noch nichts abgeschickt";
+  } else if (offen) {
+    punkt.className = "sl-punkt wartet";
+    bilanz.textContent = `${offen} wartet auf Quantus, ${fertig} angelegt`;
+  } else {
+    punkt.className = "sl-punkt ok";
+    bilanz.textContent = `Alle ${gesendet.length} in Quantus angelegt`;
+  }
 }
 
 function ergaenzeListe(eintrag) {
   gesendet.unshift(eintrag);
-  $("#wunschliste").hidden = false;
+  if (window.matchMedia("(max-width: 1180px)").matches) oeffneLeiste(true);
   zeichneListe();
   beobachte(eintrag);
 }
@@ -420,7 +524,15 @@ function beobachte(eintrag) {
   setTimeout(frage, 3000);
 }
 
+// Die Zeitangaben ("vor 3 Min.") altern mit.
+setInterval(() => gesendet.length && zeichneListe(), 60000);
+
 /* ------------------------------------------------------------- bedienung */
+
+function oeffneLeiste(auf) {
+  $("#seitenleiste").classList.toggle("offen", auf);
+  $("#leiste-auf").setAttribute("aria-expanded", String(auf));
+}
 
 document.querySelectorAll(".um-knopf").forEach((b) =>
   b.addEventListener("click", () => zeigeAnsicht(b.dataset.ansicht))
@@ -435,6 +547,16 @@ document.querySelectorAll(".gen-knopf").forEach((b) =>
     Object.entries(ansichten).forEach(([n, a]) =>
       a.picker?.setzeModus(Z.wunschAn && n === Z.ansicht, Z.genauigkeit)
     );
+  })
+);
+
+document.querySelectorAll(".fil-knopf").forEach((b) =>
+  b.addEventListener("click", () => {
+    Z.filter = b.dataset.filter;
+    document.querySelectorAll(".fil-knopf").forEach((k) =>
+      k.classList.toggle("an", k.dataset.filter === Z.filter)
+    );
+    zeichneListe();
   })
 );
 
@@ -457,20 +579,18 @@ $("#neu-laden").addEventListener("click", () => {
   a.frame.src = a.frame.src;
 });
 
-$("#wl-zu").addEventListener("click", () => {
-  $("#wunschliste").hidden = true;
-  zeichneListe();
-});
-$("#wl-auf").addEventListener("click", () => {
-  $("#wunschliste").hidden = false;
-  zeichneListe();
-});
+$("#leiste-auf").addEventListener("click", () =>
+  oeffneLeiste(!$("#seitenleiste").classList.contains("offen"))
+);
+$("#leiste-zu").addEventListener("click", () => oeffneLeiste(false));
 
-// Wunsch-Modus schnell an/aus: Escape beendet ihn (wenn kein Dialog offen ist).
+// Escape beendet den Wunsch-Modus (wenn kein Dialog offen ist).
 document.addEventListener("keydown", (e) => {
-  if (e.key === "Escape" && Z.wunschAn && !document.querySelector(".schleier")) setzeWunschModus(false);
+  if (e.key !== "Escape" || document.querySelector(".schleier")) return;
+  if ($("#seitenleiste").classList.contains("offen")) oeffneLeiste(false);
+  else if (Z.wunschAn) setzeWunschModus(false);
 });
 
-$("#wl-projekt").textContent = PROJEKT;
+$("#sl-projekt").textContent = PROJEKT;
 zeigeAnsicht("website");
 zeichneListe();

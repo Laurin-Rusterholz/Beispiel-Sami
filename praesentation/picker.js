@@ -75,18 +75,24 @@ function bezeichnung(node) {
   return node.tagName.toLowerCase();
 }
 
-/** Pfad im Dokument — damit sich die Stelle im Code wiederfinden lässt. */
-function pfad(node) {
+/**
+ * Pfad im Dokument — damit sich die Stelle im Code wiederfinden lässt und die
+ * Änderungsliste später wieder dorthin springen kann.
+ * @returns {string[]} Schritte von aussen nach innen, z. B. ["section#shop", "h2"]
+ */
+function pfadTeile(node) {
   const teile = [];
   let n = node;
   while (n && n.nodeType === 1 && n.tagName !== "BODY" && teile.length < 6) {
     let teil = n.tagName.toLowerCase();
-    if (n.id) {
-      teile.unshift(teil + "#" + n.id);
+    if (n.id && CSS.escape) {
+      teile.unshift(teil + "#" + CSS.escape(n.id));
       break; // eine id ist eindeutig — weiter oben braucht es nichts mehr
     }
-    const klasse = Array.from(n.classList || []).find((c) => !c.startsWith("wunsch-"));
-    if (klasse) teil += "." + klasse;
+    const klasse = Array.from(n.classList || []).find(
+      (c) => !c.startsWith("wunsch-") && CSS.escape
+    );
+    if (klasse) teil += "." + CSS.escape(klasse);
     const gleiche = n.parentElement
       ? Array.from(n.parentElement.children).filter((k) => k.tagName === n.tagName)
       : [];
@@ -94,7 +100,7 @@ function pfad(node) {
     teile.unshift(teil);
     n = n.parentElement;
   }
-  return teile.join(" › ") || "body";
+  return teile;
 }
 
 /**
@@ -281,16 +287,20 @@ export function installPicker(win, opts) {
     const element = elementVon(z);
     const abschnitt = abschnittVon(element, istVerwaltung);
     const label = istWort ? String(z.toString()).trim() : bezeichnung(element);
+    const teile = pfadTeile(element);
 
     return {
       ansicht,
       art: istWort ? "Wort" : art(element),
       label,
       tag: element ? element.tagName.toLowerCase() : "",
-      pfad: pfad(element),
+      pfad: teile.join(" › ") || "body",
+      // Dasselbe als echter CSS-Selektor — damit die Änderungsliste die
+      // Stelle später wieder anspringen kann.
+      selektor: teile.join(" > "),
       abschnitt: abschnitt.id,
       abschnittTitel: abschnitt.titel,
-      kontext: istWort ? kurz(element?.textContent || "", 180) : kurz(element?.textContent || "", 180),
+      kontext: kurz(element?.textContent || "", 180),
       url: String(win.location.href),
       lang: doc.documentElement.getAttribute("lang") || "",
     };
@@ -411,6 +421,39 @@ export function installPicker(win, opts) {
     weiter() {
       pausiert = false;
       loesche();
+    },
+    /**
+     * Eine früher gemeldete Stelle wieder anspringen und kurz aufblitzen
+     * lassen. Findet sich das Element nicht mehr (Ansicht neu aufgebaut,
+     * Inhalt geändert), sagt der Rückgabewert das.
+     */
+    zeigeStelle(selektor) {
+      if (!selektor) return false;
+      let n = null;
+      try {
+        n = doc.querySelector(selektor);
+      } catch (e) {
+        return false;
+      }
+      if (!n) return false;
+      anhaengen();
+      n.scrollIntoView({ behavior: "smooth", block: "center" });
+      // Nach dem Rollen zeichnen, sonst sitzt der Kasten auf der alten Stelle.
+      setTimeout(() => {
+        ziel = n;
+        zeichne("hierher");
+        huelle.style.transition = "opacity .5s";
+        huelle.style.opacity = "1";
+        setTimeout(() => {
+          huelle.style.opacity = "0";
+          setTimeout(() => {
+            huelle.style.transition = "";
+            huelle.style.opacity = "";
+            if (!an) loesche();
+          }, 520);
+        }, 1600);
+      }, 420);
+      return true;
     },
     aufraeumen() {
       zuhoerer.forEach(([typ, fn, capture]) => doc.removeEventListener(typ, fn, capture));

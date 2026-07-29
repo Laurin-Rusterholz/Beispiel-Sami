@@ -1,0 +1,75 @@
+# Baut die Präsentation und stellt sie über GitHub Pages online.
+#
+# Die Website wird dabei frisch aus dem Stand der Verwaltung gebaut — derselbe
+# Knoten, aus dem auch die echte Website entsteht. Ist er nicht erreichbar,
+# greift der eingecheckte Stand site/content/site.json.
+#
+# Pages liefert unter <benutzer>.github.io/<repo>/ aus, also in einem
+# Unterverzeichnis. SITE_BASE zieht die seiteninternen Adressen der Website
+# dorthin; alles andere (Rahmen, Verwaltung) läuft ohnehin mit relativen
+# Adressen und braucht nichts.
+name: Präsentation veröffentlichen
+
+on:
+  push:
+    branches:
+      - main
+      - claude/saemi-presentation-website-admin-f75sqz
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Immer nur ein Deploy gleichzeitig; ein laufender darf abgebrochen werden.
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  bauen:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Pages einrichten
+        id: pages
+        uses: actions/configure-pages@v5
+        with:
+          # Schaltet Pages beim ersten Lauf selbst ein, falls noch nicht getan.
+          enablement: true
+
+      - name: Website bauen
+        env:
+          SITE_BASE: /${{ github.event.repository.name }}/site
+          CONTENT_API_URL: https://jupidu-36804-default-rtdb.europe-west1.firebasedatabase.app/samsparking/content.json
+        run: node site/scripts/build.mjs
+
+      - name: Nachsehen, ob die Adressen stimmen
+        env:
+          BASIS: /${{ github.event.repository.name }}/site
+        run: |
+          echo "Erwartete Basis: $BASIS"
+          grep -o 'href="[^"]*assets/site.css"' site/index.html
+          test -f index.html && test -f verwaltung/index.html
+          grep -q "href=\"$BASIS/assets/site.css\"" site/index.html \
+            || { echo "Website-Adressen zeigen nicht auf $BASIS"; exit 1; }
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: .
+
+  veroeffentlichen:
+    needs: bauen
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - id: deploy
+        uses: actions/deploy-pages@v4
