@@ -26,17 +26,6 @@ getroffen wurde, und eine Leiste von der kleinsten bis zur grössten Auswahl
 (Wort → Absatz → Bereich → ganzer Abschnitt → ganze Seite) — damit sich auch
 nachträglich sagen lässt: nein, der ganze Shop.
 
-## Seitenleiste „Änderungen“
-
-Rechts stehen alle Wünsche dieser Sitzung, neueste zuoberst: aus welcher
-Ansicht, an welcher Stelle, was gewünscht wurde und wie weit die Aufgabe ist.
-Filtern lässt sich nach Website und Verwaltung. Ein Klick auf einen Eintrag
-springt zurück an genau die Stelle, um die es ging — auch über den
-Ansichtswechsel hinweg; dort blitzt sie kurz auf. Gibt es die Stelle nicht
-mehr (Ansicht neu aufgebaut, Inhalt geändert), sagt die Präsentation das.
-
-Auf schmalen Bildschirmen klappt die Leiste über die Bühne statt daneben.
-
 Daraus entsteht eine Aufgabe im Projekt **PRJ-YWRM4** in Quantus (ai-sync).
 Die Aufgabe enthält den Wunsch selbst und dazu, wo er hingehört: Ansicht,
 Abschnitt, Art und Text des angewählten Elements, seine Stelle im Aufbau, der
@@ -52,11 +41,24 @@ Präsentation ──POST──▶ Realtime Database /quantus_task_inbox
                         in PRJ-YWRM4 an und entfernt den Eintrag
 ```
 
-Genau dieses Verschwinden ist die Rückmeldung: in der Liste unten rechts steht
-ein Wunsch auf *wartet auf Quantus*, bis Quantus einmal offen war — dann auf
-*in Quantus angelegt*. War Quantus zehn Minuten lang nicht offen, hört die
+Genau dieses Verschwinden ist die Rückmeldung: in der Seitenleiste steht ein
+Wunsch auf *wartet auf Quantus*, bis Quantus einmal offen war — dann auf *in
+Quantus angelegt*. War Quantus zehn Minuten lang nicht offen, hört die
 Präsentation auf zu fragen; die Aufgabe entsteht trotzdem, sobald Quantus das
 nächste Mal geöffnet wird.
+
+## Seitenleiste „Änderungen“
+
+Rechts stehen alle Wünsche dieser Sitzung, neueste zuoberst: aus welcher
+Ansicht, an welcher Stelle, was gewünscht wurde und wie weit die Aufgabe ist.
+Filtern lässt sich nach Website und Verwaltung, unten steht die Bilanz.
+
+Ein Klick auf einen Eintrag springt zurück an genau die Stelle, um die es ging
+— auch über den Ansichtswechsel hinweg; dort blitzt sie kurz auf. Gibt es die
+Stelle nicht mehr (Ansicht neu aufgebaut, Inhalt geändert), sagt die
+Präsentation das, statt stumm nichts zu tun.
+
+Auf schmalen Bildschirmen klappt die Leiste über die Bühne statt daneben.
 
 ## Vorführ-Modus der Verwaltung
 
@@ -84,20 +86,13 @@ Site auf dieses Repo zeigen lassen, sonst nichts.
 
 ## Woher der Inhalt kommt
 
-Bei jedem Deploy baut Netlify die Website neu aus
-`samsparking/content` — demselben Knoten, aus dem auch die echte Website
-gebaut wird. Ist er nicht erreichbar, greift der eingecheckte Stand
-`site/content/site.json`.
+Bei jedem Deploy wird die Website neu aus `samsparking/content` gebaut —
+demselben Knoten, aus dem auch die echte Website entsteht. Ist er nicht
+erreichbar, greift der eingecheckte Stand `site/content/site.json`.
 
-```
-netlify.toml → command = "node site/scripts/build.mjs"
-               SITE_BASE = "/site"
-               CONTENT_API_URL = …/samsparking/content.json
-```
-
-`SITE_BASE` ist der einzige Unterschied im Website-Generator: er verschiebt
-alle seiteninternen Adressen unter `/site/`. Ohne die Variable — also im
-Original-Repo — verhält sich der Generator unverändert.
+`SITE_BASE` ist der einzige Unterschied im Website-Generator: es verschiebt
+alle seiteninternen Adressen in ein Unterverzeichnis. Ohne die Variable — also
+im Original-Repo — verhält sich der Generator unverändert.
 
 ## Örtlich ansehen
 
@@ -105,6 +100,9 @@ Original-Repo — verhält sich der Generator unverändert.
 SITE_BASE=/site node site/scripts/build.mjs   # Website bauen
 python3 -m http.server 8099                   # und auf 127.0.0.1:8099 ansehen
 ```
+
+`SITE_BASE` muss zu der Adresse passen, unter der die Präsentation liegt:
+`/site` an der Wurzel, `/<repo>/site` bei GitHub Pages.
 
 Die Verwaltung braucht dabei Zugang zu `gstatic.com` (Firebase-SDK) und zur
 Realtime Database; ohne Netz bleibt sie beim Ladehinweis stehen.
@@ -117,7 +115,7 @@ Realtime Database; ohne Netz bleibt sie beim Ladehinweis stehen.
 - `../verwaltung-djsamsparkling/public` → `verwaltung/`
 
 Genau **eine** Datei ist bewusst anders: `verwaltung/js/config.js` mit
-`DEMO = true`, `QUANTUS_PROJECT = "PRJ-YWRM4"` und `DEFAULT_SITE_URL = "/site"`.
+`DEMO = true`, `QUANTUS_PROJECT = "PRJ-YWRM4"` und `DEFAULT_SITE_URL = "../site"`.
 Alles andere ist Zeichen für Zeichen identisch — der Vorführ-Modus steckt
 vollständig in diesen Schaltern, nicht in abgewandeltem Code.
 
@@ -131,7 +129,7 @@ SITE_BASE=/site node site/scripts/build.mjs
 
 ## Nicht für Suchmaschinen
 
-`robots.txt` sperrt alles, dazu kommt `X-Robots-Tag: noindex, nofollow` aus
-`netlify.toml`. Die Adressen für Suchmaschinen (canonical, hreflang) in der
+`robots.txt` sperrt alles, dazu kommt bei Netlify `X-Robots-Tag: noindex,
+nofollow` aus `netlify.toml`. Die Adressen für Suchmaschinen (canonical, hreflang) in der
 gebauten Website zeigen weiterhin auf die echte Website — die Vorführ-Fassung
 soll ihr keine Konkurrenz machen.
