@@ -1,0 +1,83 @@
+# ============================================================================
+# Präsentations-Fassung Sam Sparkling
+#
+# Ausgeliefert wird das ganze Verzeichnis:
+#   /              Präsentations-Rahmen (Umschalter + Wunsch-Modus)
+#   /site/         die Website — bei jedem Deploy neu aus dem Stand der
+#                  Verwaltung gebaut, also inhaltlich gleich wie das Original
+#   /verwaltung/   die Verwaltung im Vorführ-Modus (ohne Passwort, schreibt nichts)
+# ============================================================================
+
+[build]
+  publish = "."
+  command = "node site/scripts/build.mjs"
+
+[build.environment]
+  NODE_VERSION = "22"
+
+  # Die Website liegt hier in einem Unterverzeichnis, nicht an der Wurzel.
+  SITE_BASE = "/site"
+
+  # Inhaltsquelle: derselbe öffentlich lesbare Knoten, aus dem auch die echte
+  # Website gebaut wird. Ist er nicht erreichbar, greift der eingecheckte
+  # Stand site/content/site.json.
+  CONTENT_API_URL = "https://jupidu-36804-default-rtdb.europe-west1.firebasedatabase.app/samsparking/content.json"
+
+  # Netlifys Secret-Scanning meldet den Firebase-Web-API-Key in
+  # verwaltung/js/config.js als "likely secret". Das ist ein Fehlalarm: der Key
+  # ist ein öffentlicher Projekt-Identifier und muss im Browser stehen. Der
+  # Zugriff wird über die Datenbank- und Storage-Regeln geregelt.
+  SECRETS_SCAN_SMART_DETECTION_OMIT_VALUES = "AIzaSyC6xVo-wmXC4JjG7qMQnOExIjU-UDvBluE"
+
+# Bild-CDN wie auf der echten Website: Firebase-Storage-Bilder dürfen über
+# /.netlify/images verkleinert ausgeliefert werden.
+[images]
+  remote_images = ['https://firebasestorage\.googleapis\.com/.*']
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    # Kein X-Frame-Options: der Rahmen bettet die eigenen Seiten ein. Genau das
+    # — und nur das — erlaubt frame-ancestors 'self'; von fremden Seiten aus
+    # bleibt das Einbetten verboten.
+    Content-Security-Policy = "frame-ancestors 'self'"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Permissions-Policy = "geolocation=(), microphone=(), camera=()"
+    # Diese Fassung ist zum Vorführen, nicht zum Gefundenwerden.
+    X-Robots-Tag = "noindex, nofollow"
+
+[[headers]]
+  for = "/praesentation/*"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+
+[[headers]]
+  for = "/verwaltung/js/*"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+
+[[headers]]
+  for = "/verwaltung/admin.css"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+
+[[headers]]
+  for = "/site/assets/*"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+
+[[headers]]
+  for = "/site/img/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  for = "/site/media/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  for = "/verwaltung/fonts/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"

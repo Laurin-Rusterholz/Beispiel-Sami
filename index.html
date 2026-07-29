@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sam Sparkling — Präsentation</title>
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="theme-color" content="#05070e">
+  <meta name="description" content="Vorführ-Fassung: Website und Verwaltung nebeneinander, mit direktem Anpassungswunsch aus der Seite heraus.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' fill='%2305070e'/%3E%3Cpath d='M36 6 14 38h14l-4 20 26-34H34z' fill='%232e6bff'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="/praesentation/shell.css">
+</head>
+<body>
+
+<header class="leiste">
+  <div class="marke">
+    <span class="funke">◆</span>
+    <span class="marke-text">Sam Sparkling</span>
+    <span class="marke-zusatz">Präsentation</span>
+  </div>
+
+  <!-- Umschalter zwischen den beiden Ansichten -->
+  <div class="umschalter" role="tablist" aria-label="Ansicht">
+    <button class="um-knopf an" type="button" role="tab" aria-selected="true" data-ansicht="website">Website</button>
+    <button class="um-knopf" type="button" role="tab" aria-selected="false" data-ansicht="verwaltung">Verwaltung</button>
+  </div>
+
+  <!-- Nur für die Website: Sprache und Gerät -->
+  <div class="werkzeuge" data-nur="website">
+    <label class="feld">
+      <span class="sr-only">Sprache</span>
+      <select id="sprache">
+        <option value="">English</option>
+        <option value="de">Deutsch</option>
+        <option value="fr">Français</option>
+      </select>
+    </label>
+    <button class="knopf leise" type="button" id="geraet" aria-pressed="false">Handy-Ansicht</button>
+  </div>
+
+  <div class="werkzeuge rechts">
+    <button class="knopf leise" type="button" id="neu-laden" title="Ansicht neu laden">Neu laden</button>
+    <button class="knopf wunsch" type="button" id="wunsch-schalter" aria-pressed="false">
+      Anpassungswunsch
+    </button>
+  </div>
+</header>
+
+<!-- Hinweisband, sichtbar solange der Wunsch-Modus läuft -->
+<div class="band" id="band" hidden>
+  <span class="band-punkt"></span>
+  <span class="band-text">Auf die Stelle tippen, die geändert werden soll — <strong>alles</strong> ist wählbar.</span>
+  <div class="genauigkeit" role="group" aria-label="Genauigkeit">
+    <button class="gen-knopf an" type="button" data-genauigkeit="element">Element</button>
+    <button class="gen-knopf" type="button" data-genauigkeit="wort">Einzelnes Wort</button>
+  </div>
+  <span class="band-ziel" id="band-ziel"></span>
+</div>
+
+<main class="buehne" id="buehne">
+  <div class="rahmen" id="rahmen-website">
+    <iframe id="frame-website" src="/site/" title="Website Sam Sparkling"></iframe>
+  </div>
+  <div class="rahmen" id="rahmen-verwaltung" hidden>
+    <iframe id="frame-verwaltung" src="/verwaltung/" title="Verwaltung Sam Sparkling"></iframe>
+  </div>
+</main>
+
+<!-- Liste der abgeschickten Wünsche -->
+<aside class="wunschliste" id="wunschliste" hidden aria-label="Abgeschickte Wünsche">
+  <div class="wl-kopf">
+    <strong>Wünsche dieser Sitzung</strong>
+    <button class="knopf leise sm" type="button" id="wl-zu" aria-label="Liste schliessen">✕</button>
+  </div>
+  <div class="wl-inhalt" id="wl-inhalt"></div>
+  <p class="wl-fuss">Landet als Aufgabe im Projekt <code id="wl-projekt">PRJ-YWRM4</code> in Quantus.</p>
+</aside>
+
+<button class="wl-auf" id="wl-auf" hidden type="button">
+  Wünsche <span class="wl-zahl" id="wl-zahl">0</span>
+</button>
+
+<noscript>
+  <p style="padding:40px;font-family:sans-serif;color:#fff">Diese Präsentation braucht JavaScript.</p>
+</noscript>
+
+<script type="module" src="/praesentation/shell.js"></script>
+</body>
+</html>
