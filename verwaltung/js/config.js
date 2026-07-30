@@ -68,6 +68,9 @@ export const STORAGE_PREFIX = `${ROOT}/media`;
 /** Fallback, solange unter Einstellungen keine Website-URL gesetzt ist. */
 export const DEFAULT_SITE_URL = "../site";
 
+/** In der Demo gibt es keine frühere externe Vorschau-Adresse zu migrieren. */
+export const LEGACY_SITE_URLS = [];
+
 /** Grösse pro Datei. Muss zu den Storage-Regeln passen (firebase/storage.rules). */
 export const MAX_UPLOAD_BYTES = 250 * 1024 * 1024; // 250 MB
 

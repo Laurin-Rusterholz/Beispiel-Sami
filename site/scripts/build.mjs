@@ -474,15 +474,46 @@ function renderExperience(n, s) {
       ${str(s.lede) ? `<p class="lede rv">${inline(s.lede)}</p>` : ""}
       ${
         moments.length
-          ? `<div class="moment-grid rv">${moments
+          ? `<div class="experience-composition rv">
+        <div class="speaker-model" aria-hidden="true">
+          <span class="speaker-aura"></span>
+          <span class="sound-ring ring-one"></span>
+          <span class="sound-ring ring-two"></span>
+          <span class="speaker-beam beam-left"></span>
+          <span class="speaker-beam beam-right"></span>
+          <span class="speaker-levels">
+            <i style="--level:28%"></i><i style="--level:54%"></i><i style="--level:82%"></i>
+            <i style="--level:46%"></i><i style="--level:70%"></i><i style="--level:38%"></i>
+          </span>
+          <div class="speaker-rig">
+            <span class="rig-hook"></span>
+            <div class="line-array">
+              <span class="array-module"><i></i><i></i></span>
+              <span class="array-module"><i></i><i></i></span>
+              <span class="array-module"><i></i><i></i></span>
+              <span class="array-module"><i></i><i></i></span>
+            </div>
+            <div class="sub-cabinet">
+              <span class="speaker-brand">SAM SPARKLING<small>LIVE SYSTEM</small></span>
+              <span class="sub-driver"><i></i></span>
+              <span class="speaker-port"></span>
+            </div>
+          </div>
+          <span class="speaker-floor"></span>
+        </div>
+        <div class="moment-grid">${moments
               .map(
-                (m) => `<article class="mix-card">
+                (m, index) => `<article class="mix-card" data-step="${String(index + 1).padStart(
+                  2,
+                  "0"
+                )}">
             ${str(m.kicker) ? `<span class="mono">${esc(m.kicker)}</span>` : ""}
             <h3>${esc(m.title)}</h3>
             ${str(m.text) ? `<p>${inline(m.text)}</p>` : ""}
           </article>`
               )
-              .join("\n          ")}</div>`
+              .join("\n          ")}</div>
+      </div>`
           : ""
       }
       ${
@@ -1530,6 +1561,14 @@ function renderPage(c, page, pages, lang, langs) {
   </div>`
       : "";
 
+  const configuredHeroCta = str(c.hero?.ctaHref, "#booking");
+  const heroCtaHref =
+    configuredHeroCta === "#booking" &&
+    sections.booking?.enabled !== false &&
+    sections.booking?.form?.enabled !== false
+      ? "#booking-form"
+      : configuredHeroCta;
+
   const hero =
     page.hero === "none"
       ? ""
@@ -1557,7 +1596,7 @@ function renderPage(c, page, pages, lang, langs) {
         ${c.hero?.meta ? `<span class="mono">${esc(c.hero.meta)}</span>` : ""}
         ${
           c.hero?.ctaLabel
-            ? `<a class="hero-cta" href="${anchorHref(str(c.hero.ctaHref, "#booking"))}">${esc(
+            ? `<a class="hero-cta" href="${anchorHref(heroCtaHref)}">${esc(
                 c.hero.ctaLabel
               )}<span class="cta-arr" aria-hidden="true">→</span></a>`
             : ""
@@ -1733,7 +1772,7 @@ ${body}
   <a class="totop" href="#top" aria-label="${esc(ui.toTop || "Nach oben")}">↑</a>
 ${
   hasBooking
-    ? `  <div class="actbar" id="actbar" aria-hidden="false">
+    ? `  <div class="actbar" id="actbar" aria-hidden="true">
     <a class="btn solid" href="${esc(bookingTarget)}">${esc(ui.bookCta)}</a>
   </div>
 `
