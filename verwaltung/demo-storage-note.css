@@ -1,0 +1,1 @@
+.demo-chip::after{content:" · lokal gespeichert";color:#9db8ff}.demo-chip{white-space:nowrap}@media(max-width:700px){.demo-chip::after{content:" · gespeichert"}}
