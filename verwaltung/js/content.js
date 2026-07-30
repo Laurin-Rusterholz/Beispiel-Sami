@@ -472,7 +472,7 @@ export function renderShows() {
       "Shows",
       `Auftritts-Termine. ${upcoming} kommende${upcoming === 1 ? "r" : ""} Termin${
         upcoming === 1 ? "" : "e"
-      } — vergangene rutschen automatisch nach unten und verschwinden aus der Google-Anzeige.`
+      } — ohne hinterlegten Termin verschwindet der komplette Shows-Abschnitt automatisch von der Website.`
     ),
     sectionBasics("shows"),
     group("Übersicht", [cal], {
@@ -492,7 +492,7 @@ export function renderShows() {
           status: "confirmed",
         },
         titleOf: (i) => [i.date, i.name].filter(Boolean).join("  ·  ") || "(neuer Termin)",
-        emptyText: "Noch keine Termine — die Website zeigt dann den Platzhaltertext.",
+        emptyText: "Noch keine Termine — der Shows-Abschnitt und sein Menüpunkt bleiben dann vollständig verborgen.",
         onChange: () => cal._redraw(),
         fields: (base) => [
           textField(`${base}.date`, "Datum", { type: "date" }),
@@ -515,11 +515,9 @@ export function renderShows() {
       }),
     ]),
     group("Darstellung auf der Website", [
-      textField("sections.shows.emptyText", "Text ohne Termine"),
       textField("sections.shows.pastLabel", "Beschriftung „vergangene Shows“"),
     ], {
-      cols: 2,
-      hint: "Der Termin-Kalender steht auf der Website beim Booking-Formular — dort sind belegte Tage markiert und freie direkt anfragbar.",
+      hint: "Der Abschnitt erscheint erst, sobald oben mindestens ein echter Termin angelegt ist. Der Kalender im Booking-Formular bleibt für Wunschanfragen trotzdem verfügbar.",
     }),
   ]);
 }
@@ -613,8 +611,20 @@ export function renderReferences() {
 
 export function renderGallery() {
   return view([
-    head("Galerie", "Bilder im Masonry-Raster mit Lightbox."),
+    head("Galerie", "Bilder mit Lightbox; auf dem Handy startet die Galerie bewusst als kurze Auswahl."),
     sectionBasics("gallery"),
+    group("Mobile Darstellung", [
+      selectField("sections.gallery.mobileLimit", "Bilder vor „Mehr anzeigen“", [
+        ["2", "2 Bilder"],
+        ["4", "4 Bilder (empfohlen)"],
+        ["6", "6 Bilder"],
+        ["8", "8 Bilder"],
+      ], {
+        hint: "Nur für Handys. Desktop zeigt weiterhin die komplette Galerie.",
+      }),
+    ], {
+      hint: "Eine kurze 2-Spalten-Auswahl hält den AIDA-Weg kompakt. Weitere Bilder öffnet der Besucher bewusst über einen Knopf.",
+    }),
     group("Bilder", [
       objectList("sections.gallery.items", null, {
         addLabel: "+ leeres Bild",

@@ -84,7 +84,6 @@ export async function sendeWunsch({ text, section, sectionTitle, label, url, lan
     createdAt: new Date().toISOString(),
     createdBy: S.user?.email || "Verwaltung",
   };
-  // Quantus ordnet die Aufgabe diesem Projekt zu, sofern eines eingestellt ist.
   if (QUANTUS_PROJECT) eintrag.projectExternalId = QUANTUS_PROJECT;
 
   const ref = await db.ref(QUANTUS_INBOX).push(eintrag);
@@ -195,8 +194,6 @@ window.addEventListener("message", (e) => {
   if (!frame || e.source !== frame.contentWindow) return;
   let erlaubt = "";
   try {
-    // Die Website-Adresse darf auch relativ sein ("/site" in der
-    // Präsentations-Fassung) — dann gilt die eigene Herkunft.
     erlaubt = new URL(basisUrl() || "/", location.href).origin;
   } catch (err) {
     return;

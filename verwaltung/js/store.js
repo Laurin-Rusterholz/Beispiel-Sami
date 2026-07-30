@@ -182,13 +182,9 @@ export async function loadAll() {
 }
 
 /**
- * Vorführ-Modus: nur die öffentlich lesbaren Knoten holen.
- *
- * `content` und `media` stehen in den Datenbank-Regeln auf `.read: true` — die
- * Website baut ihren Inhalt daraus, sie sind ohnehin für alle sichtbar. Alles
- * andere (Anfragen mit Personendaten, Einstellungen, Verlauf) verlangt eine
- * Sitzung; danach fragen wir hier gar nicht erst, sonst gäbe es bei jedem Start
- * ein `permission_denied` in der Konsole.
+ * Vorführ-Modus: nur die öffentlich lesbaren Inhalte und Medien laden.
+ * Anfragen, Einstellungen und Versionen bleiben wegen ihrer Personendaten
+ * unangetastet.
  */
 async function loadForDemo() {
   const defaults = await loadDefaults();
@@ -196,7 +192,7 @@ async function loadForDemo() {
 
   S.content = normalize(withDefaults(content ? clone(content) : clone(defaults), defaults));
   S.contentStamp++;
-  S.saved = clone(S.content); // im Vorführ-Modus gilt der geladene Stand als gespeichert
+  S.saved = clone(S.content);
   S.config = { siteUrl: DEFAULT_SITE_URL };
   S.inquiries = {};
   S.dirty = false;
@@ -210,7 +206,6 @@ async function loadForDemo() {
   emit("loaded");
 }
 
-/** Im Vorführ-Modus schreibt nichts in die Datenbank. */
 function demoBlock(was) {
   toast(`Vorführ-Modus: ${was} ist hier abgeschaltet — die echte Website bleibt unberührt.`);
 }
@@ -462,7 +457,6 @@ export async function deleteInquiry(id) {
 /* -------------------------------------------------------- warnung beim weg */
 
 window.addEventListener("beforeunload", (e) => {
-  // Im Vorführ-Modus geht nichts verloren — dann auch nicht nachfragen.
   if (S.dirty && !DEMO) {
     e.preventDefault();
     e.returnValue = "";
