@@ -539,9 +539,25 @@ export function renderShop() {
         hint: "Deine eigene Bezahlmethode: Produkte ohne Bezahl-Link zeigen dann einen TWINT-Kauf an (Nummer, Betrag, Vermerk, Mail-Bestätigung).",
       }),
       textField("sections.shop.buyLabel", "Kauf-Knopf", { placeholder: "Kaufen" }),
+      textField("sections.shop.defaultCountry", "Land (Vorgabe im Bestellformular)", { placeholder: "Schweiz" }),
       textArea("sections.shop.note", "Einleitung", { rows: 2 }),
       textArea("sections.shop.emptyText", "Text, solange keine Produkte da sind", { rows: 2 }),
     ], { cols: 2 }),
+    group("Bezahlung", [
+      textField("sections.shop.bank.label", "Bezeichnung", { placeholder: "Banküberweisung" }),
+      textField("sections.shop.bank.holder", "Empfänger", { placeholder: "Samuel Muster" }),
+      textField("sections.shop.bank.iban", "IBAN", { mono: true, placeholder: "CH00 0000 0000 0000 0000 0" }),
+      textField("sections.shop.bank.bank", "Bank", { placeholder: "St. Galler Kantonalbank" }),
+      imageField("sections.shop.qr", "QR-Code", {
+        kind: "image",
+        alt: true,
+        hint: "TWINT-QR (App → Geld empfangen → QR speichern) oder QR-Rechnung der Bank. Ohne Bild zeigt die Website „QR-Code folgt“.",
+      }),
+      textField("sections.shop.qr.caption", "Bildunterschrift", { placeholder: "QR-Code scannen und bezahlen" }),
+    ], {
+      cols: 2,
+      hint: "TWINT-Nummer und/oder IBAN erscheinen im Shop unter „Bezahlen“ und stehen im Bestellformular zur Auswahl. Solange nichts hinterlegt ist, steht dort „folgt“.",
+    }),
     group("Produkte", [
       objectList("sections.shop.items", null, {
         addLabel: "+ Produkt",
@@ -591,12 +607,17 @@ export function renderReferences() {
     group("Liste", [
       objectList("sections.references.items", null, {
         addLabel: "+ Referenz",
-        newItem: { name: "", city: "", url: "" },
+        newItem: { name: "", city: "", url: "", highlight: false },
         titleOf: (i) => [i.name, i.city].filter(Boolean).join(" — ") || "(leer)",
         fields: (base) => [
           textField(`${base}.name`, "Club / Festival"),
           textField(`${base}.city`, "Ort"),
           textField(`${base}.url`, "Link (optional)", { mono: true, hint: "Leer = führt zum Booking-Abschnitt." }),
+          checkboxField(
+            `${base}.highlight`,
+            "Wichtige Referenz",
+            "Steht über die ganze Breite und hebt sich ab — für die grössten Events. Die Reihenfolge bestimmst du über die Liste."
+          ),
         ],
       }),
     ]),
@@ -611,19 +632,46 @@ export function renderReferences() {
 
 export function renderGallery() {
   return view([
-    head("Galerie", "Bilder mit Lightbox; auf dem Handy startet die Galerie bewusst als kurze Auswahl."),
+    head("Galerie", "After Movies, darunter die Bilder mit Lightbox; die Galerie startet bewusst als kurze Auswahl."),
     sectionBasics("gallery"),
-    group("Mobile Darstellung", [
+    group("Darstellung", [
       selectField("sections.gallery.mobileLimit", "Bilder vor „Mehr anzeigen“", [
         ["2", "2 Bilder"],
-        ["4", "4 Bilder (empfohlen)"],
-        ["6", "6 Bilder"],
+        ["4", "4 Bilder"],
+        ["6", "6 Bilder (empfohlen)"],
         ["8", "8 Bilder"],
       ], {
-        hint: "Nur für Handys. Desktop zeigt weiterhin die komplette Galerie.",
+        hint: "Gilt auf allen Bildschirmbreiten. Die weiteren Bilder öffnet der Besucher über den Knopf.",
       }),
     ], {
-      hint: "Eine kurze 2-Spalten-Auswahl hält den AIDA-Weg kompakt. Weitere Bilder öffnet der Besucher bewusst über einen Knopf.",
+      hint: "Eine kurze Auswahl hält den AIDA-Weg kompakt. Weitere Bilder öffnet der Besucher bewusst über einen Knopf.",
+    }),
+    group("After Movies", [
+      textField("sections.gallery.aftermoviesNote", "Einleitung", {
+        placeholder: "Rückblick auf die letzten Shows.",
+      }),
+      objectList("sections.gallery.aftermovies", null, {
+        addLabel: "+ After Movie",
+        newItem: { title: "", event: "", src: "", poster: "", embedUrl: "" },
+        titleOf: (i) => [i.title, i.event].filter(Boolean).join(" — ") || "(neues Video)",
+        emptyText: "Noch keine Aftermovies — die Website zeigt solange einen Hinweis.",
+        fields: (base) => [
+          textField(`${base}.title`, "Titel", { placeholder: "Ultrawild Festival 2026" }),
+          textField(`${base}.event`, "Event / Ort", { placeholder: "St. Gallen" }),
+          imageField(base, "Video (eigene Datei)", { kind: "video", alt: false, emptyText: "kein Video" }),
+          imageField(`${base}.poster`, "Vorschaubild", {
+            kind: "image",
+            asObject: false,
+            emptyText: "kein Bild",
+          }),
+          textField(`${base}.embedUrl`, "…oder YouTube-/Vimeo-Adresse", {
+            mono: true,
+            hint: "Einbett-Adresse, z. B. https://www.youtube.com/embed/XXXX. Ist sie gesetzt, hat sie Vorrang vor der eigenen Datei.",
+          }),
+        ],
+      }),
+    ], {
+      hint: "Die Aftermovies stehen zuoberst in der Galerie. Sie starten nicht von allein — mit Ton und Bedienelementen.",
     }),
     group("Bilder", [
       objectList("sections.gallery.items", null, {
@@ -669,6 +717,12 @@ export function renderBooking() {
   return view([
     head("Booking", "Verfügbarkeit, Rider, Presskit und das Anfrage-Formular."),
     sectionBasics("booking"),
+    group("Einladung", [
+      textArea("sections.booking.lead", "Einleitung", {
+        rows: 2,
+        hint: "Steht zuoberst im Booking-Abschnitt, direkt über „Verfügbar für“.",
+      }),
+    ]),
     group("Verfügbar für", [
       textField("sections.booking.availableKicker", "Kleine Zeile"),
       stringList("sections.booking.available", "Einträge", { addLabel: "+ Eintrag" }),
@@ -689,6 +743,11 @@ export function renderBooking() {
       textArea("sections.booking.form.errorText", "Text bei einem Fehler", { rows: 2 }),
     ]),
     group("Rider (technische Anforderungen)", [
+      checkboxField(
+        "sections.booking.rider.enabled",
+        "Rider auf der Website zeigen",
+        "Der Rider steht eingeklappt unter dem Formular — anfragen soll niedrigschwellig bleiben. Haken weg = der Bereich fällt ganz weg."
+      ),
       textField("sections.booking.rider.kicker", "Kleine Zeile"),
       objectList("sections.booking.rider.groups", "Gruppen", {
         addLabel: "+ Gruppe",
@@ -729,14 +788,19 @@ export function renderContact() {
       objectList("sections.contact.socials", null, {
         addLabel: "+ Link",
         newItem: { label: "", url: "" },
-        titleOf: (i) => i.label || "(leer)",
+        titleOf: (i) => (i.label || "(leer)") + (i.url ? "" : "  ·  Adresse fehlt"),
         hint: "Instagram, Mixcloud, SoundCloud, Spotify, YouTube …",
         fields: (base) => [
           textField(`${base}.label`, "Name"),
-          textField(`${base}.url`, "URL", { mono: true }),
+          textField(`${base}.url`, "URL", {
+            mono: true,
+            hint: "Komplette Profil-Adresse. Spotify: im Künstlerprofil auf „Teilen → Link kopieren“. Ohne Adresse wird der Kanal nicht angezeigt.",
+          }),
         ],
       }),
-    ]),
+    ], {
+      hint: "Die Kanäle stehen im Kontakt-Abschnitt und zusätzlich im Fuss jeder Seite.",
+    }),
   ]);
 }
 
