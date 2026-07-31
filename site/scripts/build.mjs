@@ -370,6 +370,9 @@ function heroMedia(hero, site) {
 
 function renderAbout(n, s) {
   const facts = list(s.facts).filter((f) => str(f?.value));
+  const paragraphs = list(s.paragraphs).filter((p) => str(p));
+  const firstParagraph = paragraphs[0];
+  const moreParagraphs = paragraphs.slice(1);
   return `
   <section class="pad" id="about" aria-labelledby="about-h">
     <div class="wrap">${sectionHead(n, s, "about")}
@@ -380,10 +383,18 @@ function renderAbout(n, s) {
         </div>
         <div class="about-copy rv">
           ${str(s.lede) ? `<p class="lede">${inline(s.lede)}</p>` : ""}
-          ${list(s.paragraphs)
-            .filter((p) => str(p))
-            .map((p) => `<p>${inline(p)}</p>`)
-            .join("\n          ")}
+          ${firstParagraph ? `<p>${inline(firstParagraph)}</p>` : ""}
+          ${
+            moreParagraphs.length
+              ? `<div class="about-more" id="about-more">
+            ${moreParagraphs.map((p) => `<p>${inline(p)}</p>`).join("\n            ")}
+          </div>
+          <button class="about-toggle mono" type="button" aria-controls="about-more" aria-expanded="false"
+                  data-more="${esc(UI.moreStory)}" data-less="${esc(UI.lessStory)}">${esc(
+                    UI.moreStory
+                  )}</button>`
+              : ""
+          }
           ${
             list(s.words).length
               ? `<div class="three-words">${list(s.words)
@@ -463,15 +474,46 @@ function renderExperience(n, s) {
       ${str(s.lede) ? `<p class="lede rv">${inline(s.lede)}</p>` : ""}
       ${
         moments.length
-          ? `<div class="moment-grid rv">${moments
+          ? `<div class="experience-composition rv">
+        <div class="speaker-model" aria-hidden="true">
+          <span class="speaker-aura"></span>
+          <span class="sound-ring ring-one"></span>
+          <span class="sound-ring ring-two"></span>
+          <span class="speaker-beam beam-left"></span>
+          <span class="speaker-beam beam-right"></span>
+          <span class="speaker-levels">
+            <i style="--level:28%"></i><i style="--level:54%"></i><i style="--level:82%"></i>
+            <i style="--level:46%"></i><i style="--level:70%"></i><i style="--level:38%"></i>
+          </span>
+          <div class="speaker-rig">
+            <span class="rig-hook"></span>
+            <div class="line-array">
+              <span class="array-module"><i></i><i></i></span>
+              <span class="array-module"><i></i><i></i></span>
+              <span class="array-module"><i></i><i></i></span>
+              <span class="array-module"><i></i><i></i></span>
+            </div>
+            <div class="sub-cabinet">
+              <span class="speaker-brand">SAM SPARKLING<small>LIVE SYSTEM</small></span>
+              <span class="sub-driver"><i></i></span>
+              <span class="speaker-port"></span>
+            </div>
+          </div>
+          <span class="speaker-floor"></span>
+        </div>
+        <div class="moment-grid">${moments
               .map(
-                (m) => `<article class="mix-card">
+                (m, index) => `<article class="mix-card" data-step="${String(index + 1).padStart(
+                  2,
+                  "0"
+                )}">
             ${str(m.kicker) ? `<span class="mono">${esc(m.kicker)}</span>` : ""}
             <h3>${esc(m.title)}</h3>
             ${str(m.text) ? `<p>${inline(m.text)}</p>` : ""}
           </article>`
               )
-              .join("\n          ")}</div>`
+              .join("\n          ")}</div>
+      </div>`
           : ""
       }
       ${
@@ -531,6 +573,7 @@ function showRow(sh, idx) {
 function renderShows(n, s) {
   const t = today();
   const items = list(s.items).filter((i) => str(i?.name));
+  if (!items.length) return "";
   const upcoming = items
     .filter((i) => !isoDate(i.date) || isoDate(i.date) >= t)
     .sort((a, b) => String(a.date).localeCompare(String(b.date)));
@@ -575,7 +618,10 @@ function renderReferences(n, s) {
           .map((v, i) => {
             const url = safeUrl(v.url) || anchor("#booking");
             const ext = /^https?:/i.test(url) ? ' target="_blank" rel="noopener"' : "";
-            return `<li><a href="${esc(url)}"${ext}><span class="venue-idx">${num(
+            // Die Liste ist nach Wichtigkeit sortiert. Die oben stehenden
+            // Referenzen tragen "highlight" und bekommen die ganze Zeilenbreite
+            // — so ist die Reihenfolge auch optisch eine Rangfolge.
+            return `<li${v.highlight ? ' class="lead"' : ""}><a href="${esc(url)}"${ext}><span class="venue-idx">${num(
               i + 1
             )}</span><span class="venue-name">${esc(v.name)}</span><span class="venue-city">${esc(
               v.city
@@ -596,15 +642,70 @@ function renderReferences(n, s) {
   </section>`;
 }
 
+/**
+ * After Movies — die Rückblick-Videos zu gespielten Events. Anders als die
+ * stummen Schleifen in der Bilderwand werden sie bewusst angeschaut: mit
+ * Bedienelementen, Ton und Vorschaubild, nichts startet von allein.
+ * Fremdvideos (YouTube/Vimeo) kommen über embedUrl, eigene Dateien über src.
+ */
+function afterMovies(s) {
+  const movies = list(s.aftermovies).filter(
+    (m) => str(m?.title) && (safeUrl(m?.src) || safeUrl(m?.embedUrl))
+  );
+  const head = `<div class="after-head">
+          <span class="mono">${esc(UI.afterMovies)}</span>
+          ${str(s.aftermoviesNote) ? `<p>${inline(s.aftermoviesNote)}</p>` : ""}
+        </div>`;
+  if (!movies.length) {
+    return `<div class="after rv">
+        <!-- TODO Kunde: Aftermovie-Dateien oder YouTube-/Vimeo-Adressen liefern.
+             Eintragen in der Verwaltung unter Galerie → After Movies je Video:
+             Titel, Event, Video (src oder embedUrl) und Vorschaubild (poster).
+             Solange nichts hinterlegt ist, steht hier der Platzhaltertext. -->
+        ${head}
+        <div class="empty-state"><span class="mono">${esc(UI.afterMovies)}</span><p>${esc(
+      str(s.aftermoviesEmpty, UI.afterMoviesEmpty)
+    )}</p></div>
+      </div>`;
+  }
+  const cards = movies
+    .map((m) => {
+      const media = safeUrl(m.embedUrl)
+        ? `<iframe src="${href(m.embedUrl)}" title="${esc(m.title)}" loading="lazy"
+              allow="accelerometer; clipboard-write; encrypted-media; picture-in-picture; fullscreen"
+              referrerpolicy="strict-origin-when-cross-origin" allowfullscreen frameborder="0"></iframe>`
+        : `<video src="${href(m.src)}" controls playsinline preload="none"${
+            safeUrl(m.poster) ? ` poster="${esc(cdnUrl(m.poster, 800))}"` : ""
+          }></video>`;
+      return `<article class="after-card">
+          <div class="after-media">${media}</div>
+          <h3>${esc(m.title)}</h3>
+          ${str(m.event) ? `<span class="mono">${esc(m.event)}</span>` : ""}
+        </article>`;
+    })
+    .join("\n        ");
+  return `<div class="after rv">
+        ${head}
+        <div class="after-grid">
+        ${cards}
+        </div>
+      </div>`;
+}
+
 function renderGallery(n, s) {
   const items = list(s.items).filter((i) => safeUrl(i?.src));
   // Bilder zählen für die Lightbox-Beschriftung; Videos laufen dort nicht mit.
   const photos = items.filter((i) => !isVideoUrl(i.src));
+  // Wie viele Bilder ohne Zutun zu sehen sind — auf allen Bildschirmbreiten
+  // gleich, damit die Zahl im Knopf ("6 weitere Bilder") überall stimmt.
+  const limit = Math.max(2, Math.min(12, Number.parseInt(s.mobileLimit, 10) || 6));
+  const remaining = Math.max(0, items.length - limit);
 
   const cell = (g, i) => {
+    const extra = i >= limit ? ' data-extra="true"' : "";
     if (isVideoUrl(g.src)) {
       const gf = fitAttrs(g);
-      return `<figure class="gal-video${gf.cls}">
+      return `<figure class="gal-video${gf.cls}"${extra}>
           <video src="${href(g.src)}" muted loop playsinline autoplay preload="metadata"${
         g.poster ? ` poster="${href(g.poster)}"` : ""
       }${gf.style} aria-label="${esc(g.alt || "")}"></video>
@@ -612,7 +713,7 @@ function renderGallery(n, s) {
         </figure>`;
     }
     const idx = photos.indexOf(g) + 1;
-    return `<figure>
+    return `<figure${extra}>
           <button type="button" class="gal-btn" aria-label="${esc(
             UI.openImage.replace("{n}", idx).replace("{total}", photos.length)
           )}">
@@ -625,9 +726,19 @@ function renderGallery(n, s) {
   return `
   <section class="pad" id="gallery" aria-labelledby="gallery-h">
     <div class="wrap">${sectionHead(n, s, "gallery")}
+      ${afterMovies(s)}
       <div class="gal rv" id="gal">
         ${items.map(cell).join("\n        ")}
       </div>
+      ${
+        remaining
+          ? `<button class="gal-more btn" type="button" aria-controls="gal" aria-expanded="false"
+                  data-more="${esc(UI.showMoreImages.replace("{n}", remaining))}"
+                  data-less="${esc(UI.showLessImages)}">${esc(
+                    UI.showMoreImages.replace("{n}", remaining)
+                  )}</button>`
+          : ""
+      }
     </div>
   </section>`;
 }
@@ -639,11 +750,152 @@ function priceTag(price, currency) {
   return /[A-Za-z]/.test(v) ? v : `${currency} ${v}${/[.,]/.test(v) ? "" : ".—"}`;
 }
 
-function renderShop(n, s, contactEmail) {
+/**
+ * Bezahlmöglichkeiten: TWINT und Banküberweisung, dazu — sofern hinterlegt —
+ * der QR-Code zum Abscannen. Alles rein statisch; es wird nichts eingezogen,
+ * die Kundin überweist selbst und der Versand geht nach Zahlungseingang raus.
+ */
+function payMethods(s) {
+  const twint = str(s.twint);
+  const bank = s.bank || {};
+  const hasBank = str(bank.iban);
+  // Fehlen Nummer und IBAN noch, steht hier bewusst der Platzhalter statt
+  // nichts — sonst faellt beim Abnehmen niemandem auf, dass die Angaben fehlen.
+  const missing = !twint && !hasBank;
+  const qr = safeUrl(s.qr?.src)
+    ? `<figure class="pay-qr">
+            ${picture(s.qr, { widths: [280, 560], sizes: "220px" })}
+            <figcaption class="mono">${esc(str(s.qr.caption, UI.payQrCaption))}</figcaption>
+          </figure>`
+    : `<!-- TODO Kunde: QR-Code fehlt noch. Benötigt wird entweder der TWINT-QR
+             (in der TWINT-App unter "Geld empfangen" → QR speichern) oder der
+             Einzahlungsschein-QR der Bank (QR-Rechnung). Bild in der Verwaltung
+             unter Shop → Bezahlung hochladen; es erscheint dann hier.
+             Offene Frage: TWINT-QR, Bank-QR oder beide? -->
+        <div class="pay-qr pay-qr-missing"><span class="mono">${esc(UI.payQrMissing)}</span></div>`;
+  const details = missing
+    ? `<li><b>TWINT</b><span>${esc(UI.payPending)}</span></li>
+              <li><b>${esc(UI.payBank)}</b><span>${esc(UI.payPending)}</span></li>`
+    : `${twint ? `<li><b>TWINT</b><span>${esc(twint)}</span></li>` : ""}
+              ${hasBank ? `<li><b>${esc(str(bank.label, UI.payBank))}</b><span>${esc(bank.iban)}</span></li>` : ""}
+              ${hasBank && str(bank.holder) ? `<li><b>${esc(UI.payHolder)}</b><span>${esc(bank.holder)}</span></li>` : ""}
+              ${hasBank && str(bank.bank) ? `<li><b>${esc(UI.payBankName)}</b><span>${esc(bank.bank)}</span></li>` : ""}`;
+  return `
+      <div class="pay-methods rv">${
+        missing
+          ? `
+        <!-- TODO Kunde: Zahlungsangaben fehlen noch. Benoetigt werden die
+             TWINT-Nummer und/oder IBAN samt Empfaenger und Bank. Eintragen in
+             der Verwaltung unter Shop → Bezahlung; sobald etwas hinterlegt ist,
+             ersetzt es diesen Platzhalter und die Auswahl im Bestellformular. -->`
+          : ""
+      }
+        <div class="pay-cols">
+          <div>
+            <span class="mono">${esc(UI.payTitle)}</span>
+            <ul class="pay-list">
+              ${details}
+            </ul>
+            <p class="pay-note">${esc(UI.payNote)}</p>
+          </div>
+          ${qr}
+        </div>
+      </div>`;
+}
+
+/**
+ * Bestellformular. Der Shop verschickt Ware, deshalb sind Liefer- und
+ * Kontaktangaben Pflicht — ohne sie kann nichts versendet werden. Die
+ * Bestellung landet im selben Eingang wie die Booking-Anfragen (kind:"order").
+ */
+function orderForm(s, site, items, cur) {
+  const endpoint = safeUrl(site.shopApi) || safeUrl(site.bookingApi);
+  if (!endpoint || !items.length) return "";
+  const options = items
+    .filter((p) => p.status !== "soldout")
+    .map((p) => {
+      const price = priceTag(p.price, cur);
+      return `<option value="${esc(p.name)}">${esc(
+        [str(p.name), price].filter(Boolean).join(" — ")
+      )}</option>`;
+    })
+    .join("\n              ");
+  if (!options) return "";
+  const pay = [
+    str(s.twint) ? ["twint", "TWINT"] : null,
+    str(s.bank?.iban) ? ["bank", str(s.bank?.label, UI.payBank)] : null,
+  ].filter(Boolean);
+  return `
+      <form class="oform rv" id="order-form" data-endpoint="${esc(endpoint)}"
+            data-sending="${esc(UI.sending)}" data-invalid="${esc(UI.formInvalid)}" novalidate>
+        <div class="bform-head">
+          <span class="mono">${esc(UI.orderTitle)}</span>
+          <h3>${esc(UI.orderHeadline)}</h3>
+          <p class="bform-required mono">${esc(UI.allRequired)}</p>
+        </div>
+        <div class="bform-grid">
+          <label><span class="lbl">${esc(UI.oProduct)} <i aria-hidden="true">*</i></span>
+            <select name="product" required>
+              ${options}
+            </select>
+          </label>
+          <label><span class="lbl">${esc(UI.oQuantity)} <i aria-hidden="true">*</i></span>
+            <input name="quantity" type="number" required min="1" max="20" step="1" value="1" inputmode="numeric">
+          </label>
+          <label><span class="lbl">${esc(UI.fName)} <i aria-hidden="true">*</i></span>
+            <input name="name" type="text" required maxlength="120" autocomplete="name">
+          </label>
+          <label><span class="lbl">${esc(UI.fEmail)} <i aria-hidden="true">*</i></span>
+            <input name="email" type="email" required maxlength="160" autocomplete="email">
+          </label>
+          <label class="span-2"><span class="lbl">${esc(UI.oStreet)} <i aria-hidden="true">*</i></span>
+            <input name="street" type="text" required maxlength="160" autocomplete="street-address">
+          </label>
+          <label><span class="lbl">${esc(UI.oZip)} <i aria-hidden="true">*</i></span>
+            <input name="zip" type="text" required maxlength="12" autocomplete="postal-code">
+          </label>
+          <label><span class="lbl">${esc(UI.oCity)} <i aria-hidden="true">*</i></span>
+            <input name="city" type="text" required maxlength="120" autocomplete="address-level2">
+          </label>
+          <label><span class="lbl">${esc(UI.oCountry)} <i aria-hidden="true">*</i></span>
+            <input name="country" type="text" required maxlength="80" value="${esc(
+              str(s.defaultCountry, "Schweiz")
+            )}" autocomplete="country-name">
+          </label>
+          ${
+            pay.length
+              ? `<fieldset class="span-2 opay">
+            <legend class="lbl">${esc(UI.oPayment)} <i aria-hidden="true">*</i></legend>
+            ${pay
+              .map(
+                ([v, label], i) =>
+                  `<label class="opay-opt"><input name="payment" type="radio" value="${esc(
+                    v
+                  )}" required${i === 0 ? " checked" : ""}><span>${esc(label)}</span></label>`
+              )
+              .join("\n            ")}
+          </fieldset>`
+              : ""
+          }
+          <label class="hp" aria-hidden="true" tabindex="-1"><span class="lbl">${esc(UI.fHoneypot)}</span>
+            <input name="website" type="text" tabindex="-1" autocomplete="off">
+          </label>
+        </div>
+        <div class="bform-foot">
+          <button class="btn solid big" type="submit">${esc(UI.oSubmit)}<span class="cta-arr" aria-hidden="true">→</span></button>
+          <span class="mono reply-note">${esc(UI.oReplyNote)}</span>
+          <p class="bform-msg" role="status" aria-live="polite"
+             data-success="${esc(UI.oSuccess)}" data-error="${esc(UI.oError)}"></p>
+        </div>
+      </form>`;
+}
+
+function renderShop(n, s, contactEmail, site) {
   const items = list(s.items).filter((p) => str(p?.name));
   const cur = str(s.currency, "CHF");
   const buy = str(s.buyLabel, UI.buy);
-  const twint = str(s.twint);
+  const form = orderForm(s, site, items, cur);
+  const hasOrderForm = !!form;
   const cards = items
     .map((p) => {
       const sold = p.status === "soldout";
@@ -651,32 +903,23 @@ function renderShop(n, s, contactEmail) {
       // fallen sonst als toter Kauf-Knopf auf die Website
       const link = /^https?:\/\//i.test(String(p.linkUrl || "")) ? safeUrl(p.linkUrl) : "";
       const price = priceTag(p.price, cur);
-      const order = contactEmail
+      const mail = contactEmail
         ? `mailto:${contactEmail}?subject=${encodeURIComponent(`${UI.orderSubject}: ${str(p.name)}`)}` +
           `&body=${encodeURIComponent(UI.orderMailBody.replace("{product}", [str(p.name), price].filter(Boolean).join(" — ")))}`
         : "";
-      // TWINT-Zahlung: aufklappbares Feld mit Nummer, Vermerk und Bestaetigung
-      const twintPanel =
-        twint && !link
-          ? `<details class="pay">
-            <summary class="btn sm">${esc(buy)} · TWINT</summary>
-            <div class="pay-panel">
-              <p class="mono">${esc(UI.twintSend)}</p>
-              <strong class="pay-nr">${esc(twint)}</strong>
-              <p>${esc(UI.twintRef)}: <b>${esc(p.name)}</b>${price ? ` · ${esc(price)}` : ""}</p>
-              <p class="pay-note">${esc(UI.twintNote)}</p>
-              ${order ? `<a class="btn sm ghost" href="${esc(order)}">${esc(UI.twintConfirm)}</a>` : ""}
-            </div>
-          </details>`
-          : "";
+      // Ohne eigenen Bezahl-Link fuehrt der Knopf ins Bestellformular weiter
+      // unten und waehlt das Produkt dort schon aus. Gibt es kein Formular
+      // (kein Endpunkt hinterlegt), bleibt die Bestellung per Mail.
       const cta = sold
         ? `<span class="mono">${esc(UI.soldOut)}</span>`
         : link
         ? `<a class="btn sm" href="${esc(link)}" target="_blank" rel="noopener">${esc(buy)} ↗</a>`
-        : twintPanel
-        ? ""
-        : order
-        ? `<a class="btn sm ghost" href="${esc(order)}">${esc(UI.orderByMail)}</a>`
+        : hasOrderForm
+        ? `<a class="btn sm order-jump" href="#order-form" data-product="${esc(p.name)}">${esc(
+            buy
+          )}</a>`
+        : mail
+        ? `<a class="btn sm ghost" href="${esc(mail)}">${esc(UI.orderByMail)}</a>`
         : "";
       return `<article class="product rv${sold ? " soldout" : ""}">
           ${p.src ? `<div class="product-img">${picture(p, { sizes: "(max-width:700px) 46vw, 280px", widths: [480, 800] })}</div>` : ""}
@@ -687,66 +930,65 @@ function renderShop(n, s, contactEmail) {
               ${str(p.price) ? `<span class="price">${esc(price)}</span>` : ""}
               ${cta}
             </div>
-            ${sold ? "" : twintPanel}
           </div>
         </article>`;
     })
     .join("\n        ");
 
+  if (!items.length) {
+    return `
+  <section class="pad shop-sec" id="shop" aria-labelledby="shop-h">
+    <div class="wrap">${sectionHead(n, s, "shop")}
+      ${str(s.note) ? `<p class="shop-note rv">${inline(s.note)}</p>` : ""}
+      <div class="empty-state rv"><span class="mono">Shop</span><p>${esc(
+        str(s.emptyText, "Merch ist in Arbeit.")
+      )}</p></div>
+    </div>
+  </section>`;
+  }
+
+  // Der Shop ist ein eigener Bereich: er liegt zugeklappt hinter einem Knopf
+  // und nimmt erst Platz ein, wenn jemand ihn wirklich oeffnet. Ohne
+  // JavaScript ist er offen — dann faellt der Knopf weg (siehe .js-Regel).
   return `
   <section class="pad shop-sec" id="shop" aria-labelledby="shop-h">
     <div class="wrap">${sectionHead(n, s, "shop")}
       ${str(s.note) ? `<p class="shop-note rv">${inline(s.note)}</p>` : ""}
-      ${
-        items.length
-          ? `<div class="shop-grid">
+      <button class="shop-open btn solid" type="button" aria-controls="shop-panel" aria-expanded="false"
+              data-more="${esc(UI.shopOpen.replace("{n}", items.length))}"
+              data-less="${esc(UI.shopClose)}">${esc(
+        UI.shopOpen.replace("{n}", items.length)
+      )}</button>
+      <div class="shop-panel" id="shop-panel">
+        <div class="shop-grid">
         ${cards}
-      </div>`
-          : `<div class="empty-state rv"><span class="mono">Shop</span><p>${esc(
-              str(s.emptyText, "Merch ist in Arbeit.")
-            )}</p></div>`
-      }
+        </div>
+${payMethods(s)}
+${form}
+      </div>
     </div>
   </section>`;
 }
 
-function renderBooking(n, s, site) {
-  const f = s.form || {};
-  const formEnabled = f.enabled !== false && !!safeUrl(site.bookingApi);
+/**
+ * Technischer Rider. Steht bewusst nicht mehr neben der Einladung, sondern
+ * eingeklappt unter dem Formular: anfragen soll niedrigschwellig sein, die
+ * Geräteliste interessiert erst den Techniker. Leere Gruppen -> nichts.
+ */
+function bookingRider(s) {
+  const groups = list(s.rider?.groups).filter((g) => list(g?.items).some((i) => str(i?.name)));
+  if (!groups.length || s.rider?.enabled === false) return "";
   return `
-  <section class="booking pad" id="booking" aria-labelledby="booking-h">
-    <span class="section-mark" aria-hidden="true">${esc(str(s.title) + str(s.titleAccent))}</span>
-    <div class="wrap">${sectionHead(n, s, "booking")}
-      <div class="booking-grid">
-        <div class="rv">
-          <span class="mono">${esc(str(s.availableKicker, "Available for"))}</span>
-          <ul class="avail">
-            ${list(s.available)
-              .filter((a) => str(a))
-              .map(
-                (a, i) =>
-                  `<li><span class="mono">${String.fromCharCode(65 + i)}</span>${esc(a)}</li>`
-              )
-              .join("\n            ")}
-          </ul>
-          <div class="btn-row">
-            <a class="btn solid" href="${
-              formEnabled ? "#booking-form" : anchorHref("#contact")
-            }">${esc(
-    str(f.submitLabel, "Request a date")
-  )}</a>
-            ${
-              safeUrl(s.presskitUrl)
-                ? `<a class="btn" href="${href(s.presskitUrl)}" download>${esc(
-                    str(s.presskitLabel, "Presskit (PDF)")
-                  )}</a>`
-                : ""
-            }
-          </div>
-        </div>
-        <div class="rider rv">
-          <span class="mono">${esc(str(s.rider?.kicker, "Preferred Setup"))}</span>
-          ${list(s.rider?.groups)
+      <!-- TODO Kunde: "Preferred setup / CDJs" ist vorerst NICHT geloescht, sondern
+           fakultativ — der Rider ist eingeklappt und oeffnet sich nur auf Wunsch.
+           Offene Frage: soll der Bereich ganz verschwinden? Dann in der Verwaltung
+           unter Booking → Rider "enabled" auf false setzen (oder die Gruppen leeren);
+           der Abschnitt faellt dann komplett weg. -->
+      <details class="rider rv">
+        <summary><span class="mono">${esc(str(s.rider?.kicker, "Preferred setup"))}</span>
+          <span class="rider-hint">${esc(UI.riderOptional)}</span></summary>
+        <div class="rider-body">
+          ${groups
             .map(
               (g) => `<h3>${esc(g.title)}</h3>
           <ul>
@@ -759,6 +1001,40 @@ function renderBooking(n, s, site) {
             .join("\n          ")}
           ${str(s.rider?.note) ? `<p class="note">${inline(s.rider.note)}</p>` : ""}
         </div>
+      </details>`;
+}
+
+function renderBooking(n, s, site) {
+  const f = s.form || {};
+  const formEnabled = f.enabled !== false && !!safeUrl(site.bookingApi);
+  return `
+  <section class="booking pad" id="booking" aria-labelledby="booking-h">
+    <span class="section-mark" aria-hidden="true">${esc(str(s.title) + str(s.titleAccent))}</span>
+    <div class="wrap">${sectionHead(n, s, "booking")}
+      <div class="booking-lead rv">
+        ${str(s.lead) ? `<p class="lede">${inline(s.lead)}</p>` : ""}
+        <span class="mono">${esc(str(s.availableKicker, "Available for"))}</span>
+        <ul class="avail">
+          ${list(s.available)
+            .filter((a) => str(a))
+            .map(
+              (a, i) =>
+                `<li><span class="mono">${String.fromCharCode(65 + i)}</span>${esc(a)}</li>`
+            )
+            .join("\n          ")}
+        </ul>
+        <div class="btn-row">
+          <a class="btn solid" href="${
+            formEnabled ? "#booking-form" : anchorHref("#contact")
+          }">${esc(str(f.submitLabel, "Request a date"))}</a>
+          ${
+            safeUrl(s.presskitUrl)
+              ? `<a class="btn" href="${href(s.presskitUrl)}" download>${esc(
+                  str(s.presskitLabel, "Presskit (PDF)")
+                )}</a>`
+              : ""
+          }
+        </div>
       </div>
       ${
         formEnabled
@@ -769,6 +1045,7 @@ function renderBooking(n, s, site) {
         <div class="bform-head">
           <span class="mono">${esc(str(f.kicker, "Booking request"))}</span>
           <h3>${esc(str(f.title, "Tell me about your event"))}</h3>
+          <p class="bform-required mono">${esc(UI.allRequired)}</p>
         </div>
         <div class="bform-cols">
           <div class="bform-grid">
@@ -778,20 +1055,20 @@ function renderBooking(n, s, site) {
           <label><span class="lbl">${esc(UI.fEmail)} <i aria-hidden="true">*</i></span>
             <input name="email" type="email" required maxlength="160" autocomplete="email">
           </label>
-          <label><span class="lbl">${esc(UI.fEvent)}</span>
-            <input name="event" type="text" maxlength="160">
+          <label><span class="lbl">${esc(UI.fEvent)} <i aria-hidden="true">*</i></span>
+            <input name="event" type="text" required maxlength="160">
           </label>
-          <label><span class="lbl">${esc(UI.fCity)}</span>
-            <input name="city" type="text" maxlength="120">
+          <label><span class="lbl">${esc(UI.fCity)} <i aria-hidden="true">*</i></span>
+            <input name="city" type="text" required maxlength="120">
           </label>
-          <label><span class="lbl">${esc(UI.fDate)}</span>
-            <input name="date" type="date">
+          <label><span class="lbl">${esc(UI.fDate)} <i aria-hidden="true">*</i></span>
+            <input name="date" type="date" required>
           </label>
-          <label><span class="lbl">${esc(UI.fSetLength)}</span>
-            <input name="setLength" type="text" maxlength="60" placeholder="${esc(UI.fSetLengthHint)}">
+          <label><span class="lbl">${esc(UI.fSetLength)} <i aria-hidden="true">*</i></span>
+            <input name="setLength" type="text" required maxlength="60" placeholder="${esc(UI.fSetLengthHint)}">
           </label>
-          <label class="span-2"><span class="lbl">${esc(UI.fMessage)}</span>
-            <textarea name="message" rows="4" maxlength="4000"></textarea>
+          <label class="span-2"><span class="lbl">${esc(UI.fMessage)} <i aria-hidden="true">*</i></span>
+            <textarea name="message" rows="4" required maxlength="4000"></textarea>
           </label>
           <label class="hp" aria-hidden="true" tabindex="-1"><span class="lbl">${esc(UI.fHoneypot)}</span>
             <input name="website" type="text" tabindex="-1" autocomplete="off">
@@ -815,6 +1092,7 @@ function renderBooking(n, s, site) {
       </form>`
           : ""
       }
+${bookingRider(s)}
     </div>
   </section>`;
 }
@@ -848,9 +1126,14 @@ function socialIcon(label, url) {
   return `<svg viewBox="0 0 24 24" aria-hidden="true">${body}</svg>`;
 }
 
-function renderContact(n, s, hasBooking) {
+/** Kanäle mit Namen, aber noch ohne Adresse — die werden nicht verlinkt. */
+const pendingSocials = (s) =>
+  list(s?.socials).filter((x) => str(x?.label) && !safeUrl(x?.url));
+
+function renderContact(n, s, bookingTarget) {
   const mail = str(s.email);
   const socials = list(s.socials).filter((x) => str(x?.label) && safeUrl(x?.url));
+  const pending = pendingSocials(s);
   const meta = `
         <div class="contact-meta">
           ${
@@ -869,7 +1152,18 @@ function renderContact(n, s, hasBooking) {
   return `
   <section class="pad contact accent-block" id="contact" aria-labelledby="contact-h">
     <span class="contact-mark" aria-hidden="true">${esc(str(s.title) + str(s.titleAccent))}</span>
-    <div class="wrap">${sectionHead(n, s, "contact")}
+    <div class="wrap">${sectionHead(n, s, "contact")}${
+      pending.length
+        ? `
+      <!-- TODO Kunde: Fuer diese Kanaele fehlt noch die Adresse, sie werden
+           deshalb weder hier noch im Fuss verlinkt: ${pending
+             .map((x) => str(x.label))
+             .join(", ")}.
+           Eintragen in der Verwaltung unter Kontakt → Kanaele, jeweils die
+           komplette Profil-Adresse (z. B. https://www.instagram.com/… bzw. das
+           Spotify-Kuenstlerprofil ueber "Teilen → Link kopieren"). -->`
+        : ""
+    }
       <div class="contact-grid rv">
         <div class="contact-main">
           ${str(s.kicker) ? `<span class="mono">${esc(s.kicker)}</span>` : ""}
@@ -880,7 +1174,11 @@ function renderContact(n, s, hasBooking) {
             <button class="copy-mail mono" type="button" data-mail="${esc(mail)}" data-done="${esc(
                   UI.copied
                 )}">${esc(UI.copyMail)}</button>
-            ${hasBooking ? `<a class="btn ink" href="#booking">${esc(UI.bookCta)}</a>` : ""}
+            ${
+              bookingTarget
+                ? `<a class="btn ink" href="${esc(bookingTarget)}">${esc(UI.bookCta)}</a>`
+                : ""
+            }
           </div>`
               : ""
           }
@@ -1127,14 +1425,41 @@ const UI_DEFAULTS = {
   cookieText: "Diese Website kommt ohne Tracking und Werbe-Cookies aus. Beim Abschicken einer Anfrage oder Bestellung werden nur die Angaben aus dem Formular gespeichert.",
   cookieOk: "Alles klar",
   replyNote: "Antwort meist innert 48 Stunden",
-  copyMail: "Adresse kopieren",
+  copyMail: "E-Mail kopieren",
   copied: "Kopiert ✓",
-  bookCta: "Jetzt buchen",
+  bookCta: "Booking anfragen",
+  moreStory: "Ganze Story lesen",
+  lessStory: "Weniger anzeigen",
+  showMoreImages: "{n} weitere Bilder",
+  showLessImages: "Weniger Bilder",
+  afterMovies: "After Movies",
+  afterMoviesEmpty: "Die Aftermovies der letzten Shows sind im Schnitt — sie erscheinen hier, sobald sie fertig sind.",
+  allRequired: "Alle Felder sind Pflichtfelder.",
+  riderOptional: "Fakultativ — für die Technik",
+  shopOpen: "Shop öffnen ({n})",
+  shopClose: "Shop schliessen",
+  payTitle: "Bezahlen",
+  payBank: "Banküberweisung",
+  payBankName: "Bank",
+  payHolder: "Empfänger",
+  payNote: "Nach dem Absenden kommt eine Bestätigung mit Betrag und Vermerk. Der Versand geht raus, sobald die Zahlung da ist.",
+  payQrCaption: "QR-Code scannen und bezahlen",
+  payQrMissing: "QR-Code folgt",
+  payPending: "folgt",
+  orderTitle: "Bestellung",
+  orderHeadline: "Wohin darf es gehen?",
+  oProduct: "Artikel",
+  oQuantity: "Anzahl",
+  oStreet: "Strasse und Nummer",
+  oZip: "PLZ",
+  oCity: "Ort",
+  oCountry: "Land",
+  oPayment: "Bezahlung",
+  oSubmit: "Bestellung abschicken",
+  oReplyNote: "Bestätigung mit Zahlungsangaben folgt per Mail",
+  oSuccess: "Danke — deine Bestellung ist da. Die Zahlungsangaben kommen gleich per Mail.",
+  oError: "Das hat nicht geklappt. Schreib mir bitte direkt eine Mail.",
   follow: "Kanäle",
-  twintSend: "Per TWINT bezahlen an",
-  twintRef: "Vermerk",
-  twintNote: "Nach der Zahlung kurz per Mail bestätigen und die Lieferadresse angeben — dann geht dein Teil in den Versand.",
-  twintConfirm: "Bestellung per Mail bestätigen",
   orderMailBody: "Hoi Sam\n\nIch bestelle: {product}\nLieferadresse:\n\nDanke!",
   notFoundTitle: "Nichts hier.",
   notFoundText: "Diese Seite gibt es nicht (mehr). Zurück zum Start — dort steht alles Aktuelle.",
@@ -1179,7 +1504,7 @@ const NO_TRANSLATE = new Set([
   "value", "logoText", "artist", "languages", "nameSpaced", "nameMain",
   // Eigennamen: Clubs, Festivals, Geräte, Genre-Bezeichnungen
   "name", "venue", "inquiryId", "backgroundImage", "price", "currency", "twint",
-  "fit", "focus",
+  "fit", "focus", "mobileLimit",
 ]);
 
 const looksTechnical = (v) =>
@@ -1381,12 +1706,25 @@ function renderPage(c, page, pages, lang, langs) {
   const master = langs[0];
   UI = { ...UI_DEFAULTS, ...(c.ui || {}) };
   const ui = UI;
-  CTX = { page, pages, hideHead: null, prefix: navPrefix(lang, master) };
   const site = c.site;
   const base = site.domain.replace(/\/+$/, "");
   const sections = c.sections || {};
-  const order = page.sections;
   const isHome = !page.slug;
+  const hasShows = list(sections.shows?.items).some((item) => str(item?.name));
+  const order = list(page.sections).filter(
+    (key) =>
+      sections[key] &&
+      sections[key].enabled !== false &&
+      (key !== "shows" || hasShows)
+  );
+  const effectivePage = { ...page, sections: order };
+  CTX = { page: effectivePage, pages, hideHead: null, prefix: navPrefix(lang, master) };
+  const hasBooking = order.includes("booking");
+  const hasBookingForm =
+    hasBooking &&
+    sections.booking?.form?.enabled !== false &&
+    !!safeUrl(site.bookingApi);
+  const bookingTarget = hasBooking ? (hasBookingForm ? "#booking-form" : "#booking") : "";
 
   const renderers = {
     about: renderAbout,
@@ -1395,9 +1733,9 @@ function renderPage(c, page, pages, lang, langs) {
     shows: renderShows,
     references: renderReferences,
     gallery: renderGallery,
-    shop: (n, s) => renderShop(n, s, str(sections.contact?.email)),
+    shop: (n, s) => renderShop(n, s, str(sections.contact?.email), site),
     booking: (n, s) => renderBooking(n, s, site),
-    contact: (n, s) => renderContact(n, s, order.includes("booking")),
+    contact: (n, s) => renderContact(n, s, bookingTarget),
   };
 
   const norm = (v) => String(v || "").toLowerCase().replace(/[^a-z0-9]/g, "");
@@ -1453,6 +1791,11 @@ function renderPage(c, page, pages, lang, langs) {
     </nav>`
       : "";
 
+  // Die Kanäle stehen auf jeder Seite im Fuss, nicht nur im Kontakt-Abschnitt.
+  const footSocials = list(sections.contact?.socials).filter(
+    (x) => str(x?.label) && safeUrl(x?.url)
+  );
+
   const accent = color(site.accentColor, "#2e6bff");
   const ink = color(site.themeColor, "#05070e");
   const ogImage = absolute(base, cdnUrl(site.ogImage, 1200));
@@ -1485,6 +1828,14 @@ function renderPage(c, page, pages, lang, langs) {
   </div>`
       : "";
 
+  const configuredHeroCta = str(c.hero?.ctaHref, "#booking");
+  const heroCtaHref =
+    configuredHeroCta === "#booking" &&
+    sections.booking?.enabled !== false &&
+    sections.booking?.form?.enabled !== false
+      ? "#booking-form"
+      : configuredHeroCta;
+
   const hero =
     page.hero === "none"
       ? ""
@@ -1504,15 +1855,19 @@ function renderPage(c, page, pages, lang, langs) {
     </div>
     <div class="hero-inner">
       ${c.hero?.kicker ? `<p class="mono">${esc(c.hero.kicker)}</p>` : ""}
-      <h1>${
-        c.hero?.nameSpaced ? `<span class="sp">${esc(c.hero.nameSpaced)}</span>` : ""
+      <h1${
+        c.hero?.nameSpaced ? ` aria-label="${esc(site.artist)}"` : ""
+      }>${
+        c.hero?.nameSpaced
+          ? `<span class="sp">${esc(c.hero.nameSpaced)}</span> `
+          : ""
       }${esc(c.hero?.nameMain || site.artist)}</h1>
       <div class="hero-sub">
         ${c.hero?.tagline ? `<span class="tag">${esc(c.hero.tagline)}</span>` : ""}
         ${c.hero?.meta ? `<span class="mono">${esc(c.hero.meta)}</span>` : ""}
         ${
           c.hero?.ctaLabel
-            ? `<a class="hero-cta" href="${anchorHref(str(c.hero.ctaHref, "#booking"))}">${esc(
+            ? `<a class="hero-cta" href="${anchorHref(heroCtaHref)}">${esc(
                 c.hero.ctaLabel
               )}<span class="cta-arr" aria-hidden="true">→</span></a>`
             : ""
@@ -1579,7 +1934,7 @@ function renderPage(c, page, pages, lang, langs) {
 <html lang="${esc(site.lang || "en")}">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 
   <!-- Primary SEO -->
   <title>${esc(title)}</title>
@@ -1687,13 +2042,9 @@ ${body}
 
   <a class="totop" href="#top" aria-label="${esc(ui.toTop || "Nach oben")}">↑</a>
 ${
-  order.includes("booking")
-    ? `  <div class="actbar" id="actbar" aria-hidden="false">
-    <a class="btn solid" href="#booking">${esc(str(sections.booking?.navLabel, "Booking"))}</a>${
-        sections.shop && sections.shop.enabled !== false && order.includes("shop")
-          ? `<a class="btn" href="#shop">${esc(str(sections.shop.navLabel, "Shop"))}</a>`
-          : ""
-      }
+  hasBooking
+    ? `  <div class="actbar" id="actbar" aria-hidden="true">
+    <a class="btn solid" href="${esc(bookingTarget)}">${esc(ui.bookCta)}</a>
   </div>
 `
     : ""
@@ -1704,7 +2055,26 @@ ${
     <button class="btn sm solid" id="cookie-ok" type="button">${esc(ui.cookieOk)}</button>
   </aside>
 
-  <footer>
+  <footer>${
+    footSocials.length
+      ? `
+    <div class="wrap foot-social">
+      <span class="mono">${esc(ui.follow)}</span>
+      <ul>
+        ${footSocials
+          .map(
+            (x) =>
+              `<li><a href="${href(x.url)}" target="_blank" rel="noopener me" title="${esc(
+                x.label
+              )}"><span aria-hidden="true">${socialIcon(x.label, x.url)}</span><span>${esc(
+                x.label
+              )}</span></a></li>`
+          )
+          .join("\n        ")}
+      </ul>
+    </div>`
+      : ""
+  }
     <div class="wrap foot">
       ${
         langs.length > 1
@@ -1816,7 +2186,7 @@ function renderLegal(c, lang, langs) {
 <html lang="${esc(lang)}">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>${esc(t.title)} — ${artist}</title>
   <meta name="robots" content="noindex, follow">
   <link rel="stylesheet" href="${BASE}/assets/site.css">
@@ -1915,7 +2285,7 @@ function render404(c, langs) {
 <html lang="${esc(langs[0] || "de")}">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>404 — ${esc(site.artist)}</title>
   <meta name="robots" content="noindex, follow">
   <link rel="stylesheet" href="${BASE}/assets/site.css">

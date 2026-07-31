@@ -84,7 +84,6 @@ export async function sendeWunsch({ text, section, sectionTitle, label, url, lan
     createdAt: new Date().toISOString(),
     createdBy: S.user?.email || "Verwaltung",
   };
-  // Quantus ordnet die Aufgabe diesem Projekt zu, sofern eines eingestellt ist.
   if (QUANTUS_PROJECT) eintrag.projectExternalId = QUANTUS_PROJECT;
 
   const ref = await db.ref(QUANTUS_INBOX).push(eintrag);
@@ -195,8 +194,6 @@ window.addEventListener("message", (e) => {
   if (!frame || e.source !== frame.contentWindow) return;
   let erlaubt = "";
   try {
-    // Die Website-Adresse darf auch relativ sein ("/site" in der
-    // Präsentations-Fassung) — dann gilt die eigene Herkunft.
     erlaubt = new URL(basisUrl() || "/", location.href).origin;
   } catch (err) {
     return;
@@ -213,7 +210,9 @@ export function renderPreview() {
   const master = String(S.content?.site?.lang || "de");
   const alleSprachen = [master, ...languages()];
   let lang = master;
-  let breit = true;
+  // Mobile ist der kritische Auslieferungsfall und deshalb der erste Blick.
+  // 393 × 852 entspricht dem Prüfformat der aktuellen iPhone-Darstellung.
+  let breit = false;
 
   frame = el("iframe", {
     class: "vorschau-frame",
@@ -222,7 +221,12 @@ export function renderPreview() {
     loading: "lazy",
   });
 
-  const buehne = el("div", { class: "vorschau-buehne desktop" }, [frame]);
+  const buehne = el("div", { class: "vorschau-buehne mobil" }, [frame]);
+  const geraetStatus = el(
+    "span",
+    { class: "vorschau-geraet mono", "aria-live": "polite" },
+    "Handy · 393 × 852"
+  );
 
   const neuLaden = () => {
     armed = false;
@@ -257,9 +261,10 @@ export function renderPreview() {
         breit = !breit;
         buehne.className = "vorschau-buehne " + (breit ? "desktop" : "mobil");
         geraetKnopf.textContent = breit ? "Handy-Ansicht" : "Desktop-Ansicht";
+        geraetStatus.textContent = breit ? "Desktop · responsive" : "Handy · 393 × 852";
       },
     },
-    "Handy-Ansicht"
+    "Desktop-Ansicht"
   );
 
   zeichneListe();
@@ -271,7 +276,7 @@ export function renderPreview() {
         el(
           "p",
           { class: "muted" },
-          "Die veröffentlichte Website — so, wie sie gerade online ist. Im Wunsch-Modus auf eine Stelle tippen, den Wunsch eintippen: daraus entsteht sofort eine Aufgabe in Quantus."
+          "Die veröffentlichte Website — standardmässig im mobilen Prüfformat und exakt mit dem Live-Auftritt verbunden. Im Wunsch-Modus auf eine Stelle tippen, den Wunsch eintippen: daraus entsteht sofort eine Aufgabe in Quantus."
         ),
       ]),
     ]),
@@ -279,6 +284,7 @@ export function renderPreview() {
       el("div", { class: "quick" }, [
         wunschKnopf,
         geraetKnopf,
+        geraetStatus,
         sprachWahl,
         el("button", { class: "btn ghost", onclick: neuLaden }, "Neu laden"),
         el(

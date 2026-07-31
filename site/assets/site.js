@@ -140,23 +140,100 @@
     }
   });
 
+  /* ----------------------------------------- mobile Inhaltsverdichtung */
+  // Die lange Künstlergeschichte bleibt auf grossen Bildschirmen vollständig
+  // sichtbar. Auf dem Handy startet sie bewusst kurz und lässt sich bei
+  // Interesse öffnen — so bleibt der Weg von Sound zu Booking klar.
+  var aboutToggle = document.querySelector(".about-toggle");
+  var aboutMore = document.getElementById("about-more");
+  if (aboutToggle && aboutMore) {
+    aboutToggle.addEventListener("click", function () {
+      var open = !aboutMore.classList.contains("expanded");
+      aboutMore.classList.toggle("expanded", open);
+      aboutToggle.setAttribute("aria-expanded", open ? "true" : "false");
+      aboutToggle.textContent = aboutToggle.getAttribute(open ? "data-less" : "data-more") || "";
+    });
+  }
+
+  // Mobil zunächst nur die kuratierte Auswahl zeigen. Weitere Bilder bleiben
+  // im Dokument und in der Lightbox vorhanden, verlängern die Seite aber erst
+  // nach einer bewussten Entscheidung.
+  var galleryToggle = document.querySelector(".gal-more");
+  var gallery = document.getElementById("gal");
+  if (galleryToggle && gallery) {
+    galleryToggle.addEventListener("click", function () {
+      var open = !gallery.classList.contains("expanded");
+      gallery.classList.toggle("expanded", open);
+      galleryToggle.setAttribute("aria-expanded", open ? "true" : "false");
+      galleryToggle.textContent =
+        galleryToggle.getAttribute(open ? "data-less" : "data-more") || "";
+    });
+  }
+
+  // Der Shop ist ein eigener Bereich hinter einem Knopf: er liegt zugeklappt
+  // da und oeffnet sich erst auf Wunsch. Ein Link auf #shop-panel oder
+  // #order-form (etwa aus dem Menue) klappt ihn automatisch auf.
+  var shopToggle = document.querySelector(".shop-open");
+  var shopPanel = document.getElementById("shop-panel");
+  var setShop = function (open) {
+    if (!shopPanel || !shopToggle) return;
+    shopPanel.classList.toggle("expanded", open);
+    shopToggle.setAttribute("aria-expanded", open ? "true" : "false");
+    shopToggle.textContent = shopToggle.getAttribute(open ? "data-less" : "data-more") || "";
+  };
+  if (shopToggle && shopPanel) {
+    setShop(false);
+    shopToggle.addEventListener("click", function () {
+      setShop(!shopPanel.classList.contains("expanded"));
+    });
+    document.addEventListener("click", function (e) {
+      var a = e.target.closest && e.target.closest('a[href*="#order-form"],a[href*="#shop"]');
+      if (a) setShop(true);
+    });
+    if (/#(shop-panel|order-form)$/.test(location.hash)) setShop(true);
+  }
+
+  // „Kaufen" an einer Ware waehlt sie im Bestellformular gleich aus.
+  document.addEventListener("click", function (e) {
+    var jump = e.target.closest && e.target.closest(".order-jump");
+    if (!jump) return;
+    var sel = document.querySelector('#order-form select[name="product"]');
+    if (!sel) return;
+    var wanted = jump.getAttribute("data-product");
+    Array.prototype.forEach.call(sel.options, function (o) {
+      if (o.value === wanted) sel.value = o.value;
+    });
+  });
+
   /* -------------------------------------------- scroll progress + active nav */
   var progress = document.getElementById("progress");
   var toTop = document.querySelector(".totop");
   // Daumen-Leiste: erscheint nach dem ersten Bildschirm, verschwindet, sobald
   // Booking/Kontakt selbst im Bild sind (sonst verdeckt sie das Formular)
   var actbar = document.getElementById("actbar");
+  var fullHero = document.querySelector(".hero:not(.hero-compact)");
+  var pageHeader = document.querySelector("header");
   var nearAction = false;
+  var updateActbar = function () {
+    if (!actbar) return;
+    var pastHero = fullHero
+      ? fullHero.getBoundingClientRect().bottom <= (pageHeader ? pageHeader.offsetHeight : 0)
+      : window.scrollY > window.innerHeight;
+    var show = pastHero && !nearAction;
+    actbar.classList.toggle("show", show);
+    actbar.setAttribute("aria-hidden", show ? "false" : "true");
+  };
   if (actbar && "IntersectionObserver" in window) {
     var actTargets = ["booking", "contact"].map(function (id) { return document.getElementById(id); }).filter(Boolean);
     var actSeen = {};
     var aio = new IntersectionObserver(function (es) {
       es.forEach(function (e) { actSeen[e.target.id] = e.isIntersecting; });
       nearAction = Object.keys(actSeen).some(function (k) { return actSeen[k]; });
-      actbar.classList.toggle("show", window.scrollY > 500 && !nearAction);
+      updateActbar();
     }, { rootMargin: "0px 0px -20% 0px" });
     actTargets.forEach(function (t) { aio.observe(t); });
   }
+  updateActbar();
   var subnav = document.querySelector(".subnav");
   var links = Array.prototype.slice.call(
     document.querySelectorAll('.subnav a[href^="#"], header nav a[href^="#"]')
@@ -180,7 +257,7 @@
         progress.style.width = (h > 0 ? (window.scrollY / h) * 100 : 0) + "%";
       }
       if (toTop) toTop.classList.toggle("show", window.scrollY > 700);
-      if (actbar) actbar.classList.toggle("show", window.scrollY > 500 && !nearAction);
+      updateActbar();
       var y = window.scrollY + window.innerHeight * 0.32;
       var current = null;
       targets.forEach(function (t) {
@@ -670,11 +747,24 @@
         data[k] = f ? String(f.value || "").trim() : "";
       });
 
-      // Pflichtfelder
+      // Pflichtfelder — es sind alle sichtbaren Felder. Die Mindestlängen
+      // halten "a" oder "-" als Antwort fern; die E-Mail wird zusätzlich auf
+      // ihre Form geprüft.
       var bad = null;
-      [["name", 2], ["email", 5]].forEach(function (p) {
+      [
+        ["name", 2],
+        ["email", 5],
+        ["event", 2],
+        ["city", 2],
+        ["date", 1],
+        ["setLength", 1],
+        ["message", 2],
+      ].forEach(function (p) {
         var f = form.elements[p[0]];
-        var ok = data[p[0]].length >= p[1] && (p[0] !== "email" || /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(data.email));
+        if (!f) return;
+        var ok =
+          data[p[0]].length >= p[1] &&
+          (p[0] !== "email" || /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(data.email));
         f.setAttribute("aria-invalid", ok ? "false" : "true");
         if (!ok && !bad) bad = f;
       });
@@ -718,6 +808,90 @@
     });
   }
 
+  /* ----------------------------------------------------------- bestellform */
+  // Versand braucht vollstaendige Angaben — deshalb ist hier jedes Feld
+  // Pflicht. Die Bestellung geht in denselben Eingang wie die Booking-
+  // Anfragen, aber mit kind:"order" gekennzeichnet.
+  var oform = document.getElementById("order-form");
+  if (oform) {
+    var oEndpoint = oform.getAttribute("data-endpoint");
+    var oSending = oform.getAttribute("data-sending") || "…";
+    var oInvalid = oform.getAttribute("data-invalid") || "";
+    var oMsg = oform.querySelector(".bform-msg");
+    var oOpened = Date.now();
+    var FIELDS = ["product", "quantity", "name", "email", "street", "zip", "city", "country"];
+
+    var setOMsg = function (text, cls) {
+      if (!oMsg) return;
+      oMsg.textContent = text;
+      oMsg.className = "bform-msg" + (cls ? " " + cls : "");
+    };
+
+    oform.addEventListener("submit", function (e) {
+      e.preventDefault();
+      if (oform.classList.contains("busy")) return;
+
+      var data = {};
+      FIELDS.forEach(function (k) {
+        var f = oform.elements[k];
+        data[k] = f ? String(f.value || "").trim() : "";
+      });
+      var pay = oform.querySelector('input[name="payment"]:checked');
+      data.payment = pay ? pay.value : "";
+
+      var bad = null;
+      FIELDS.forEach(function (k) {
+        var f = oform.elements[k];
+        if (!f) return;
+        var ok = data[k].length >= (k === "zip" ? 3 : 2);
+        if (k === "email") ok = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(data.email);
+        if (k === "quantity") ok = Number(data.quantity) >= 1 && Number(data.quantity) <= 20;
+        f.setAttribute("aria-invalid", ok ? "false" : "true");
+        if (!ok && !bad) bad = f;
+      });
+      if (!bad && oform.querySelector('input[name="payment"]') && !data.payment) {
+        bad = oform.querySelector('input[name="payment"]');
+      }
+      if (bad) {
+        setOMsg(oInvalid, "err");
+        bad.focus();
+        return;
+      }
+
+      var hp = oform.elements.website;
+      if ((hp && hp.value) || Date.now() - oOpened < 2500) {
+        oform.classList.add("sent");
+        setOMsg(oMsg ? oMsg.getAttribute("data-success") : "Danke!", "ok");
+        return;
+      }
+
+      data.kind = "order";
+      data.createdAt = new Date().toISOString();
+      data.status = "new";
+      data.source = location.hostname || "website";
+
+      oform.classList.add("busy");
+      setOMsg(oSending, "");
+
+      fetch(oEndpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      })
+        .then(function (res) {
+          if (!res.ok) throw new Error("HTTP " + res.status);
+          oform.classList.remove("busy");
+          oform.classList.add("sent");
+          oform.reset();
+          setOMsg(oMsg.getAttribute("data-success"), "ok");
+        })
+        .catch(function () {
+          oform.classList.remove("busy");
+          setOMsg(oMsg.getAttribute("data-error"), "err");
+        });
+    });
+  }
+
   /* ------------------------------------------------------------------ jahr */
   var yr = document.getElementById("yr");
   if (yr) yr.textContent = new Date().getFullYear();
@@ -726,8 +900,25 @@
   var copyBtn = document.querySelector(".copy-mail");
   if (copyBtn) {
     var copyLabel = copyBtn.textContent;
+    var fallbackCopy = function (mail, done) {
+      var tmp = document.createElement("textarea");
+      tmp.value = mail;
+      tmp.setAttribute("readonly", "");
+      tmp.style.position = "fixed";
+      tmp.style.left = "-9999px";
+      tmp.style.opacity = "0";
+      document.body.appendChild(tmp);
+      tmp.select();
+      tmp.setSelectionRange(0, tmp.value.length);
+      var copied = false;
+      try { copied = document.execCommand("copy"); } catch (e) {}
+      tmp.remove();
+      if (copied) done();
+      return copied;
+    };
     copyBtn.addEventListener("click", function () {
       var mail = copyBtn.getAttribute("data-mail") || "";
+      if (!mail) return;
       var done = function () {
         copyBtn.classList.add("done");
         copyBtn.textContent = copyBtn.getAttribute("data-done") || "OK";
@@ -737,17 +928,11 @@
         }, 1800);
       };
       if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(mail).then(done, function () {});
+        navigator.clipboard.writeText(mail).then(done, function () {
+          fallbackCopy(mail, done);
+        });
       } else {
-        // Fallback ohne Clipboard-API: unsichtbares Feld markieren + kopieren
-        var tmp = document.createElement("textarea");
-        tmp.value = mail;
-        tmp.style.position = "fixed";
-        tmp.style.left = "-9999px";
-        document.body.appendChild(tmp);
-        tmp.select();
-        try { document.execCommand("copy"); done(); } catch (e) {}
-        tmp.remove();
+        fallbackCopy(mail, done);
       }
     });
   }
