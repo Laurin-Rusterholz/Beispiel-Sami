@@ -596,6 +596,50 @@ function go(id) {
   toggleSidebar(false);
 }
 
+/**
+ * Zeichen für die Navigation. Einfarbige Striche, aus einem Guss gezeichnet —
+ * keine Fremd-Bibliothek, keine Bilddateien. Der Schlüssel ist die Ansicht;
+ * was nicht aufgeführt ist, bekommt das neutrale Zeichen.
+ */
+const NAV_ICONS = {
+  dashboard: "M4 13h6V4H4zM14 20h6v-9h-6zM4 20h6v-4H4zM14 8h6V4h-6z",
+  preview: "M3 5h18v12H3zM9 21h6M12 17v4",
+  design: "M4 20 8 8l4 12M6 16h4M14 20V8l5 5-5 5",
+  seo: "M11 5a6 6 0 1 0 0 12 6 6 0 0 0 0-12M15.5 15.5 20 20",
+  pages: "M6 3h8l4 4v14H6zM14 3v4h4",
+  layout: "M4 5h16v4H4zM4 12h7v7H4zM14 12h6v7h-6z",
+  i18n: "M4 6h11M9 4v2c0 4-2 7-5 9M7 11c1.5 3 4 5 6 6M13 20l4-9 4 9M14.5 17h5",
+  about: "M12 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7M5 20c0-3.5 3-6 7-6s7 2.5 7 6",
+  sound: "M4 14v-4M8 17V7M12 20V4M16 17V7M20 14v-4",
+  experience: "m12 3 2.6 5.6 6 .8-4.4 4.2 1.1 6-5.3-3-5.3 3 1.1-6L3.4 9.4l6-.8z",
+  shows: "M5 5h14v15H5zM5 9h14M9 3v4M15 3v4M9 14h2",
+  references: "M5 20V6l7-3 7 3v14M9 20v-5h6v5",
+  gallery: "M3 5h18v14H3zM3 15l5-4 4 3 3-3 6 5",
+  shop: "M5 8h14l-1 12H6zM9 8V6a3 3 0 0 1 6 0v2",
+  booking: "M4 6h16v14H4zM4 10h16M8 3v4M16 3v4M8 14h4",
+  contact: "M3 6h18v12H3zM3 7l9 6 9-6",
+  media: "M3 5h18v14H3zM10 9.5v5l4.5-2.5z",
+  inbox: "M3 13h5l1.5 3h5L16 13h5M3 13 6 5h12l3 8v6H3z",
+  publish: "M12 19V5M6 11l6-6 6 6",
+  settings: "M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6M12 2.5l1.4 2.4 2.7-.4 1 2.6 2.4 1.4-1 2.5 1 2.5-2.4 1.4-1 2.6-2.7-.4L12 21.5l-1.4-2.4-2.7.4-1-2.6-2.4-1.4 1-2.5-1-2.5 2.4-1.4 1-2.6 2.7.4z",
+};
+
+function navIcon(id) {
+  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  svg.setAttribute("viewBox", "0 0 24 24");
+  svg.setAttribute("class", "nav-ico");
+  svg.setAttribute("aria-hidden", "true");
+  const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+  path.setAttribute("d", NAV_ICONS[id] || "M5 12h14M12 5v14");
+  path.setAttribute("fill", "none");
+  path.setAttribute("stroke", "currentColor");
+  path.setAttribute("stroke-width", "1.6");
+  path.setAttribute("stroke-linecap", "round");
+  path.setAttribute("stroke-linejoin", "round");
+  svg.appendChild(path);
+  return svg;
+}
+
 function renderSidebar() {
   const nav = el("nav", { class: "nav", id: "sidebar" });
   NAV.forEach((g) => {
@@ -610,7 +654,11 @@ function renderSidebar() {
             dataset: { nav: item.id },
             onclick: () => go(item.id),
           },
-          [el("span", {}, item.label), badge ? el("span", { class: "nav-badge" }, String(badge)) : null]
+          [
+            navIcon(item.id),
+            el("span", { class: "nav-label" }, item.label),
+            badge ? el("span", { class: "nav-badge" }, String(badge)) : null,
+          ]
         )
       );
     });
@@ -689,7 +737,7 @@ function renderShell() {
         }, "☰"),
         el("div", { class: "brand" }, [
           el("span", { class: "brand-mark" }, "◆"),
-          el("span", {}, "Sam Sparkling — Verwaltung"),
+          el("span", { class: "brand-text" }, "Sam Sparkling"),
           DEMO
             ? el(
                 "span",
