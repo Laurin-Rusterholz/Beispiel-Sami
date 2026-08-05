@@ -15,6 +15,13 @@
  *   sind Zeichen für Zeichen dieselben wie im Original; die Unterschiede der
  *   Vorführ-Fassung stecken ausschliesslich in diesen Schaltern.
  *
+ * Dazu kommen Dateien, die es nur hier gibt (`nurHier`, unten). Sie stammen
+ * aus keinem Original und werden deshalb nie überschrieben — angehängt werden
+ * sie ausschliesslich über config.js, damit index.html & Co. unangetastet
+ * bleiben und dieses Skript sie gefahrlos nachziehen kann. Wer hier etwas
+ * ergänzt: denselben Weg gehen, sonst überschreibt der nächste Lauf die
+ * Änderung stillschweigend.
+ *
  * Aufruf:  node scripts/quellen-holen.mjs [--pruefen]
  *          --pruefen  meldet nur Unterschiede, kopiert nichts
  */
@@ -53,6 +60,8 @@ const QUELLEN = [
     // Bleibt in der Demo bewusst anders: DEMO = true, Projekt, Website-Adresse
     eigen: ["js/config.js"],
     entfernen: ["passwort.html"],
+    // Gibt es nur in der Demo — von config.js nachgeladen, nicht aus index.html
+    nurHier: ["js/demo-persistence.js", "demo-storage-note.css", "DEMO-SPEICHERUNG.md"],
   },
 ];
 
@@ -106,9 +115,19 @@ for (const q of QUELLEN) {
     if (!NUR_PRUEFEN) await rm(weg, { force: true });
   }
 
+  // Was es nur hier gibt, kommt im Original nicht vor und wird darum von der
+  // Schleife oben gar nicht gesehen — hier trotzdem melden, damit sichtbar
+  // bleibt, woraus der Vorführ-Modus besteht, und auffällt, wenn etwas fehlt.
+  for (const rel of q.nurHier || []) {
+    if (existsSync(join(q.nach, rel))) continue;
+    console.log(`  FEHLT     ${q.nach.split("/").pop()}/${rel} (gehört nur zur Demo)`);
+    abweichungen++;
+  }
+
   console.log(
     `[${q.name}] ${liste.length} Dateien geprüft — ${neu} neu, ${geaendert} geändert` +
-      (q.eigen.length ? `, unangetastet: ${q.eigen.join(", ")}` : "")
+      (q.eigen.length ? `, unangetastet: ${q.eigen.join(", ")}` : "") +
+      ((q.nurHier || []).length ? `, nur hier: ${q.nurHier.join(", ")}` : "")
   );
 }
 

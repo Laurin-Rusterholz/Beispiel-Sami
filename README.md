@@ -71,6 +71,17 @@ Einstellungen werden gar nicht erst geladen.
 
 Erkennbar ist das an der Marke **Vorführ-Modus** oben in der Verwaltung.
 
+Was in der Vorführung geändert wird, bleibt trotzdem über das Neuladen hinweg
+stehen: die Verwaltung legt den Stand im Browser ab (`localStorage`), erkennbar
+am Zusatz *· lokal gespeichert* an der Marke. Die Datenbank sieht davon nichts.
+`verwaltung/?resetDemo=1` wirft den gemerkten Stand weg und zeigt wieder den
+echten Inhalt.
+
+Bilder und Videos sind dabei die echten: die Mediathek und alle Vorschauen
+lesen `samsparking/media` mit, denselben öffentlich lesbaren Knoten, aus dem
+auch die echte Verwaltung ihre Medien holt. Nur Hochladen und Löschen sind
+stillgelegt.
+
 ## Veröffentlichen
 
 Zwei Wege, beide eingerichtet:
@@ -118,6 +129,15 @@ Genau **eine** Datei ist bewusst anders: `verwaltung/js/config.js` mit
 `DEMO = true`, `QUANTUS_PROJECT = "PRJ-YWRM4"` und `DEFAULT_SITE_URL = "../site"`.
 Alles andere ist Zeichen für Zeichen identisch — der Vorführ-Modus steckt
 vollständig in diesen Schaltern, nicht in abgewandeltem Code.
+
+Dazu kommen drei Dateien, die es im Original gar nicht gibt: die Demo-Speicherung
+(`verwaltung/js/demo-persistence.js`), ihr Hinweis an der Marke
+(`verwaltung/demo-storage-note.css`) und `verwaltung/DEMO-SPEICHERUNG.md`.
+Eingehängt werden sie am Ende von `config.js` (`if (DEMO) import(…)`) — bewusst
+nicht über ein zusätzliches `<script>` in `index.html`, denn jede Zeile, die
+dort dazukäme, würde beim nächsten `quellen-holen.mjs` stillschweigend wieder
+verschwinden. Wer etwas ergänzt, geht denselben Weg und trägt die Datei in
+`nurHier` im Skript nach.
 
 Nachziehen, wenn sich in den Originalen etwas getan hat:
 

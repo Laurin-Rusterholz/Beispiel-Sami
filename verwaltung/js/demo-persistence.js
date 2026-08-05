@@ -1,3 +1,11 @@
+/* ==========================================================================
+   Demo-Speicherung — nur in der Präsentations-Fassung
+   Geladen aus config.js (`if (DEMO) import(…)`), damit index.html unverändert
+   bleibt. Hält den Inhalt der Vorführ-Verwaltung im localStorage fest: die
+   echte Datenbank wird nie beschrieben, ein Neuladen wirft die Änderungen aber
+   trotzdem nicht weg. `?resetDemo=1` setzt zurück auf den echten Inhalt.
+   ========================================================================== */
+
 import { S, onChange, emit } from "./store.js";
 import { DEMO } from "./config.js";
 
@@ -5,6 +13,23 @@ const KEY = "samsparkling-demo-content-v1";
 const META_KEY = "samsparkling-demo-meta-v1";
 
 if (DEMO) {
+  // Hinweis "· lokal gespeichert" an der Marke "Vorführ-Modus" — gehört zu
+  // dieser Ergänzung, also wird das Stilblatt auch von hier geladen.
+  const stil = document.createElement("link");
+  stil.rel = "stylesheet";
+  stil.href = new URL("../demo-storage-note.css", import.meta.url).href;
+  document.head.appendChild(stil);
+
+  // Zurück auf Anfang: gespeicherten Stand wegwerfen, bevor er gelesen wird.
+  const params = new URLSearchParams(location.search);
+  if (params.get("resetDemo") === "1") {
+    localStorage.removeItem(KEY);
+    localStorage.removeItem(META_KEY);
+    params.delete("resetDemo");
+    const rest = params.toString();
+    history.replaceState(null, "", location.pathname + (rest ? `?${rest}` : "") + location.hash);
+  }
+
   let bootstrapped = false;
   let timer = 0;
 
