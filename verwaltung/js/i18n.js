@@ -493,11 +493,7 @@ export function renderI18n() {
         el(
           "p",
           { class: "muted" },
-          // Die Hauptsprache steht im Inhalt und ist nicht mehr fest Deutsch —
-          // der Satz nannte sonst die falsche Sprache.
-          `Hauptsprache ist ${
-            LANG_LABEL[S.content?.site?.lang] || S.content?.site?.lang || "die eingestellte Sprache"
-          } — was hier steht, ist die Übersetzung. Fehlt eine, zeigt die Website an dieser Stelle den Text der Hauptsprache.`
+          "Deutsch ist die Hauptsprache — was hier steht, ist die Übersetzung. Fehlt eine, zeigt die Website an dieser Stelle den deutschen Text."
         ),
       ]),
     ]),
