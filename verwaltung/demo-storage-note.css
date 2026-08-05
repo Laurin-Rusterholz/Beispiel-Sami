@@ -1,1 +1,5 @@
-.demo-chip::after{content:" · lokal gespeichert";color:#9db8ff}.demo-chip{white-space:nowrap}@media(max-width:700px){.demo-chip::after{content:" · gespeichert"}}
+/* Die Marke "Vorführ-Modus" sagt hier zusätzlich, dass lokal gespeichert wird.
+   Farbe und Form kommen aus .demo-chip in admin.css — seit der hellen
+   Verwaltung würde eine eigene Farbe hier nicht mehr dazu passen. */
+.demo-chip::after{content:" · lokal gespeichert"}
+@media(max-width:700px){.demo-chip::after{content:" · gespeichert"}}

@@ -5,6 +5,19 @@ const KEY = "samsparkling-demo-content-v1";
 const META_KEY = "samsparkling-demo-meta-v1";
 
 if (DEMO) {
+  // `?resetDemo=1` wirft den lokal gespeicherten Stand weg, bevor irgendetwas
+  // davon zurückgeholt wird — die Vorführung fängt dann wieder beim echten
+  // Inhalt an. Die Adresse wird gleich wieder sauber gemacht, damit ein
+  // späteres Neuladen nicht erneut zurücksetzt.
+  const params = new URLSearchParams(location.search);
+  if (params.get("resetDemo") === "1") {
+    localStorage.removeItem(KEY);
+    localStorage.removeItem(META_KEY);
+    params.delete("resetDemo");
+    const rest = params.toString();
+    history.replaceState(null, "", location.pathname + (rest ? `?${rest}` : "") + location.hash);
+  }
+
   let bootstrapped = false;
   let timer = 0;
 

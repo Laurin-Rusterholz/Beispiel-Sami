@@ -124,11 +124,27 @@ function withDefaults(target, defaults) {
  * gibt. Bilder, Videos, Termine, Farben und Links bleiben unangetastet.
  * Dieselbe Regel wie der Knopf „Texte umstellen" in der Verwaltung.
  */
-function adoptTexts(live, template) {
+export function adoptTexts(live, template) {
   for (const [path, text] of collectStrings(template)) {
     const keys = path.split(".");
     let cur = live;
-    for (let i = 0; i < keys.length - 1 && cur != null; i++) cur = cur[keys[i]];
+    let tpl = template;
+    let mismatch = false;
+    for (let i = 0; i < keys.length - 1 && cur != null; i++) {
+      // Übernommen wird Feld für Feld über den Pfad. In Listen zählt dabei nur
+      // die Position — stehen dort unterschiedlich viele Einträge, gehört
+      // Position 2 der Vorlage nicht zu Position 2 des Live-Inhalts. Genau so
+      // ist "Luzern" schon einmal auf "Sektor 11" gerutscht. Solche Pfade
+      // bleiben deshalb unangetastet.
+      if (Array.isArray(cur) && Array.isArray(tpl) && cur.length !== tpl.length) {
+        mismatch = true;
+        break;
+      }
+      cur = cur[keys[i]];
+      tpl = tpl == null ? null : tpl[keys[i]];
+    }
+    if (mismatch) continue;
+    if (Array.isArray(cur) && Array.isArray(tpl) && cur.length !== tpl.length) continue;
     const last = keys[keys.length - 1];
     if (cur && typeof cur === "object" && cur[last] !== undefined) cur[last] = text;
   }
@@ -618,7 +634,10 @@ function renderReferences(n, s) {
           .map((v, i) => {
             const url = safeUrl(v.url) || anchor("#booking");
             const ext = /^https?:/i.test(url) ? ' target="_blank" rel="noopener"' : "";
-            return `<li><a href="${esc(url)}"${ext}><span class="venue-idx">${num(
+            // Die Liste ist nach Wichtigkeit sortiert. Die oben stehenden
+            // Referenzen tragen "highlight" und bekommen die ganze Zeilenbreite
+            // — so ist die Reihenfolge auch optisch eine Rangfolge.
+            return `<li${v.highlight ? ' class="lead"' : ""}><a href="${esc(url)}"${ext}><span class="venue-idx">${num(
               i + 1
             )}</span><span class="venue-name">${esc(v.name)}</span><span class="venue-city">${esc(
               v.city
@@ -639,18 +658,70 @@ function renderReferences(n, s) {
   </section>`;
 }
 
+/**
+ * After Movies — die Rückblick-Videos zu gespielten Events. Anders als die
+ * stummen Schleifen in der Bilderwand werden sie bewusst angeschaut: mit
+ * Bedienelementen, Ton und Vorschaubild, nichts startet von allein.
+ * Fremdvideos (YouTube/Vimeo) kommen über embedUrl, eigene Dateien über src.
+ */
+function afterMovies(s) {
+  const movies = list(s.aftermovies).filter(
+    (m) => str(m?.title) && (safeUrl(m?.src) || safeUrl(m?.embedUrl))
+  );
+  const head = `<div class="after-head">
+          <span class="mono">${esc(UI.afterMovies)}</span>
+          ${str(s.aftermoviesNote) ? `<p>${inline(s.aftermoviesNote)}</p>` : ""}
+        </div>`;
+  if (!movies.length) {
+    return `<div class="after rv">
+        <!-- TODO Kunde: Aftermovie-Dateien oder YouTube-/Vimeo-Adressen liefern.
+             Eintragen in der Verwaltung unter Galerie → After Movies je Video:
+             Titel, Event, Video (src oder embedUrl) und Vorschaubild (poster).
+             Solange nichts hinterlegt ist, steht hier der Platzhaltertext. -->
+        ${head}
+        <div class="empty-state"><span class="mono">${esc(UI.afterMovies)}</span><p>${esc(
+      str(s.aftermoviesEmpty, UI.afterMoviesEmpty)
+    )}</p></div>
+      </div>`;
+  }
+  const cards = movies
+    .map((m) => {
+      const media = safeUrl(m.embedUrl)
+        ? `<iframe src="${href(m.embedUrl)}" title="${esc(m.title)}" loading="lazy"
+              allow="accelerometer; clipboard-write; encrypted-media; picture-in-picture; fullscreen"
+              referrerpolicy="strict-origin-when-cross-origin" allowfullscreen frameborder="0"></iframe>`
+        : `<video src="${href(m.src)}" controls playsinline preload="none"${
+            safeUrl(m.poster) ? ` poster="${esc(cdnUrl(m.poster, 800))}"` : ""
+          }></video>`;
+      return `<article class="after-card">
+          <div class="after-media">${media}</div>
+          <h3>${esc(m.title)}</h3>
+          ${str(m.event) ? `<span class="mono">${esc(m.event)}</span>` : ""}
+        </article>`;
+    })
+    .join("\n        ");
+  return `<div class="after rv">
+        ${head}
+        <div class="after-grid">
+        ${cards}
+        </div>
+      </div>`;
+}
+
 function renderGallery(n, s) {
   const items = list(s.items).filter((i) => safeUrl(i?.src));
   // Bilder zählen für die Lightbox-Beschriftung; Videos laufen dort nicht mit.
   const photos = items.filter((i) => !isVideoUrl(i.src));
-  const mobileLimit = Math.max(2, Math.min(8, Number.parseInt(s.mobileLimit, 10) || 4));
-  const remaining = Math.max(0, items.length - mobileLimit);
+  // Wie viele Bilder ohne Zutun zu sehen sind — auf allen Bildschirmbreiten
+  // gleich, damit die Zahl im Knopf ("6 weitere Bilder") überall stimmt.
+  const limit = Math.max(2, Math.min(12, Number.parseInt(s.mobileLimit, 10) || 6));
+  const remaining = Math.max(0, items.length - limit);
 
   const cell = (g, i) => {
-    const mobileExtra = i >= mobileLimit ? ' data-mobile-extra="true"' : "";
+    const extra = i >= limit ? ' data-extra="true"' : "";
     if (isVideoUrl(g.src)) {
       const gf = fitAttrs(g);
-      return `<figure class="gal-video${gf.cls}"${mobileExtra}>
+      return `<figure class="gal-video${gf.cls}"${extra}>
           <video src="${href(g.src)}" muted loop playsinline autoplay preload="metadata"${
         g.poster ? ` poster="${href(g.poster)}"` : ""
       }${gf.style} aria-label="${esc(g.alt || "")}"></video>
@@ -658,7 +729,7 @@ function renderGallery(n, s) {
         </figure>`;
     }
     const idx = photos.indexOf(g) + 1;
-    return `<figure${mobileExtra}>
+    return `<figure${extra}>
           <button type="button" class="gal-btn" aria-label="${esc(
             UI.openImage.replace("{n}", idx).replace("{total}", photos.length)
           )}">
@@ -671,6 +742,7 @@ function renderGallery(n, s) {
   return `
   <section class="pad" id="gallery" aria-labelledby="gallery-h">
     <div class="wrap">${sectionHead(n, s, "gallery")}
+      ${afterMovies(s)}
       <div class="gal rv" id="gal">
         ${items.map(cell).join("\n        ")}
       </div>
@@ -694,11 +766,152 @@ function priceTag(price, currency) {
   return /[A-Za-z]/.test(v) ? v : `${currency} ${v}${/[.,]/.test(v) ? "" : ".—"}`;
 }
 
-function renderShop(n, s, contactEmail) {
+/**
+ * Bezahlmöglichkeiten: TWINT und Banküberweisung, dazu — sofern hinterlegt —
+ * der QR-Code zum Abscannen. Alles rein statisch; es wird nichts eingezogen,
+ * die Kundin überweist selbst und der Versand geht nach Zahlungseingang raus.
+ */
+function payMethods(s) {
+  const twint = str(s.twint);
+  const bank = s.bank || {};
+  const hasBank = str(bank.iban);
+  // Fehlen Nummer und IBAN noch, steht hier bewusst der Platzhalter statt
+  // nichts — sonst faellt beim Abnehmen niemandem auf, dass die Angaben fehlen.
+  const missing = !twint && !hasBank;
+  const qr = safeUrl(s.qr?.src)
+    ? `<figure class="pay-qr">
+            ${picture(s.qr, { widths: [280, 560], sizes: "220px" })}
+            <figcaption class="mono">${esc(str(s.qr.caption, UI.payQrCaption))}</figcaption>
+          </figure>`
+    : `<!-- TODO Kunde: QR-Code fehlt noch. Benötigt wird entweder der TWINT-QR
+             (in der TWINT-App unter "Geld empfangen" → QR speichern) oder der
+             Einzahlungsschein-QR der Bank (QR-Rechnung). Bild in der Verwaltung
+             unter Shop → Bezahlung hochladen; es erscheint dann hier.
+             Offene Frage: TWINT-QR, Bank-QR oder beide? -->
+        <div class="pay-qr pay-qr-missing"><span class="mono">${esc(UI.payQrMissing)}</span></div>`;
+  const details = missing
+    ? `<li><b>TWINT</b><span>${esc(UI.payPending)}</span></li>
+              <li><b>${esc(UI.payBank)}</b><span>${esc(UI.payPending)}</span></li>`
+    : `${twint ? `<li><b>TWINT</b><span>${esc(twint)}</span></li>` : ""}
+              ${hasBank ? `<li><b>${esc(str(bank.label, UI.payBank))}</b><span>${esc(bank.iban)}</span></li>` : ""}
+              ${hasBank && str(bank.holder) ? `<li><b>${esc(UI.payHolder)}</b><span>${esc(bank.holder)}</span></li>` : ""}
+              ${hasBank && str(bank.bank) ? `<li><b>${esc(UI.payBankName)}</b><span>${esc(bank.bank)}</span></li>` : ""}`;
+  return `
+      <div class="pay-methods rv">${
+        missing
+          ? `
+        <!-- TODO Kunde: Zahlungsangaben fehlen noch. Benoetigt werden die
+             TWINT-Nummer und/oder IBAN samt Empfaenger und Bank. Eintragen in
+             der Verwaltung unter Shop → Bezahlung; sobald etwas hinterlegt ist,
+             ersetzt es diesen Platzhalter und die Auswahl im Bestellformular. -->`
+          : ""
+      }
+        <div class="pay-cols">
+          <div>
+            <span class="mono">${esc(UI.payTitle)}</span>
+            <ul class="pay-list">
+              ${details}
+            </ul>
+            <p class="pay-note">${esc(UI.payNote)}</p>
+          </div>
+          ${qr}
+        </div>
+      </div>`;
+}
+
+/**
+ * Bestellformular. Der Shop verschickt Ware, deshalb sind Liefer- und
+ * Kontaktangaben Pflicht — ohne sie kann nichts versendet werden. Die
+ * Bestellung landet im selben Eingang wie die Booking-Anfragen (kind:"order").
+ */
+function orderForm(s, site, items, cur) {
+  const endpoint = safeUrl(site.shopApi) || safeUrl(site.bookingApi);
+  if (!endpoint || !items.length) return "";
+  const options = items
+    .filter((p) => p.status !== "soldout")
+    .map((p) => {
+      const price = priceTag(p.price, cur);
+      return `<option value="${esc(p.name)}">${esc(
+        [str(p.name), price].filter(Boolean).join(" — ")
+      )}</option>`;
+    })
+    .join("\n              ");
+  if (!options) return "";
+  const pay = [
+    str(s.twint) ? ["twint", "TWINT"] : null,
+    str(s.bank?.iban) ? ["bank", str(s.bank?.label, UI.payBank)] : null,
+  ].filter(Boolean);
+  return `
+      <form class="oform rv" id="order-form" data-endpoint="${esc(endpoint)}"
+            data-sending="${esc(UI.sending)}" data-invalid="${esc(UI.formInvalid)}" novalidate>
+        <div class="bform-head">
+          <span class="mono">${esc(UI.orderTitle)}</span>
+          <h3>${esc(UI.orderHeadline)}</h3>
+          <p class="bform-required mono">${esc(UI.allRequired)}</p>
+        </div>
+        <div class="bform-grid">
+          <label><span class="lbl">${esc(UI.oProduct)} <i aria-hidden="true">*</i></span>
+            <select name="product" required>
+              ${options}
+            </select>
+          </label>
+          <label><span class="lbl">${esc(UI.oQuantity)} <i aria-hidden="true">*</i></span>
+            <input name="quantity" type="number" required min="1" max="20" step="1" value="1" inputmode="numeric">
+          </label>
+          <label><span class="lbl">${esc(UI.fName)} <i aria-hidden="true">*</i></span>
+            <input name="name" type="text" required maxlength="120" autocomplete="name">
+          </label>
+          <label><span class="lbl">${esc(UI.fEmail)} <i aria-hidden="true">*</i></span>
+            <input name="email" type="email" required maxlength="160" autocomplete="email">
+          </label>
+          <label class="span-2"><span class="lbl">${esc(UI.oStreet)} <i aria-hidden="true">*</i></span>
+            <input name="street" type="text" required maxlength="160" autocomplete="street-address">
+          </label>
+          <label><span class="lbl">${esc(UI.oZip)} <i aria-hidden="true">*</i></span>
+            <input name="zip" type="text" required maxlength="12" autocomplete="postal-code">
+          </label>
+          <label><span class="lbl">${esc(UI.oCity)} <i aria-hidden="true">*</i></span>
+            <input name="city" type="text" required maxlength="120" autocomplete="address-level2">
+          </label>
+          <label><span class="lbl">${esc(UI.oCountry)} <i aria-hidden="true">*</i></span>
+            <input name="country" type="text" required maxlength="80" value="${esc(
+              str(s.defaultCountry, "Schweiz")
+            )}" autocomplete="country-name">
+          </label>
+          ${
+            pay.length
+              ? `<fieldset class="span-2 opay">
+            <legend class="lbl">${esc(UI.oPayment)} <i aria-hidden="true">*</i></legend>
+            ${pay
+              .map(
+                ([v, label], i) =>
+                  `<label class="opay-opt"><input name="payment" type="radio" value="${esc(
+                    v
+                  )}" required${i === 0 ? " checked" : ""}><span>${esc(label)}</span></label>`
+              )
+              .join("\n            ")}
+          </fieldset>`
+              : ""
+          }
+          <label class="hp" aria-hidden="true" tabindex="-1"><span class="lbl">${esc(UI.fHoneypot)}</span>
+            <input name="website" type="text" tabindex="-1" autocomplete="off">
+          </label>
+        </div>
+        <div class="bform-foot">
+          <button class="btn solid big" type="submit">${esc(UI.oSubmit)}<span class="cta-arr" aria-hidden="true">→</span></button>
+          <span class="mono reply-note">${esc(UI.oReplyNote)}</span>
+          <p class="bform-msg" role="status" aria-live="polite"
+             data-success="${esc(UI.oSuccess)}" data-error="${esc(UI.oError)}"></p>
+        </div>
+      </form>`;
+}
+
+function renderShop(n, s, contactEmail, site) {
   const items = list(s.items).filter((p) => str(p?.name));
   const cur = str(s.currency, "CHF");
   const buy = str(s.buyLabel, UI.buy);
-  const twint = str(s.twint);
+  const form = orderForm(s, site, items, cur);
+  const hasOrderForm = !!form;
   const cards = items
     .map((p) => {
       const sold = p.status === "soldout";
@@ -706,32 +919,23 @@ function renderShop(n, s, contactEmail) {
       // fallen sonst als toter Kauf-Knopf auf die Website
       const link = /^https?:\/\//i.test(String(p.linkUrl || "")) ? safeUrl(p.linkUrl) : "";
       const price = priceTag(p.price, cur);
-      const order = contactEmail
+      const mail = contactEmail
         ? `mailto:${contactEmail}?subject=${encodeURIComponent(`${UI.orderSubject}: ${str(p.name)}`)}` +
           `&body=${encodeURIComponent(UI.orderMailBody.replace("{product}", [str(p.name), price].filter(Boolean).join(" — ")))}`
         : "";
-      // TWINT-Zahlung: aufklappbares Feld mit Nummer, Vermerk und Bestaetigung
-      const twintPanel =
-        twint && !link
-          ? `<details class="pay">
-            <summary class="btn sm">${esc(buy)} · TWINT</summary>
-            <div class="pay-panel">
-              <p class="mono">${esc(UI.twintSend)}</p>
-              <strong class="pay-nr">${esc(twint)}</strong>
-              <p>${esc(UI.twintRef)}: <b>${esc(p.name)}</b>${price ? ` · ${esc(price)}` : ""}</p>
-              <p class="pay-note">${esc(UI.twintNote)}</p>
-              ${order ? `<a class="btn sm ghost" href="${esc(order)}">${esc(UI.twintConfirm)}</a>` : ""}
-            </div>
-          </details>`
-          : "";
+      // Ohne eigenen Bezahl-Link fuehrt der Knopf ins Bestellformular weiter
+      // unten und waehlt das Produkt dort schon aus. Gibt es kein Formular
+      // (kein Endpunkt hinterlegt), bleibt die Bestellung per Mail.
       const cta = sold
         ? `<span class="mono">${esc(UI.soldOut)}</span>`
         : link
         ? `<a class="btn sm" href="${esc(link)}" target="_blank" rel="noopener">${esc(buy)} ↗</a>`
-        : twintPanel
-        ? ""
-        : order
-        ? `<a class="btn sm ghost" href="${esc(order)}">${esc(UI.orderByMail)}</a>`
+        : hasOrderForm
+        ? `<a class="btn sm order-jump" href="#order-form" data-product="${esc(p.name)}">${esc(
+            buy
+          )}</a>`
+        : mail
+        ? `<a class="btn sm ghost" href="${esc(mail)}">${esc(UI.orderByMail)}</a>`
         : "";
       return `<article class="product rv${sold ? " soldout" : ""}">
           ${p.src ? `<div class="product-img">${picture(p, { sizes: "(max-width:700px) 46vw, 280px", widths: [480, 800] })}</div>` : ""}
@@ -742,66 +946,58 @@ function renderShop(n, s, contactEmail) {
               ${str(p.price) ? `<span class="price">${esc(price)}</span>` : ""}
               ${cta}
             </div>
-            ${sold ? "" : twintPanel}
           </div>
         </article>`;
     })
     .join("\n        ");
 
+  if (!items.length) {
+    return `
+  <section class="pad shop-sec" id="shop" aria-labelledby="shop-h">
+    <div class="wrap">${sectionHead(n, s, "shop")}
+      ${str(s.note) ? `<p class="shop-note rv">${inline(s.note)}</p>` : ""}
+      <div class="empty-state rv"><span class="mono">Shop</span><p>${esc(
+        str(s.emptyText, "Merch ist in Arbeit.")
+      )}</p></div>
+    </div>
+  </section>`;
+  }
+
+  // Der ganze Shop ist auf einen Blick da — Bilder, Preise, Bezahlung und
+  // Bestellung. Die Ware steht dafuer in kleineren Karten, damit mehr davon
+  // gleichzeitig ins Bild passt.
   return `
   <section class="pad shop-sec" id="shop" aria-labelledby="shop-h">
     <div class="wrap">${sectionHead(n, s, "shop")}
       ${str(s.note) ? `<p class="shop-note rv">${inline(s.note)}</p>` : ""}
-      ${
-        items.length
-          ? `<div class="shop-grid">
-        ${cards}
-      </div>`
-          : `<div class="empty-state rv"><span class="mono">Shop</span><p>${esc(
-              str(s.emptyText, "Merch ist in Arbeit.")
-            )}</p></div>`
-      }
+      <div class="shop-grid">
+      ${cards}
+      </div>
+${payMethods(s)}
+${form}
     </div>
   </section>`;
 }
 
-function renderBooking(n, s, site) {
-  const f = s.form || {};
-  const formEnabled = f.enabled !== false && !!safeUrl(site.bookingApi);
+/**
+ * Technischer Rider. Steht bewusst nicht mehr neben der Einladung, sondern
+ * eingeklappt unter dem Formular: anfragen soll niedrigschwellig sein, die
+ * Geräteliste interessiert erst den Techniker. Leere Gruppen -> nichts.
+ */
+function bookingRider(s) {
+  const groups = list(s.rider?.groups).filter((g) => list(g?.items).some((i) => str(i?.name)));
+  if (!groups.length || s.rider?.enabled === false) return "";
   return `
-  <section class="booking pad" id="booking" aria-labelledby="booking-h">
-    <span class="section-mark" aria-hidden="true">${esc(str(s.title) + str(s.titleAccent))}</span>
-    <div class="wrap">${sectionHead(n, s, "booking")}
-      <div class="booking-grid">
-        <div class="rv">
-          <span class="mono">${esc(str(s.availableKicker, "Available for"))}</span>
-          <ul class="avail">
-            ${list(s.available)
-              .filter((a) => str(a))
-              .map(
-                (a, i) =>
-                  `<li><span class="mono">${String.fromCharCode(65 + i)}</span>${esc(a)}</li>`
-              )
-              .join("\n            ")}
-          </ul>
-          <div class="btn-row">
-            <a class="btn solid" href="${
-              formEnabled ? "#booking-form" : anchorHref("#contact")
-            }">${esc(
-    str(f.submitLabel, "Request a date")
-  )}</a>
-            ${
-              safeUrl(s.presskitUrl)
-                ? `<a class="btn" href="${href(s.presskitUrl)}" download>${esc(
-                    str(s.presskitLabel, "Presskit (PDF)")
-                  )}</a>`
-                : ""
-            }
-          </div>
-        </div>
-        <div class="rider rv">
-          <span class="mono">${esc(str(s.rider?.kicker, "Preferred Setup"))}</span>
-          ${list(s.rider?.groups)
+      <!-- TODO Kunde: "Preferred setup / CDJs" ist vorerst NICHT geloescht, sondern
+           fakultativ — der Rider ist eingeklappt und oeffnet sich nur auf Wunsch.
+           Offene Frage: soll der Bereich ganz verschwinden? Dann in der Verwaltung
+           unter Booking → Rider "enabled" auf false setzen (oder die Gruppen leeren);
+           der Abschnitt faellt dann komplett weg. -->
+      <details class="rider rv">
+        <summary><span class="mono">${esc(str(s.rider?.kicker, "Preferred setup"))}</span>
+          <span class="rider-hint">${esc(UI.riderOptional)}</span></summary>
+        <div class="rider-body">
+          ${groups
             .map(
               (g) => `<h3>${esc(g.title)}</h3>
           <ul>
@@ -814,62 +1010,121 @@ function renderBooking(n, s, site) {
             .join("\n          ")}
           ${str(s.rider?.note) ? `<p class="note">${inline(s.rider.note)}</p>` : ""}
         </div>
+      </details>`;
+}
+
+function renderBooking(n, s, site) {
+  const f = s.form || {};
+  const formEnabled = f.enabled !== false && !!safeUrl(site.bookingApi);
+  // Anfragen ist der wichtigste Weg der Seite. Deshalb steht hier links die
+  // Ansage und rechts gleich das Formular — ohne Umweg über einen Knopf.
+  return `
+  <section class="booking pad" id="booking" aria-labelledby="booking-h">
+    <span class="section-mark" aria-hidden="true">${esc(str(s.title) + str(s.titleAccent))}</span>
+    <div class="wrap">
+      <div class="booking-grid">
+      <div class="booking-lead rv">
+        <span class="mono">${esc(str(s.navLabel, "Booking"))}</span>
+        <h2 id="booking-h" class="booking-claim">${esc(str(s.claim, "Let's create"))} <i>${esc(
+    str(s.claimAccent, "something.")
+  )}</i></h2>
+        ${str(s.lead) ? `<p class="lede">${inline(s.lead)}</p>` : ""}
+        <span class="mono">${esc(str(s.availableKicker, "Available for"))}</span>
+        <ul class="avail">
+          ${list(s.available)
+            .filter((a) => str(a))
+            .map(
+              (a, i) =>
+                `<li><span class="mono">${String.fromCharCode(65 + i)}</span>${esc(a)}</li>`
+            )
+            .join("\n          ")}
+        </ul>
+        ${
+          safeUrl(s.presskitUrl)
+            ? `<div class="btn-row">
+          <a class="btn" href="${href(s.presskitUrl)}" download>${esc(
+                str(s.presskitLabel, "Presskit (PDF)")
+              )}</a>
+        </div>`
+            : ""
+        }
+        ${
+          formEnabled
+            ? ""
+            : `<div class="btn-row">
+          <a class="btn solid" href="${anchorHref("#contact")}">${esc(
+                str(f.submitLabel, "Request a date")
+              )}</a>
+        </div>`
+        }
       </div>
       ${
         formEnabled
           ? `
       <form class="bform rv" id="booking-form" data-endpoint="${href(
         site.bookingApi
-      )}" data-sending="${esc(UI.sending)}" data-invalid="${esc(UI.formInvalid)}" novalidate>
+      )}" data-sending="${esc(UI.sending)}" data-invalid="${esc(UI.formInvalid)}"
+            data-captcha="${esc(UI.captchaWrong)}" novalidate>
         <div class="bform-head">
           <span class="mono">${esc(str(f.kicker, "Booking request"))}</span>
           <h3>${esc(str(f.title, "Tell me about your event"))}</h3>
         </div>
-        <div class="bform-cols">
-          <div class="bform-grid">
+        <div class="bform-grid">
           <label><span class="lbl">${esc(UI.fName)} <i aria-hidden="true">*</i></span>
-            <input name="name" type="text" required maxlength="120" autocomplete="name">
+            <input name="name" type="text" required maxlength="120" autocomplete="name"
+                   placeholder="${esc(UI.phName)}">
           </label>
           <label><span class="lbl">${esc(UI.fEmail)} <i aria-hidden="true">*</i></span>
-            <input name="email" type="email" required maxlength="160" autocomplete="email">
+            <input name="email" type="email" required maxlength="160" autocomplete="email"
+                   placeholder="${esc(UI.phEmail)}">
           </label>
-          <label><span class="lbl">${esc(UI.fEvent)}</span>
-            <input name="event" type="text" maxlength="160">
+          <label class="span-2"><span class="lbl">${esc(UI.fPhone)} <i aria-hidden="true">*</i></span>
+            <input name="phone" type="tel" required maxlength="40" autocomplete="tel"
+                   placeholder="${esc(UI.phPhone)}">
           </label>
-          <label><span class="lbl">${esc(UI.fCity)}</span>
-            <input name="city" type="text" maxlength="120">
+          <label><span class="lbl">${esc(UI.fEvent)} <i aria-hidden="true">*</i></span>
+            <input name="event" type="text" required maxlength="160" placeholder="${esc(UI.phEvent)}">
           </label>
-          <label><span class="lbl">${esc(UI.fDate)}</span>
-            <input name="date" type="date">
+          <label><span class="lbl">${esc(UI.fCity)} <i aria-hidden="true">*</i></span>
+            <input name="city" type="text" required maxlength="120" placeholder="${esc(UI.phCity)}">
           </label>
-          <label><span class="lbl">${esc(UI.fSetLength)}</span>
-            <input name="setLength" type="text" maxlength="60" placeholder="${esc(UI.fSetLengthHint)}">
+          <label><span class="lbl">${esc(UI.fDate)} <i aria-hidden="true">*</i></span>
+            <input name="date" type="date" required>
           </label>
-          <label class="span-2"><span class="lbl">${esc(UI.fMessage)}</span>
-            <textarea name="message" rows="4" maxlength="4000"></textarea>
+          <label><span class="lbl">${esc(UI.fSetLength)} <i aria-hidden="true">*</i></span>
+            <input name="setLength" type="text" required maxlength="60" placeholder="${esc(UI.fSetLengthHint)}">
+          </label>
+          <label class="span-2"><span class="lbl">${esc(UI.fMessage)} <i aria-hidden="true">*</i></span>
+            <textarea name="message" rows="5" required maxlength="4000"
+                      placeholder="${esc(UI.phMessage)}"></textarea>
+          </label>
+          <label class="span-2 bform-captcha"><span class="lbl">${esc(UI.captcha)} <i aria-hidden="true">*</i></span>
+            <span class="captcha-row">
+              <span class="captcha-sum" aria-hidden="true"><b data-a></b> + <b data-b></b> =</span>
+              <input name="captcha" type="text" required inputmode="numeric" maxlength="4"
+                     autocomplete="off" aria-label="${esc(UI.captchaAria)}" placeholder="?">
+            </span>
           </label>
           <label class="hp" aria-hidden="true" tabindex="-1"><span class="lbl">${esc(UI.fHoneypot)}</span>
             <input name="website" type="text" tabindex="-1" autocomplete="off">
           </label>
-          </div>
-          <div class="bform-side">
-            <div class="bform-cal" id="bform-cal"
-                 data-weekdays="${esc(UI.weekdays)}" data-hint="${esc(UI.pickDay)}"
-                 data-busy="${esc(UI.dayBusy)}" hidden></div>
-          </div>
         </div>
+        <div class="bform-cal" id="bform-cal"
+             data-weekdays="${esc(UI.weekdays)}" data-hint="${esc(UI.pickDay)}"
+             data-busy="${esc(UI.dayBusy)}" hidden></div>
         <div class="bform-foot">
-          <button class="btn solid big" type="submit">${esc(
+          <button class="btn solid big wide" type="submit">${esc(
             str(f.submitLabel, "Send request")
           )}<span class="cta-arr" aria-hidden="true">→</span></button>
-          <span class="mono reply-note">${esc(UI.replyNote)}</span>
           <p class="bform-msg" role="status" aria-live="polite"
              data-success="${esc(str(f.successText, "Thanks — your request landed."))}"
              data-error="${esc(str(f.errorText, "Something went wrong. Please e-mail instead."))}"></p>
+          <p class="bform-fine mono">${esc(UI.formFine)}</p>
         </div>
       </form>`
           : ""
       }
+${bookingRider(s)}
     </div>
   </section>`;
 }
@@ -903,9 +1158,14 @@ function socialIcon(label, url) {
   return `<svg viewBox="0 0 24 24" aria-hidden="true">${body}</svg>`;
 }
 
+/** Kanäle mit Namen, aber noch ohne Adresse — die werden nicht verlinkt. */
+const pendingSocials = (s) =>
+  list(s?.socials).filter((x) => str(x?.label) && !safeUrl(x?.url));
+
 function renderContact(n, s, bookingTarget) {
   const mail = str(s.email);
   const socials = list(s.socials).filter((x) => str(x?.label) && safeUrl(x?.url));
+  const pending = pendingSocials(s);
   const meta = `
         <div class="contact-meta">
           ${
@@ -924,7 +1184,18 @@ function renderContact(n, s, bookingTarget) {
   return `
   <section class="pad contact accent-block" id="contact" aria-labelledby="contact-h">
     <span class="contact-mark" aria-hidden="true">${esc(str(s.title) + str(s.titleAccent))}</span>
-    <div class="wrap">${sectionHead(n, s, "contact")}
+    <div class="wrap">${sectionHead(n, s, "contact")}${
+      pending.length
+        ? `
+      <!-- TODO Kunde: Fuer diese Kanaele fehlt noch die Adresse, sie werden
+           deshalb weder hier noch im Fuss verlinkt: ${pending
+             .map((x) => str(x.label))
+             .join(", ")}.
+           Eintragen in der Verwaltung unter Kontakt → Kanaele, jeweils die
+           komplette Profil-Adresse (z. B. https://www.instagram.com/… bzw. das
+           Spotify-Kuenstlerprofil ueber "Teilen → Link kopieren"). -->`
+        : ""
+    }
       <div class="contact-grid rv">
         <div class="contact-main">
           ${str(s.kicker) ? `<span class="mono">${esc(s.kicker)}</span>` : ""}
@@ -1193,11 +1464,32 @@ const UI_DEFAULTS = {
   lessStory: "Weniger anzeigen",
   showMoreImages: "{n} weitere Bilder",
   showLessImages: "Weniger Bilder",
+  afterMovies: "After Movies",
+  afterMoviesEmpty: "Die Aftermovies der letzten Shows sind im Schnitt — sie erscheinen hier, sobald sie fertig sind.",
+  allRequired: "Alle Felder sind Pflichtfelder.",
+  riderOptional: "Fakultativ — für die Technik",
+  payTitle: "Bezahlen",
+  payBank: "Banküberweisung",
+  payBankName: "Bank",
+  payHolder: "Empfänger",
+  payNote: "Nach dem Absenden kommt eine Bestätigung mit Betrag und Vermerk. Der Versand geht raus, sobald die Zahlung da ist.",
+  payQrCaption: "QR-Code scannen und bezahlen",
+  payQrMissing: "QR-Code folgt",
+  payPending: "folgt",
+  orderTitle: "Bestellung",
+  orderHeadline: "Wohin darf es gehen?",
+  oProduct: "Artikel",
+  oQuantity: "Anzahl",
+  oStreet: "Strasse und Nummer",
+  oZip: "PLZ",
+  oCity: "Ort",
+  oCountry: "Land",
+  oPayment: "Bezahlung",
+  oSubmit: "Bestellung abschicken",
+  oReplyNote: "Bestätigung mit Zahlungsangaben folgt per Mail",
+  oSuccess: "Danke — deine Bestellung ist da. Die Zahlungsangaben kommen gleich per Mail.",
+  oError: "Das hat nicht geklappt. Schreib mir bitte direkt eine Mail.",
   follow: "Kanäle",
-  twintSend: "Per TWINT bezahlen an",
-  twintRef: "Vermerk",
-  twintNote: "Nach der Zahlung kurz per Mail bestätigen und die Lieferadresse angeben — dann geht dein Teil in den Versand.",
-  twintConfirm: "Bestellung per Mail bestätigen",
   orderMailBody: "Hoi Sam\n\nIch bestelle: {product}\nLieferadresse:\n\nDanke!",
   notFoundTitle: "Nichts hier.",
   notFoundText: "Diese Seite gibt es nicht (mehr). Zurück zum Start — dort steht alles Aktuelle.",
@@ -1207,8 +1499,9 @@ const UI_DEFAULTS = {
   weekdays: "Mo,Di,Mi,Do,Fr,Sa,So",
   sending: "Wird gesendet …",
   formInvalid: "Bitte die markierten Felder prüfen.",
-  fName: "Dein Name",
+  fName: "Name",
   fEmail: "E-Mail",
+  fPhone: "Telefon",
   fEvent: "Event / Club",
   fCity: "Ort",
   fDate: "Datum",
@@ -1216,6 +1509,17 @@ const UI_DEFAULTS = {
   fSetLengthHint: "z. B. 60 Min.",
   fMessage: "Nachricht",
   fHoneypot: "Bitte leer lassen",
+  phName: "Max Muster",
+  phEmail: "deine@email.ch",
+  phPhone: "+41 79 123 45 67",
+  phEvent: "Club, Festival, Firmenfest …",
+  phCity: "St. Gallen",
+  phMessage: "Deine Nachricht …",
+  captcha: "Anti-Spam — bitte lösen",
+  captchaAria: "Ergebnis der Rechenaufgabe",
+  captchaWrong: "Die Rechnung stimmt noch nicht.",
+  formFine:
+    "* Pflichtfelder · Deine Angaben werden nur für die Bearbeitung deiner Anfrage verwendet.",
 };
 
 /* Die gerade gültigen Oberflächentexte — von renderPage je Sprache gesetzt. */
@@ -1250,8 +1554,19 @@ const looksTechnical = (v) =>
   /^#[0-9a-f]{3,8}$/i.test(v) ||
   /^\d{4}-\d{2}-\d{2}$/.test(v);
 
-/** Pfade, die technische Schlüssel enthalten (Abschnitts-Namen, keine Texte). */
-const NO_TRANSLATE_PATH = /^layout\.|^pages\.\d+\.sections\.|^pages\.\d+\.hero$/;
+/**
+ * Pfade, die technische Schlüssel enthalten (Abschnitts-Namen, keine Texte)
+ * oder Eigennamen tragen.
+ *
+ * Kanäle gehören dazu: "Instagram", "Spotify" und "Mixcloud" heissen in jeder
+ * Sprache gleich. Übersetzt man sie trotzdem, zeigt die Übersetzungstabelle
+ * über die Position auf den Kanal — und sobald in der Verwaltung ein Kanal
+ * gelöscht wird, rutscht der Name des gelöschten auf den nächsten Eintrag.
+ * Genau so trug der Mixcloud-Link auf /de/ und /fr/ die Aufschrift "Instagram"
+ * (dieselbe Falle wie "Luzern" auf "Sektor 11", siehe adoptTexts).
+ */
+const NO_TRANSLATE_PATH =
+  /^layout\.|^pages\.\d+\.sections\.|^pages\.\d+\.hero$|^sections\.contact\.socials\./;
 
 /** Alle übersetzbaren Textstellen als [pfad, text]. */
 export function collectStrings(node, prefix = "", out = []) {
@@ -1307,12 +1622,16 @@ export function flattenI18n(node, prefix = "", out = {}) {
 }
 
 /** Inhalt in eine Sprache übersetzen. Fehlende Stellen bleiben deutsch. */
-function localize(content, lang) {
+export function localize(content, lang) {
   const master = String(content.site?.lang || "de");
   if (lang === master) return content;
   const table = flattenI18n((content.i18n && content.i18n[lang]) || {});
   const copy = JSON.parse(JSON.stringify(content));
   for (const [path, value] of Object.entries(table)) {
+    // Dieselbe Sperre wie beim Einsammeln: was nie übersetzt werden durfte,
+    // wird auch nicht eingesetzt. Ältere Stände in der Datenbank tragen solche
+    // Einträge noch — sie dürfen die Kanäle nicht umbenennen.
+    if (NO_TRANSLATE_PATH.test(path)) continue;
     if (typeof value === "string" && value.trim()) setDeep(copy, path, value);
   }
   copy.site.lang = lang;
@@ -1471,7 +1790,7 @@ function renderPage(c, page, pages, lang, langs) {
     shows: renderShows,
     references: renderReferences,
     gallery: renderGallery,
-    shop: (n, s) => renderShop(n, s, str(sections.contact?.email)),
+    shop: (n, s) => renderShop(n, s, str(sections.contact?.email), site),
     booking: (n, s) => renderBooking(n, s, site),
     contact: (n, s) => renderContact(n, s, bookingTarget),
   };
@@ -1528,6 +1847,11 @@ function renderPage(c, page, pages, lang, langs) {
       </div>
     </nav>`
       : "";
+
+  // Die Kanäle stehen auf jeder Seite im Fuss, nicht nur im Kontakt-Abschnitt.
+  const footSocials = list(sections.contact?.socials).filter(
+    (x) => str(x?.label) && safeUrl(x?.url)
+  );
 
   const accent = color(site.accentColor, "#2e6bff");
   const ink = color(site.themeColor, "#05070e");
@@ -1588,8 +1912,12 @@ function renderPage(c, page, pages, lang, langs) {
     </div>
     <div class="hero-inner">
       ${c.hero?.kicker ? `<p class="mono">${esc(c.hero.kicker)}</p>` : ""}
-      <h1>${
-        c.hero?.nameSpaced ? `<span class="sp">${esc(c.hero.nameSpaced)}</span>` : ""
+      <h1${
+        c.hero?.nameSpaced ? ` aria-label="${esc(site.artist)}"` : ""
+      }>${
+        c.hero?.nameSpaced
+          ? `<span class="sp">${esc(c.hero.nameSpaced)}</span> `
+          : ""
       }${esc(c.hero?.nameMain || site.artist)}</h1>
       <div class="hero-sub">
         ${c.hero?.tagline ? `<span class="tag">${esc(c.hero.tagline)}</span>` : ""}
@@ -1784,7 +2112,26 @@ ${
     <button class="btn sm solid" id="cookie-ok" type="button">${esc(ui.cookieOk)}</button>
   </aside>
 
-  <footer>
+  <footer>${
+    footSocials.length
+      ? `
+    <div class="wrap foot-social">
+      <span class="mono">${esc(ui.follow)}</span>
+      <ul>
+        ${footSocials
+          .map(
+            (x) =>
+              `<li><a href="${href(x.url)}" target="_blank" rel="noopener me" title="${esc(
+                x.label
+              )}"><span aria-hidden="true">${socialIcon(x.label, x.url)}</span><span>${esc(
+                x.label
+              )}</span></a></li>`
+          )
+          .join("\n        ")}
+      </ul>
+    </div>`
+      : ""
+  }
     <div class="wrap foot">
       ${
         langs.length > 1
@@ -2144,7 +2491,11 @@ async function main() {
   if (missing) console.log(`[build] Übersetzungen: ${missing}`);
 }
 
-main().catch((err) => {
-  console.error("[build] FEHLER:", err.message);
-  process.exit(1);
-});
+// Nur bauen, wenn die Datei direkt aufgerufen wurde — beim Importieren aus
+// einem Test soll nichts geschrieben werden.
+if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  main().catch((err) => {
+    console.error("[build] FEHLER:", err.message);
+    process.exit(1);
+  });
+}
