@@ -8,25 +8,30 @@
  *   ../verwaltung-djsamsparkling   →  verwaltung/   (die Verwaltung)
  *
  * Damit die Kopie nicht auseinanderläuft, holt dieses Skript beide wieder
- * herein. Genau eine Datei bleibt dabei bewusst anders:
+ * herein. Drei Dateien bleiben dabei anders:
  *
  *   verwaltung/js/config.js — hier steht DEMO = true, das Projekt für die
- *   Wünsche (PRJ-YWRM4) und die Website-Adresse "/site". Alle übrigen Dateien
- *   sind Zeichen für Zeichen dieselben wie im Original; die Unterschiede der
- *   Vorführ-Fassung stecken ausschliesslich in diesen Schaltern.
+ *   Wünsche (PRJ-YWRM4) und die Website-Adresse "/site". Diese Datei wird gar
+ *   nicht erst angefasst.
  *
- * Dazu kommen Dateien, die es nur hier gibt (`nurHier`, unten). Sie stammen
- * aus keinem Original und werden deshalb nie überschrieben — angehängt werden
- * sie ausschliesslich über config.js, damit index.html & Co. unangetastet
- * bleiben und dieses Skript sie gefahrlos nachziehen kann. Wer hier etwas
- * ergänzt: denselben Weg gehen, sonst überschreibt der nächste Lauf die
- * Änderung stillschweigend.
+ *   verwaltung/index.html — kommt aus dem Original, bekommt beim Übernehmen
+ *   aber die zwei Zeilen der Demo-Speicherung wieder eingesetzt (siehe
+ *   DEMO_ZUSAETZE weiter unten). So wandern Änderungen am Original mit,
+ *   ohne dass die Demo-Speicherung dabei verloren geht.
+ *
+ *   verwaltung/admin.css — dasselbe Verfahren, hier für die Schrift-Adressen:
+ *   das Original liegt an der Wurzel, die Vorführ-Fassung im Unterverzeichnis
+ *   /verwaltung/ (siehe schriftenRelativMachen).
+ *
+ * Alle übrigen Dateien sind Zeichen für Zeichen dieselben wie im Original;
+ * die Unterschiede der Vorführ-Fassung stecken ausschliesslich in diesen
+ * Schaltern.
  *
  * Aufruf:  node scripts/quellen-holen.mjs [--pruefen]
  *          --pruefen  meldet nur Unterschiede, kopiert nichts
  */
 
-import { cp, readdir, stat, readFile, rm } from "node:fs/promises";
+import { readdir, readFile, writeFile, mkdir, rm } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { dirname, join, resolve, relative } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -60,10 +65,57 @@ const QUELLEN = [
     // Bleibt in der Demo bewusst anders: DEMO = true, Projekt, Website-Adresse
     eigen: ["js/config.js"],
     entfernen: ["passwort.html"],
-    // Gibt es nur in der Demo — von config.js nachgeladen, nicht aus index.html
-    nurHier: ["js/demo-persistence.js", "demo-storage-note.css", "DEMO-SPEICHERUNG.md"],
+    // Nach dem Übernehmen anpassen — siehe die beiden Funktionen unten.
+    anpassen: {
+      "index.html": demoSpeicherungEinsetzen,
+      "admin.css": schriftenRelativMachen,
+    },
   },
 ];
+
+/**
+ * Im Original liegt die Verwaltung an der Wurzel, deshalb stehen die
+ * Schriften dort unter `/fonts/…`. Hier liegt sie unter `/verwaltung/`
+ * (bei GitHub Pages sogar noch eine Ebene tiefer), wo dieselbe Adresse ins
+ * Leere zeigt. Relativ gedacht stimmt sie überall.
+ */
+function schriftenRelativMachen(inhalt) {
+  return Buffer.from(inhalt.toString("utf8").replaceAll("url(/fonts/", "url(fonts/"), "utf8");
+}
+
+/**
+ * Die Demo-Speicherung: sie hält Änderungen im Browser fest, damit eine
+ * Vorführung ein Neuladen übersteht. Zwei Zeilen in `verwaltung/index.html`
+ * hängen daran — sie gehören nicht ins Original und werden deshalb hier
+ * beschrieben statt dort gepflegt.
+ */
+const DEMO_ZUSAETZE = [
+  {
+    zeile: '  <link rel="stylesheet" href="demo-storage-note.css">',
+    nach: '  <link rel="stylesheet" href="editor-live-preview.css">',
+  },
+  {
+    zeile: '  <script type="module" src="js/demo-persistence.js"></script>',
+    nach: '  <script type="module" src="js/app.js"></script>',
+  },
+];
+
+/** Setzt die Zeilen der Demo-Speicherung in das Original-HTML ein. */
+function demoSpeicherungEinsetzen(inhalt) {
+  let text = inhalt.toString("utf8");
+  for (const { zeile, nach } of DEMO_ZUSAETZE) {
+    if (text.includes(zeile.trim())) continue;
+    if (!text.includes(nach)) {
+      throw new Error(
+        `Ankerzeile fehlt in index.html: ${nach.trim()}\n` +
+          "Das Original hat sich hier geändert — DEMO_ZUSAETZE in " +
+          "scripts/quellen-holen.mjs nachziehen."
+      );
+    }
+    text = text.replace(nach, `${nach}\n${zeile}`);
+  }
+  return Buffer.from(text, "utf8");
+}
 
 /** Alle Dateien unterhalb eines Verzeichnisses, relativ zu ihm. */
 async function dateien(wurzel, auslassen, prefix = "") {
@@ -76,14 +128,6 @@ async function dateien(wurzel, auslassen, prefix = "") {
   }
   return out;
 }
-
-const gleich = async (a, b) => {
-  if (!existsSync(b)) return false;
-  const [x, y] = await Promise.all([stat(a), stat(b)]);
-  if (x.size !== y.size) return false;
-  const [ba, bb] = await Promise.all([readFile(a), readFile(b)]);
-  return ba.equals(bb);
-};
 
 let abweichungen = 0;
 
@@ -98,14 +142,24 @@ for (const q of QUELLEN) {
 
   for (const rel of liste) {
     if (q.eigen.includes(rel)) continue;
-    const von = join(q.von, rel);
     const nach = join(q.nach, rel);
-    if (await gleich(von, nach)) continue;
-    if (existsSync(nach)) geaendert++;
+    const anpassen = q.anpassen?.[rel];
+    // Der Soll-Stand: das Original, bei den angepassten Dateien mit den
+    // Demo-Zusätzen darin. Verglichen wird gegen genau diesen Stand, damit
+    // eine schon eingesetzte Zeile nicht jedes Mal als Unterschied gilt.
+    let soll = await readFile(join(q.von, rel));
+    if (anpassen) soll = anpassen(soll);
+
+    const dawar = existsSync(nach);
+    if (dawar && (await readFile(nach)).equals(soll)) continue;
+    if (dawar) geaendert++;
     else neu++;
     abweichungen++;
-    console.log(`  ${existsSync(nach) ? "geändert" : "neu     "}  ${q.nach.split("/").pop()}/${rel}`);
-    if (!NUR_PRUEFEN) await cp(von, nach, { recursive: true });
+    console.log(`  ${dawar ? "geändert" : "neu     "}  ${q.nach.split("/").pop()}/${rel}`);
+    if (!NUR_PRUEFEN) {
+      await mkdir(dirname(nach), { recursive: true });
+      await writeFile(nach, soll);
+    }
   }
 
   for (const rel of q.entfernen || []) {
@@ -115,19 +169,9 @@ for (const q of QUELLEN) {
     if (!NUR_PRUEFEN) await rm(weg, { force: true });
   }
 
-  // Was es nur hier gibt, kommt im Original nicht vor und wird darum von der
-  // Schleife oben gar nicht gesehen — hier trotzdem melden, damit sichtbar
-  // bleibt, woraus der Vorführ-Modus besteht, und auffällt, wenn etwas fehlt.
-  for (const rel of q.nurHier || []) {
-    if (existsSync(join(q.nach, rel))) continue;
-    console.log(`  FEHLT     ${q.nach.split("/").pop()}/${rel} (gehört nur zur Demo)`);
-    abweichungen++;
-  }
-
   console.log(
     `[${q.name}] ${liste.length} Dateien geprüft — ${neu} neu, ${geaendert} geändert` +
-      (q.eigen.length ? `, unangetastet: ${q.eigen.join(", ")}` : "") +
-      ((q.nurHier || []).length ? `, nur hier: ${q.nurHier.join(", ")}` : "")
+      (q.eigen.length ? `, unangetastet: ${q.eigen.join(", ")}` : "")
   );
 }
 

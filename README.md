@@ -71,17 +71,6 @@ Einstellungen werden gar nicht erst geladen.
 
 Erkennbar ist das an der Marke **Vorführ-Modus** oben in der Verwaltung.
 
-Was in der Vorführung geändert wird, bleibt trotzdem über das Neuladen hinweg
-stehen: die Verwaltung legt den Stand im Browser ab (`localStorage`), erkennbar
-am Zusatz *· lokal gespeichert* an der Marke. Die Datenbank sieht davon nichts.
-`verwaltung/?resetDemo=1` wirft den gemerkten Stand weg und zeigt wieder den
-echten Inhalt.
-
-Bilder und Videos sind dabei die echten: die Mediathek und alle Vorschauen
-lesen `samsparking/media` mit, denselben öffentlich lesbaren Knoten, aus dem
-auch die echte Verwaltung ihre Medien holt. Nur Hochladen und Löschen sind
-stillgelegt.
-
 ## Veröffentlichen
 
 Zwei Wege, beide eingerichtet:
@@ -125,19 +114,22 @@ Realtime Database; ohne Netz bleibt sie beim Ladehinweis stehen.
 - `../s-mi` → `site/`
 - `../verwaltung-djsamsparkling/public` → `verwaltung/`
 
-Genau **eine** Datei ist bewusst anders: `verwaltung/js/config.js` mit
-`DEMO = true`, `QUANTUS_PROJECT = "PRJ-YWRM4"` und `DEFAULT_SITE_URL = "../site"`.
+Bewusst anders sind zwei Dateien:
+
+- `verwaltung/js/config.js` — `DEMO = true`, `QUANTUS_PROJECT = "PRJ-YWRM4"`,
+  `DEFAULT_SITE_URL = "../site"`. Diese Datei wird beim Nachziehen gar nicht
+  angefasst.
+- `verwaltung/index.html` — kommt aus dem Original, bekommt beim Nachziehen
+  aber die zwei Zeilen der [Demo-Speicherung](verwaltung/DEMO-SPEICHERUNG.md)
+  wieder eingesetzt. Ändert sich das Original an dieser Stelle, sagt
+  `scripts/quellen-holen.mjs` Bescheid, statt still die falsche Datei zu
+  schreiben.
+- `verwaltung/admin.css` — ebenfalls aus dem Original, nur die Schrift-Adressen
+  werden relativ gemacht: im Original liegt die Verwaltung an der Wurzel und
+  lädt `/fonts/…`, hier liegt sie unter `/verwaltung/`.
+
 Alles andere ist Zeichen für Zeichen identisch — der Vorführ-Modus steckt
 vollständig in diesen Schaltern, nicht in abgewandeltem Code.
-
-Dazu kommen drei Dateien, die es im Original gar nicht gibt: die Demo-Speicherung
-(`verwaltung/js/demo-persistence.js`), ihr Hinweis an der Marke
-(`verwaltung/demo-storage-note.css`) und `verwaltung/DEMO-SPEICHERUNG.md`.
-Eingehängt werden sie am Ende von `config.js` (`if (DEMO) import(…)`) — bewusst
-nicht über ein zusätzliches `<script>` in `index.html`, denn jede Zeile, die
-dort dazukäme, würde beim nächsten `quellen-holen.mjs` stillschweigend wieder
-verschwinden. Wer etwas ergänzt, geht denselben Weg und trägt die Datei in
-`nurHier` im Skript nach.
 
 Nachziehen, wenn sich in den Originalen etwas getan hat:
 

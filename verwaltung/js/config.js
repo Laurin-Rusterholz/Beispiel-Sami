@@ -62,18 +62,6 @@ export const QUANTUS_PROJECT = "PRJ-YWRM4";
  */
 export const DEMO = true;
 
-/**
- * Der Vorführ-Modus merkt sich die Änderungen im Browser. Eingehängt wird das
- * bewusst von hier aus und nicht über ein zusätzliches <script> in index.html:
- * so bleibt jede andere Datei Zeichen für Zeichen die des Originals und
- * `scripts/quellen-holen.mjs` kann sie gefahrlos nachziehen.
- */
-if (DEMO) {
-  import("./demo-persistence.js").catch((e) =>
-    console.warn("Demo-Speicherung konnte nicht geladen werden:", e)
-  );
-}
-
 /** Ablage der Bilder und Videos in Firebase Storage. */
 export const STORAGE_PREFIX = `${ROOT}/media`;
 
