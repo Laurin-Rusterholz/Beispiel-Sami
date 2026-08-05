@@ -5,7 +5,11 @@
    diese Verwaltung ist ein Werkzeug und darf hell und übersichtlich sein.
    ========================================================================== */
 
-/* Schriften lokal (public/fonts) — kein Google-Abruf */
+/* Schriften lokal (public/fonts) — kein Google-Abruf.
+   Die Adressen sind bewusst relativ zu dieser Datei und nicht "/fonts/…":
+   so tragen sie auch, wenn die Verwaltung nicht an der Wurzel einer Domain
+   liegt, sondern in einem Unterverzeichnis — etwa als /verwaltung/ in der
+   Präsentations-Fassung. An der Wurzel ändert sich dadurch nichts. */
 @font-face {
   font-family: 'Archivo';
   font-style: normal;
