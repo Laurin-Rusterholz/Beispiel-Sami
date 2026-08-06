@@ -1,4 +1,4 @@
-# Sam Sparkling — Präsentations-Fassung
+# Sam Sparking — Präsentations-Fassung
 
 Eine Vorführ-Fassung, die drei Dinge an einem Ort zusammenbringt:
 

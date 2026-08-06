@@ -1,8 +1,8 @@
 import { S, onChange, emit } from "./store.js";
 import { DEMO } from "./config.js";
 
-const KEY = "samsparkling-demo-content-v1";
-const META_KEY = "samsparkling-demo-meta-v1";
+const KEY = "samsparking-demo-content-v1";
+const META_KEY = "samsparking-demo-meta-v1";
 
 if (DEMO) {
   // `?resetDemo=1` wirft den lokal gespeicherten Stand weg, bevor irgendetwas
