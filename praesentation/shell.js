@@ -338,7 +338,7 @@ async function sendeWunsch(info, text) {
   const stelle = stelleVon(info);
 
   const zeilen = [text, ""];
-  zeilen.push("— Anpassungswunsch aus der Präsentation Sam Sparkling —");
+  zeilen.push("— Anpassungswunsch aus der Präsentation Sam Sparking —");
   zeilen.push(`Ansicht: ${info.ansicht}`);
   if (info.abschnittTitel || info.abschnitt)
     zeilen.push(`Abschnitt: ${info.abschnittTitel || "—"}${info.abschnitt ? ` (#${info.abschnitt})` : ""}`);
@@ -357,7 +357,7 @@ async function sendeWunsch(info, text) {
     source: "samsparking-praesentation",
     type: "anpassungswunsch",
     projectExternalId: PROJEKT,
-    tags: ["Website", "Sam Sparkling"],
+    tags: ["Website", "Sam Sparking"],
     createdAt: jetzt,
     createdBy: "Präsentation",
   };
