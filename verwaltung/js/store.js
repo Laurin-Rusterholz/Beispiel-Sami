@@ -262,14 +262,10 @@ function normalize(c) {
     "sections.about.paragraphs",
     "sections.about.words",
     "sections.about.facts",
-    "sections.sound.genres",
-    "sections.sound.mixes",
     "sections.shows.items",
     "sections.references.items",
     "sections.gallery.items",
-    "sections.shop.items",
     "sections.booking.available",
-    "sections.booking.rider.groups",
     "sections.contact.socials",
   ];
   const toArray = (v) => {
@@ -292,10 +288,6 @@ function normalize(c) {
     cur[last] = toArray(cur[last]);
   };
   arrays.forEach((p) => walk(c, p));
-  // Rider-Gruppen haben selbst wieder Listen
-  (c.sections?.booking?.rider?.groups || []).forEach((g) => {
-    g.items = toArray(g.items);
-  });
   // Jede Seite hat eine Abschnittsliste; nur bekannte Abschnitte, keine doppelt
   const knownSections = Object.keys(c.sections || {});
   (c.pages || []).forEach((p, i) => {

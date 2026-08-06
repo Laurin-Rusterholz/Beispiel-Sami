@@ -68,7 +68,7 @@ export function renderDesign() {
     group("Lauftext-Ticker", [
       checkboxField("ticker.enabled", "Ticker anzeigen"),
       objectList("ticker.items", "Wörter", {
-        addLabel: "+ Wortpaar",
+        addLabel: "Wortpaar hinzufügen",
         newItem: { text: "", accent: "" },
         titleOf: (i) => [i.text, i.accent].filter(Boolean).join(" ") || "(leer)",
         emptyText: "Keine Ticker-Wörter.",
@@ -134,8 +134,7 @@ function heroBackground() {
           ], { hint: "Welcher Teil sichtbar bleibt, wenn Ränder abgeschnitten werden." }),
       imageField("hero.media", isVideo ? "Video-Datei" : "Bild", {
         kind: isVideo ? "video" : "image",
-        pickLabel: isVideo ? "Video wählen" : "Bild wählen",
-        emptyText: isVideo ? "kein Video" : "kein Bild",
+        emptyText: isVideo ? "Video wählen" : "Bild wählen",
         alt: true,
         afterPick: (item) => {
           const nowVideo = item.kind === "video" || /\.(mp4|webm|mov|m4v)(\?|#|$)/i.test(item.url || "");
@@ -193,7 +192,7 @@ export function renderSeo() {
         hint: "Ideal 140–160 Zeichen. Das ist der Text unter dem Suchergebnis.",
       }),
       stringList("site.keywords", "Keywords", {
-        addLabel: "+ Keyword",
+        addLabel: "Keyword hinzufügen",
         placeholder: "Hardstyle DJ Schweiz",
         hint: "Nur noch schwach gewichtet — 5 bis 10 treffende Begriffe genügen.",
       }),
@@ -261,60 +260,20 @@ export function renderAbout() {
       stringList("sections.about.paragraphs", "Absätze", {
         multiline: true,
         rows: 5,
-        addLabel: "+ Absatz",
+        addLabel: "Absatz hinzufügen",
         hint: "**doppelte Sternchen** machen fett, [Text](https://…) macht einen Link.",
       }),
-      stringList("sections.about.words", "Stichworte (Kacheln)", { addLabel: "+ Stichwort" }),
+      stringList("sections.about.words", "Stichworte (Kacheln)", { addLabel: "Stichwort hinzufügen" }),
     ]),
     group("Fakten-Leiste", [
       objectList("sections.about.facts", null, {
-        addLabel: "+ Fakt",
+        addLabel: "Fakt hinzufügen",
         newItem: { value: "", label: "" },
         titleOf: (i) => [i.value, i.label].filter(Boolean).join(" — ") || "(leer)",
         emptyText: "Keine Fakten — die Leiste wird dann nicht angezeigt.",
         fields: (base) => [
           textField(`${base}.value`, "Zahl / Wert", { placeholder: "7+" }),
           textField(`${base}.label`, "Beschriftung", { placeholder: "Clubs & Festivals" }),
-        ],
-      }),
-    ]),
-  ]);
-}
-
-/* ------------------------------------------------------- Abschnitt: Sound */
-
-export function renderSound() {
-  return view([
-    head("Sound & Mixe", "Genres und veröffentlichte Sets."),
-    sectionBasics("sound"),
-    group("Genres", [
-      objectList("sections.sound.genres", null, {
-        addLabel: "+ Genre",
-        newItem: { name: "", meta: "Genre" },
-        titleOf: (i) => i.name || "(leer)",
-        fields: (base) => [
-          textField(`${base}.name`, "Genre"),
-          textField(`${base}.meta`, "Beschriftung rechts", { placeholder: "Genre" }),
-        ],
-      }),
-      textField("sections.sound.note", "Satz unter den Genres"),
-    ]),
-    group("Mixe", [
-      objectList("sections.sound.mixes", null, {
-        addLabel: "+ Mix",
-        newItem: { kicker: "Latest Mix", title: "", text: "", linkLabel: "Listen", linkUrl: "", embedUrl: "" },
-        titleOf: (i) => i.title || "(ohne Titel)",
-        emptyText: "Keine Mixe.",
-        fields: (base) => [
-          textField(`${base}.kicker`, "Kleine Zeile oben", { placeholder: "Latest Mix" }),
-          textField(`${base}.title`, "Titel"),
-          textArea(`${base}.text`, "Kurzbeschreibung", { rows: 2 }),
-          textField(`${base}.linkLabel`, "Button-Text", { placeholder: "Listen on Mixcloud" }),
-          textField(`${base}.linkUrl`, "Button-Link", { mono: true }),
-          textField(`${base}.embedUrl`, "Player einbetten (optional)", {
-            mono: true,
-            hint: "Embed-URL von Mixcloud/SoundCloud/Spotify. Leer = nur Button.",
-          }),
         ],
       }),
     ]),
@@ -427,40 +386,6 @@ function showsCalendar() {
   return host;
 }
 
-/* ---------------------------------------------------- Abschnitt: Erlebnis */
-
-export function renderExperience() {
-  return view([
-    head("Erlebnis", "Was ein Sam-Sparkling-Set ausmacht — für Booker und Fans."),
-    sectionBasics("experience"),
-    group("Einstieg", [
-      textArea("sections.experience.lede", "Einstiegssatz (gross gesetzt)", { rows: 2 }),
-    ]),
-    group("Momente", [
-      objectList("sections.experience.moments", null, {
-        addLabel: "+ Moment",
-        newItem: { kicker: "", title: "", text: "" },
-        titleOf: (i) => i.title || "(leer)",
-        emptyText: "Keine Momente.",
-        fields: (base) => [
-          textField(`${base}.kicker`, "Kleine Zeile oben", { placeholder: "Peak time" }),
-          textField(`${base}.title`, "Titel", { placeholder: "The Drop" }),
-          textArea(`${base}.text`, "Text", { rows: 2 }),
-        ],
-      }),
-    ]),
-    group("Aftermovie (optional)", [
-      textField("sections.experience.embedUrl", "Einbett-Link (YouTube/Vimeo, embed-URL)", { mono: true }),
-      textField("sections.experience.embedLabel", "Titel für Screenreader", { placeholder: "Aftermovie" }),
-    ], { cols: 2 }),
-    group("Zitat (optional)", [
-      textArea("sections.experience.quote.text", "Zitat", { rows: 2 }),
-      textField("sections.experience.quote.name", "Person"),
-      textField("sections.experience.quote.venue", "Club / Festival"),
-    ], { cols: 2 }),
-  ]);
-}
-
 export function renderShows() {
   const today = new Date().toISOString().slice(0, 10);
   const items = getPath(S.content, "sections.shows.items") || [];
@@ -480,7 +405,7 @@ export function renderShows() {
     }),
     group("Termine", [
       objectList("sections.shows.items", null, {
-        addLabel: "+ Termin",
+        addLabel: "Termin hinzufügen",
         newItem: {
           date: "",
           name: "",
@@ -522,66 +447,6 @@ export function renderShows() {
   ]);
 }
 
-/* ------------------------------------------------------- Abschnitt: Shop */
-
-export function renderShop() {
-  return view([
-    head(
-      "Shop",
-      "Merch verkaufen, ohne eigenen Server: jedes Produkt bekommt einen Bezahl-Link. " +
-        "Ohne Link zeigt die Website einen „Per Mail bestellen“-Knopf an die Kontakt-Adresse."
-    ),
-    sectionBasics("shop"),
-    group("Allgemein", [
-      textField("sections.shop.currency", "Währung", { placeholder: "CHF", maxlength: 5 }),
-      textField("sections.shop.twint", "TWINT-Nummer", {
-        placeholder: "+41 77 509 11 71",
-        hint: "Deine eigene Bezahlmethode: Produkte ohne Bezahl-Link zeigen dann einen TWINT-Kauf an (Nummer, Betrag, Vermerk, Mail-Bestätigung).",
-      }),
-      textField("sections.shop.buyLabel", "Kauf-Knopf", { placeholder: "Kaufen" }),
-      textArea("sections.shop.note", "Einleitung", { rows: 2 }),
-      textArea("sections.shop.emptyText", "Text, solange keine Produkte da sind", { rows: 2 }),
-    ], { cols: 2 }),
-    group("Produkte", [
-      objectList("sections.shop.items", null, {
-        addLabel: "+ Produkt",
-        newItem: { name: "", price: "", note: "", src: "", alt: "", linkUrl: "", status: "available" },
-        titleOf: (i) => [i.name, i.price].filter(Boolean).join("  ·  ") || "(neues Produkt)",
-        emptyText: "Noch keine Produkte — die Website zeigt solange den Text oben.",
-        fields: (base) => [
-          imageField(base, "Produktbild", { kind: "image", alt: true }),
-          textField(`${base}.name`, "Name", { placeholder: "Sparkling T-Shirt" }),
-          textField(`${base}.price`, "Preis", { placeholder: "45", maxlength: 12, hint: "Nur die Zahl — die Währung kommt aus der Einstellung oben." }),
-          textField(`${base}.note`, "Beschreibung (kurz)", { placeholder: "Schwarz, Logo vorne, S–XL" }),
-          textField(`${base}.linkUrl`, "Bezahl-Link", {
-            mono: true,
-            hint: "Stripe Payment Link oder PayPal.me — auf stripe.com bzw. paypal.me erstellen und hier einsetzen. Leer = Bestellung per Mail.",
-          }),
-          selectField(`${base}.status`, "Status", [
-            ["available", "verfügbar"],
-            ["soldout", "ausverkauft"],
-          ]),
-        ],
-      }),
-    ]),
-    group("So läuft das Bezahlen", [
-      el("p", { class: "field-hint" }, "Pro Produkt gilt: Bezahl-Link gesetzt → Kauf über den Link. Sonst TWINT-Nummer gesetzt → TWINT-Kauf. Sonst → Bestellung per Mail."),
-      el("h4", { class: "group-title" }, "Weg 1 — TWINT (deine eigene Bezahlmethode, sofort startklar)"),
-      el("ol", { class: "steps" }, [
-        el("li", {}, "Oben deine TWINT-Handynummer eintragen und publizieren — fertig."),
-        el("li", {}, "Die Kundschaft zahlt per TWINT (Betrag + Produktname als Vermerk) und bestätigt per Mail mit Lieferadresse."),
-        el("li", {}, "Zahlung in der TWINT-App prüfen, Paket verschicken."),
-      ]),
-      el("h4", { class: "group-title" }, "Weg 2 — Stripe Payment Link (Kartenzahlung, automatische Quittung)"),
-      el("ol", { class: "steps" }, [
-        el("li", {}, "Konto bei stripe.com anlegen (einmalig — Gebühr fällt nur pro Verkauf an)."),
-        el("li", {}, "Stripe → Payment Links → „+ Neu“: Produkt, Preis und Versand eintragen."),
-        el("li", {}, "Den Link beim Produkt als Bezahl-Link einsetzen und publizieren."),
-      ]),
-    ]),
-  ]);
-}
-
 /* -------------------------------------------------- Abschnitt: Referenzen */
 
 export function renderReferences() {
@@ -590,7 +455,7 @@ export function renderReferences() {
     sectionBasics("references"),
     group("Liste", [
       objectList("sections.references.items", null, {
-        addLabel: "+ Referenz",
+        addLabel: "Referenz hinzufügen",
         newItem: { name: "", city: "", url: "" },
         titleOf: (i) => [i.name, i.city].filter(Boolean).join(" — ") || "(leer)",
         fields: (base) => [
@@ -627,22 +492,29 @@ export function renderGallery() {
     }),
     group("Bilder", [
       objectList("sections.gallery.items", null, {
-        addLabel: "+ leeres Bild",
+        // Der übliche Weg ist „Bilder aussuchen“ — der leere Platz ist die
+        // Ausnahme (z. B. wenn die Adresse von Hand kommt).
+        addLabel: "Bilder aus den Medien hinzufügen",
+        onAdd: async (items, render) => {
+          const chosen = await pickMany({ kind: "image" });
+          if (!chosen || !chosen.length) return;
+          chosen.forEach((m) =>
+            items.push({ src: m.url, alt: m.alt || "", credit: getPath(S.content, "site.photoCredit") || "" })
+          );
+          markDirty();
+          render();
+          toast(`${chosen.length} Bild(er) hinzugefügt`);
+        },
         newItem: { src: "", alt: "", credit: "" },
         titleOf: (i, n) => i.alt || `Bild ${n + 1}`,
         emptyText: "Keine Bilder.",
         extraAdd: [
           {
-            label: "+ Aus Medien hinzufügen",
-            onClick: async (items, render) => {
-              const chosen = await pickMany({ kind: "image" });
-              if (!chosen || !chosen.length) return;
-              chosen.forEach((m) =>
-                items.push({ src: m.url, alt: m.alt || "", credit: getPath(S.content, "site.photoCredit") || "" })
-              );
+            label: "leerer Platz",
+            onClick: (items, render) => {
+              items.push({ src: "", alt: "", credit: "" });
               markDirty();
               render();
-              toast(`${chosen.length} Bild(er) hinzugefügt`);
             },
           },
         ],
@@ -667,11 +539,11 @@ export function renderGallery() {
 
 export function renderBooking() {
   return view([
-    head("Booking", "Verfügbarkeit, Rider, Presskit und das Anfrage-Formular."),
+    head("Booking", "Verfügbarkeit, Presskit und das Anfrage-Formular."),
     sectionBasics("booking"),
     group("Verfügbar für", [
       textField("sections.booking.availableKicker", "Kleine Zeile"),
-      stringList("sections.booking.available", "Einträge", { addLabel: "+ Eintrag" }),
+      stringList("sections.booking.available", "Einträge", { addLabel: "Eintrag hinzufügen" }),
     ]),
     group("Presskit", [
       textField("sections.booking.presskitLabel", "Button-Text"),
@@ -687,28 +559,6 @@ export function renderBooking() {
       textField("sections.booking.form.submitLabel", "Button-Text"),
       textArea("sections.booking.form.successText", "Text nach dem Absenden", { rows: 2 }),
       textArea("sections.booking.form.errorText", "Text bei einem Fehler", { rows: 2 }),
-    ]),
-    group("Rider (technische Anforderungen)", [
-      textField("sections.booking.rider.kicker", "Kleine Zeile"),
-      objectList("sections.booking.rider.groups", "Gruppen", {
-        addLabel: "+ Gruppe",
-        newItem: { title: "", items: [] },
-        titleOf: (i) => i.title || "(neue Gruppe)",
-        fields: (base) => [
-          textField(`${base}.title`, "Titel", { placeholder: "CDJs — 4× required" }),
-          objectList(`${base}.items`, "Geräte", {
-            addLabel: "+ Gerät",
-            newItem: { name: "", meta: "" },
-            titleOf: (i) => i.name || "(leer)",
-            confirmDelete: false,
-            fields: (b2) => [
-              textField(`${b2}.name`, "Gerät"),
-              textField(`${b2}.meta`, "Hinweis rechts", { placeholder: "1st choice" }),
-            ],
-          }),
-        ],
-      }),
-      textArea("sections.booking.rider.note", "Hinweis-Box", { rows: 3 }),
     ]),
   ]);
 }
@@ -727,7 +577,7 @@ export function renderContact() {
     ], { cols: 2 }),
     group("Social Media & Musik", [
       objectList("sections.contact.socials", null, {
-        addLabel: "+ Link",
+        addLabel: "Link hinzufügen",
         newItem: { label: "", url: "" },
         titleOf: (i) => i.label || "(leer)",
         hint: "Instagram, Mixcloud, SoundCloud, Spotify, YouTube …",
@@ -819,7 +669,7 @@ export function renderPages() {
       : null,
     group(null, [
       objectList("pages", null, {
-        addLabel: "+ Seite",
+        addLabel: "Seite hinzufügen",
         newItem: {
           slug: "",
           navLabel: "Neue Seite",

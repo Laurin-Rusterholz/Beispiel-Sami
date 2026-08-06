@@ -1,6 +1,6 @@
 {
   "hero": {
-    "ctaHref": "#booking",
+    "ctaHref": "#booking-form",
     "ctaLabel": "Book me",
     "kicker": "DJ & producer — St. Gallen, Switzerland",
     "media": {
@@ -79,40 +79,6 @@
           },
           "navLabel": "Booking",
           "presskitLabel": "Presskit (PDF)",
-          "rider": {
-            "groups": {
-              "0": {
-                "items": {
-                  "0": {
-                    "meta": "1. Wahl"
-                  },
-                  "1": {
-                    "meta": "2. Wahl"
-                  },
-                  "2": {
-                    "meta": "3. Wahl"
-                  }
-                },
-                "title": "CDJs — 4× erforderlich"
-              },
-              "1": {
-                "items": {
-                  "0": {
-                    "meta": "1. Wahl"
-                  },
-                  "1": {
-                    "meta": "2. Wahl"
-                  },
-                  "2": {
-                    "meta": "3. Wahl"
-                  }
-                },
-                "title": "Mixer — eines der folgenden"
-              }
-            },
-            "kicker": "Bevorzugtes Setup",
-            "note": "Bitte Booth-Monitore mit unabhängiger Lautstärkeregelung bereitstellen — essenziell für sauberes Cueing und Mixing."
-          },
           "title": "Boo",
           "titleAccent": "king."
         },
@@ -208,48 +174,12 @@
           "title": "Refe",
           "titleAccent": "renzen."
         },
-        "shop": {
-          "buyLabel": "Kaufen",
-          "emptyText": "Der Shop ist bald offen — das erste Merch ist in Arbeit. Folg mir auf den Kanälen unten, dann verpasst du den Start nicht.",
-          "items": {
-            "0": {
-              "alt": "as",
-              "note": "as"
-            }
-          },
-          "navLabel": "Shop",
-          "note": "Merch von Sam Sparkling — jedes Teil hilft, die nächste Produktion zu stemmen.",
-          "title": "Sh",
-          "titleAccent": "op."
-        },
         "shows": {
           "emptyText": "Aktuell habe ich keine Termine angekündigt. Neue Shows stehen hier zuerst — oder melde dich und buch mich für dein Event.",
           "navLabel": "Shows",
           "pastLabel": "Schon gespielt",
           "title": "Sh",
           "titleAccent": "ows."
-        },
-        "sound": {
-          "genres": {
-            "0": {
-              "meta": "Genre"
-            },
-            "1": {
-              "meta": "Genre"
-            }
-          },
-          "mixes": {
-            "0": {
-              "kicker": "Aktueller Mix",
-              "linkLabel": "Auf Mixcloud hören",
-              "text": "One Take, keine Abkürzungen. So bewegt ein Set von Sam Sparkling einen Raum.",
-              "title": "Euphoric & Melodic Hardstyle — Recorded Set"
-            }
-          },
-          "navLabel": "Sound",
-          "note": "Druckvolle Kicks. Emotionale Melodien. Ich baue Sets, die von Storytelling und Crowd-Energie leben.",
-          "title": "Gen",
-          "titleAccent": "res."
         }
       },
       "site": {
@@ -306,7 +236,6 @@
         "photography": "Fotografie",
         "base": "Standort",
         "tickets": "Tickets",
-        "soldOut": "Ausverkauft",
         "booked": "Gebucht",
         "calShow": "Termin",
         "prevMonth": "Vorheriger Monat",
@@ -327,9 +256,6 @@
         "notFoundText": "Diese Seite gibt es nicht (mehr). Zurück zum Start — dort steht alles Aktuelle.",
         "notFoundCta": "Zur Startseite",
         "language": "Sprache",
-        "buy": "Kaufen",
-        "orderByMail": "Per Mail bestellen",
-        "orderSubject": "Bestellung",
         "bookDay": "Diesen Tag anfragen",
         "pickDay": "Oder Wunschdatum direkt im Kalender antippen:",
         "dayBusy": "Belegt",
@@ -337,7 +263,6 @@
         "twintRef": "Vermerk",
         "twintNote": "Nach der Zahlung kurz per Mail bestätigen und die Lieferadresse angeben — dann geht dein Teil in den Versand.",
         "twintConfirm": "Bestellung per Mail bestätigen",
-        "orderMailBody": "Hoi Sam\n\nIch bestelle: {product}\nLieferadresse:\n\nDanke!",
         "toTop": "Nach oben",
         "cookieText": "Diese Website kommt ohne Tracking und Werbe-Cookies aus. Beim Abschicken einer Anfrage oder Bestellung werden nur die Angaben aus dem Formular gespeichert.",
         "cookieOk": "Alles klar",
@@ -350,7 +275,8 @@
         "showLessImages": "Weniger Bilder",
         "follow": "Kanäle",
         "phone": "Telefon",
-        "replyNote": "Antwort meist innert 48 Stunden"
+        "replyNote": "Antwort meist innert 48 Stunden",
+        "channelNotice": "Instagram wird gerade erneuert und ist ab dem 7. August wieder verfügbar."
       }
     },
     "fr": {
@@ -430,28 +356,6 @@
             },
             "2": {
               "label": "BPM de référence"
-            }
-          }
-        },
-        "sound": {
-          "navLabel": "Sound",
-          "title": "Gen",
-          "titleAccent": "res.",
-          "note": "Des kicks puissants. Des mélodies émotionnelles. Je construis des sets qui vivent de narration et d'énergie du public.",
-          "genres": {
-            "0": {
-              "meta": "Genre"
-            },
-            "1": {
-              "meta": "Genre"
-            }
-          },
-          "mixes": {
-            "0": {
-              "kicker": "Dernier mix",
-              "title": "Euphoric & Melodic Hardstyle — Recorded Set",
-              "text": "Une seule prise, sans raccourcis. De quoi sentir comment un set de Sam Sparkling soulève une salle.",
-              "linkLabel": "Écouter sur Mixcloud"
             }
           }
         },
@@ -564,40 +468,6 @@
             "successText": "Merci — ta demande est bien arrivée. Tu auras de mes nouvelles sous 48 heures.",
             "errorText": "Quelque chose n'a pas fonctionné. Écris-moi directement à info@samsparking.ch.",
             "submitLabel": "Envoyer la demande"
-          },
-          "rider": {
-            "kicker": "Setup souhaité",
-            "groups": {
-              "0": {
-                "title": "CDJ — 4× requis",
-                "items": {
-                  "0": {
-                    "meta": "1er choix"
-                  },
-                  "1": {
-                    "meta": "2e choix"
-                  },
-                  "2": {
-                    "meta": "3e choix"
-                  }
-                }
-              },
-              "1": {
-                "title": "Mixer — l'un des suivants",
-                "items": {
-                  "0": {
-                    "meta": "1er choix"
-                  },
-                  "1": {
-                    "meta": "2e choix"
-                  },
-                  "2": {
-                    "meta": "3e choix"
-                  }
-                }
-              }
-            },
-            "note": "Merci de prévoir des retours booth avec réglage de volume indépendant — indispensable pour un cueing et un mix propres."
           }
         },
         "contact": {
@@ -606,14 +476,6 @@
           "titleAccent": "takt.",
           "kicker": "Booking & demandes",
           "base": "Saint-Gall, Suisse"
-        },
-        "shop": {
-          "navLabel": "Shop",
-          "note": "Le merch de Sam Sparkling — chaque pièce aide à financer la prochaine production.",
-          "emptyText": "Le shop ouvre bientôt — le premier merch est en préparation. Suis les canaux ci-dessous pour ne pas rater le lancement.",
-          "buyLabel": "Acheter",
-          "title": "Sh",
-          "titleAccent": "op."
         }
       },
       "ui": {
@@ -629,7 +491,6 @@
         "photography": "Photographie",
         "base": "Basé à",
         "tickets": "Billets",
-        "soldOut": "Complet",
         "booked": "Réservé",
         "prevMonth": "Mois précédent",
         "nextMonth": "Mois suivant",
@@ -650,9 +511,6 @@
         "notFoundText": "Cette page n'existe pas (ou plus). Retour à l'accueil — tout ce qui est actuel s'y trouve.",
         "notFoundCta": "Retour à l'accueil",
         "language": "Langue",
-        "buy": "Acheter",
-        "orderByMail": "Commander par e-mail",
-        "orderSubject": "Commande",
         "bookDay": "Demander cette date",
         "pickDay": "Ou choisis ta date directement dans le calendrier :",
         "dayBusy": "Occupé",
@@ -660,7 +518,6 @@
         "twintRef": "Motif",
         "twintNote": "Après le paiement, confirme par e-mail avec ton adresse de livraison — ta pièce part ensuite.",
         "twintConfirm": "Confirmer la commande par e-mail",
-        "orderMailBody": "Salut Sam\n\nJe commande : {product}\nAdresse de livraison :\n\nMerci !",
         "toTop": "En haut",
         "cookieText": "Ce site n'utilise ni traçage ni cookies publicitaires. Lors de l'envoi d'une demande ou d'une commande, seules les informations du formulaire sont enregistrées.",
         "cookieOk": "Compris",
@@ -673,7 +530,8 @@
         "showLessImages": "Afficher moins d’images",
         "follow": "Réseaux",
         "phone": "Téléphone",
-        "replyNote": "Réponse en général sous 48 h"
+        "replyNote": "Réponse en général sous 48 h",
+        "channelNotice": "Instagram est en cours de refonte et sera de nouveau disponible le 7 août."
       },
       "hero": {
         "kicker": "DJ & producteur — Saint-Gall, Suisse",
@@ -751,40 +609,6 @@
           },
           "navLabel": "12a938f0",
           "presskitLabel": "d483ae75",
-          "rider": {
-            "groups": {
-              "0": {
-                "items": {
-                  "0": {
-                    "meta": "132bae32"
-                  },
-                  "1": {
-                    "meta": "4ac4842e"
-                  },
-                  "2": {
-                    "meta": "0e9aaaff"
-                  }
-                },
-                "title": "2fc7c7af"
-              },
-              "1": {
-                "items": {
-                  "0": {
-                    "meta": "132bae32"
-                  },
-                  "1": {
-                    "meta": "4ac4842e"
-                  },
-                  "2": {
-                    "meta": "0e9aaaff"
-                  }
-                },
-                "title": "c13e7aaf"
-              }
-            },
-            "kicker": "86449877",
-            "note": "0aa5b4c5"
-          },
           "title": "e0cb9023",
           "titleAccent": "454fdf68"
         },
@@ -880,48 +704,12 @@
           "title": "4e18ba45",
           "titleAccent": "1f0cb59f"
         },
-        "shop": {
-          "buyLabel": "cada780b",
-          "emptyText": "29cb33e6",
-          "items": {
-            "0": {
-              "alt": "5e25208d",
-              "note": "5e25208d"
-            }
-          },
-          "navLabel": "28742cc9",
-          "note": "9d4f0d9d",
-          "title": "3f025d7e",
-          "titleAccent": "632213cc"
-        },
         "shows": {
           "emptyText": "335e234f",
           "navLabel": "70e4b3fd",
           "pastLabel": "dcef0772",
           "title": "3f025d7e",
           "titleAccent": "505289f2"
-        },
-        "sound": {
-          "genres": {
-            "0": {
-              "meta": "1c27eb60"
-            },
-            "1": {
-              "meta": "1c27eb60"
-            }
-          },
-          "mixes": {
-            "0": {
-              "kicker": "e37c4d5c",
-              "linkLabel": "417850f6",
-              "text": "94891c63",
-              "title": "2bd0b949"
-            }
-          },
-          "navLabel": "b3ca9a34",
-          "note": "c2ad77e1",
-          "title": "c0974eb5",
-          "titleAccent": "b4bce895"
         }
       },
       "site": {
@@ -978,7 +766,6 @@
         "photography": "f7926338",
         "base": "a4bc2bf8",
         "tickets": "9241e6c2",
-        "soldOut": "0fe973c7",
         "booked": "9bf344d9",
         "calShow": "29742e5c",
         "prevMonth": "0d6437b6",
@@ -999,9 +786,6 @@
         "notFoundText": "48825a82",
         "notFoundCta": "4448fb13",
         "language": "9a73db9b",
-        "buy": "cada780b",
-        "orderByMail": "62151401",
-        "orderSubject": "18e78237",
         "bookDay": "aa2f019e",
         "pickDay": "c2e36ecb",
         "dayBusy": "d6152dc8",
@@ -1009,7 +793,6 @@
         "twintRef": "adc8c33a",
         "twintNote": "eb378b74",
         "twintConfirm": "93393f49",
-        "orderMailBody": "92a8e3b2",
         "toTop": "0babbd70",
         "cookieText": "0252aaa9",
         "cookieOk": "4c891c6a",
@@ -1018,7 +801,8 @@
         "bookCta": "5747254e",
         "follow": "c9409495",
         "phone": "4930944f",
-        "replyNote": "273c1cf7"
+        "replyNote": "273c1cf7",
+        "channelNotice": "b0e89c39"
       }
     },
     "fr": {
@@ -1098,28 +882,6 @@
             },
             "2": {
               "label": "6921445a"
-            }
-          }
-        },
-        "sound": {
-          "navLabel": "b3ca9a34",
-          "title": "c0974eb5",
-          "titleAccent": "b4bce895",
-          "note": "c2ad77e1",
-          "genres": {
-            "0": {
-              "meta": "1c27eb60"
-            },
-            "1": {
-              "meta": "1c27eb60"
-            }
-          },
-          "mixes": {
-            "0": {
-              "kicker": "e37c4d5c",
-              "title": "2bd0b949",
-              "text": "94891c63",
-              "linkLabel": "417850f6"
             }
           }
         },
@@ -1232,40 +994,6 @@
             "successText": "29f4405b",
             "errorText": "7a37cbc4",
             "submitLabel": "4a783e3a"
-          },
-          "rider": {
-            "kicker": "86449877",
-            "groups": {
-              "0": {
-                "title": "2fc7c7af",
-                "items": {
-                  "0": {
-                    "meta": "132bae32"
-                  },
-                  "1": {
-                    "meta": "4ac4842e"
-                  },
-                  "2": {
-                    "meta": "0e9aaaff"
-                  }
-                }
-              },
-              "1": {
-                "title": "c13e7aaf",
-                "items": {
-                  "0": {
-                    "meta": "132bae32"
-                  },
-                  "1": {
-                    "meta": "4ac4842e"
-                  },
-                  "2": {
-                    "meta": "0e9aaaff"
-                  }
-                }
-              }
-            },
-            "note": "0aa5b4c5"
           }
         },
         "contact": {
@@ -1274,14 +1002,6 @@
           "titleAccent": "a26feecd",
           "kicker": "c49a5387",
           "base": "23df4a6c"
-        },
-        "shop": {
-          "navLabel": "28742cc9",
-          "note": "9d4f0d9d",
-          "emptyText": "29cb33e6",
-          "buyLabel": "cada780b",
-          "title": "3f025d7e",
-          "titleAccent": "632213cc"
         }
       },
       "ui": {
@@ -1297,7 +1017,6 @@
         "photography": "f7926338",
         "base": "a4bc2bf8",
         "tickets": "9241e6c2",
-        "soldOut": "0fe973c7",
         "booked": "9bf344d9",
         "prevMonth": "0d6437b6",
         "nextMonth": "711101f6",
@@ -1318,9 +1037,6 @@
         "notFoundText": "48825a82",
         "notFoundCta": "4448fb13",
         "language": "9a73db9b",
-        "buy": "cada780b",
-        "orderByMail": "62151401",
-        "orderSubject": "18e78237",
         "bookDay": "aa2f019e",
         "pickDay": "c2e36ecb",
         "dayBusy": "d6152dc8",
@@ -1328,7 +1044,6 @@
         "twintRef": "adc8c33a",
         "twintNote": "eb378b74",
         "twintConfirm": "93393f49",
-        "orderMailBody": "92a8e3b2",
         "toTop": "0babbd70",
         "cookieText": "0252aaa9",
         "cookieOk": "4c891c6a",
@@ -1337,7 +1052,8 @@
         "bookCta": "5747254e",
         "follow": "c9409495",
         "phone": "4930944f",
-        "replyNote": "273c1cf7"
+        "replyNote": "273c1cf7",
+        "channelNotice": "b0e89c39"
       },
       "hero": {
         "kicker": "0f636286",
@@ -1352,12 +1068,9 @@
   },
   "layout": [
     "about",
-    "sound",
-    "experience",
     "shows",
     "references",
     "gallery",
-    "shop",
     "booking",
     "contact"
   ],
@@ -1440,46 +1153,6 @@
       "navLabel": "Booking",
       "presskitLabel": "Presskit (PDF)",
       "presskitUrl": "presskit/sam-sparking-presskit-2026.pdf",
-      "rider": {
-        "groups": [
-          {
-            "items": [
-              {
-                "meta": "1st choice",
-                "name": "Pioneer CDJ-3000X"
-              },
-              {
-                "meta": "2nd choice",
-                "name": "Pioneer CDJ-3000"
-              },
-              {
-                "meta": "3rd choice",
-                "name": "Pioneer CDJ-2000NXS2"
-              }
-            ],
-            "title": "CDJs — 4× required"
-          },
-          {
-            "items": [
-              {
-                "meta": "1st choice",
-                "name": "Pioneer DJM-V10"
-              },
-              {
-                "meta": "2nd choice",
-                "name": "Pioneer DJM-A9"
-              },
-              {
-                "meta": "3rd choice",
-                "name": "Pioneer DJM-2000NXS"
-              }
-            ],
-            "title": "Mixer — one of the following"
-          }
-        ],
-        "kicker": "Preferred setup",
-        "note": "Please provide booth monitors with independent volume control — essential for proper cueing and mixing."
-      },
       "title": "Boo",
       "titleAccent": "king."
     },
@@ -1505,6 +1178,7 @@
     },
     "gallery": {
       "enabled": true,
+      "mobileLimit": 4,
       "items": [
         {
           "alt": "Sam Sparkling live — crowd with hands up",
@@ -1569,8 +1243,7 @@
       ],
       "navLabel": "Gallery",
       "title": "Gal",
-      "titleAccent": "lery.",
-      "mobileLimit": 4
+      "titleAccent": "lery."
     },
     "references": {
       "enabled": true,
@@ -1610,28 +1283,6 @@
       "title": "Refe",
       "titleAccent": "rences."
     },
-    "shop": {
-      "buyLabel": "Buy",
-      "currency": "CHF 5",
-      "emptyText": "The shop opens soon — the first merch is in the works. Follow the channels below so you don't miss the drop.",
-      "enabled": true,
-      "items": [
-        {
-          "alt": "as",
-          "linkUrl": "asd",
-          "name": "Beispiel",
-          "note": "as",
-          "price": "35",
-          "src": "https://firebasestorage.googleapis.com/v0/b/jupidu-36804.firebasestorage.app/o/samsparking%2Fmedia%2F-OyU22YYzpKFXkDykqQX%2Fdscf8788.jpg?alt=media&token=5fa53fdc-6095-4f9c-8c66-88563f120179",
-          "status": "available"
-        }
-      ],
-      "navLabel": "Shop",
-      "note": "Sam Sparkling merch — every piece helps fund the next production.",
-      "title": "Sh",
-      "titleAccent": "op.",
-      "twint": ""
-    },
     "shows": {
       "emptyText": "I haven't announced any dates right now. New shows land here first — or get in touch and book me for your event.",
       "enabled": true,
@@ -1641,63 +1292,6 @@
       "titleAccent": "ows.",
       "view": "calendar",
       "items": []
-    },
-    "sound": {
-      "enabled": true,
-      "genres": [
-        {
-          "meta": "Genre",
-          "name": "Euphoric Hardstyle"
-        },
-        {
-          "meta": "Genre",
-          "name": "Melodic Hardstyle"
-        }
-      ],
-      "mixes": [
-        {
-          "kicker": "Latest Mix",
-          "linkLabel": "Listen on Mixcloud",
-          "linkUrl": "https://www.mixcloud.com/samsparking/euphoric-melodic-hardstyle-rec/",
-          "text": "One take, no shortcuts. Get a feel for how a Sam Sparkling set moves a room.",
-          "title": "Euphoric & Melodic Hardstyle — Recorded Set"
-        }
-      ],
-      "navLabel": "Sound",
-      "note": "Hard kicks. Emotional melodies. I build sets that live on storytelling and crowd energy.",
-      "title": "Gen",
-      "titleAccent": "res."
-    },
-    "experience": {
-      "enabled": true,
-      "navLabel": "Experience",
-      "title": "Experi",
-      "titleAccent": "ence.",
-      "lede": "A Sam Sparkling set is built like a story: a slow burn, a hard turn, and a last hour nobody wants to end.",
-      "moments": [
-        {
-          "kicker": "Warm-up",
-          "title": "The Build",
-          "text": "Melodic, patient, and loud enough to pull people off the wall. The room fills before the first kick lands."
-        },
-        {
-          "kicker": "Peak time",
-          "title": "The Drop",
-          "text": "Euphoric hardstyle at full width — hard kicks under melodies you can sing back. This is what people come for."
-        },
-        {
-          "kicker": "Closing",
-          "title": "The Last Hour",
-          "text": "Raw energy, no filler. Tracks I only play when the floor has earned them."
-        }
-      ],
-      "embedUrl": "",
-      "embedLabel": "Aftermovie",
-      "quote": {
-        "text": "",
-        "name": "",
-        "venue": ""
-      }
     }
   },
   "site": {
@@ -1770,7 +1364,6 @@
     "phone": "Phone",
     "base": "Base",
     "tickets": "Tickets",
-    "soldOut": "Sold out",
     "booked": "Booked",
     "calShow": "Show",
     "prevMonth": "Previous month",
@@ -1791,9 +1384,6 @@
     "notFoundText": "This page doesn't exist (any more). Head back to the start — everything current is there.",
     "notFoundCta": "Back to start",
     "language": "Language",
-    "buy": "Buy",
-    "orderByMail": "Order by e-mail",
-    "orderSubject": "Order",
     "bookDay": "Request this date",
     "pickDay": "Or tap your preferred date right in the calendar:",
     "dayBusy": "Taken",
@@ -1801,7 +1391,6 @@
     "twintRef": "Reference",
     "twintNote": "After paying, confirm briefly by e-mail with your shipping address — then your piece ships.",
     "twintConfirm": "Confirm order by e-mail",
-    "orderMailBody": "Hi Sam\n\nI'd like to order: {product}\nShipping address:\n\nThanks!",
     "toTop": "Back to top",
     "cookieText": "This website uses no tracking or advertising cookies. When you send a request or order, only the details from the form are stored.",
     "cookieOk": "Got it",
@@ -1813,7 +1402,8 @@
     "showMoreImages": "Show {n} more",
     "showLessImages": "Show fewer images",
     "follow": "Channels",
-    "replyNote": "I usually reply within 48 hours"
+    "replyNote": "I usually reply within 48 hours",
+    "channelNotice": "Instagram is being rebuilt and will be back on 7 August."
   },
   "updatedAt": "2026-07-27T04:36:05.224Z",
   "updatedBy": "Verwaltung"
