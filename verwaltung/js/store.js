@@ -256,7 +256,6 @@ function detachListeners() {
 function normalize(c) {
   const arrays = [
     "site.keywords",
-    "hero.stats",
     "ticker.items",
     "layout",
     "pages",

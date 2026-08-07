@@ -1,5 +1,5 @@
 /* ==========================================================================
-   Verwaltung DJ Sam Sparking — App-Rahmen, Navigation, Dashboard
+   Verwaltung DJ Sam Sparkling — App-Rahmen, Navigation, Dashboard
    ========================================================================== */
 
 import { DEFAULT_SITE_URL, PATHS, RTDB_URL, DEMO } from "./config.js";
@@ -27,9 +27,6 @@ import {
   renderShows,
   renderReferences,
   renderGallery,
-  renderShop,
-  renderSound,
-  renderExperience,
   renderBooking,
   renderContact,
   renderLayout,
@@ -108,9 +105,6 @@ const NAV = [
       { id: "shows", label: "Shows", icon: ICON.calendar, render: renderShows },
       { id: "references", label: "Referenzen", icon: ICON.star, render: renderReferences },
       { id: "gallery", label: "Galerie", icon: ICON.image, render: renderGallery },
-      { id: "sound", label: "Sound & Genres", icon: ICON.music, render: renderSound },
-      { id: "experience", label: "Erlebnis", icon: ICON.bolt, render: renderExperience },
-      { id: "shop", label: "Shop", icon: ICON.bag, render: renderShop },
       { id: "booking", label: "Booking", icon: ICON.clipboard, render: renderBooking },
       { id: "contact", label: "Kontakt", icon: ICON.mail, render: renderContact },
     ],
@@ -210,7 +204,7 @@ function renderDashboard() {
     el("div", { class: "view-head" }, [
       el("div", {}, [
         el("h2", {}, "Hoi Sam"),
-        el("p", { class: "muted" }, "Alles über Sam Sparking an einem Ort."),
+        el("p", { class: "muted" }, "Alles über Sam Sparkling an einem Ort."),
       ]),
     ]),
     el("div", { class: "stats" }, [
@@ -728,7 +722,7 @@ function renderShell() {
         }, "☰"),
         el("div", { class: "brand" }, [
           el("span", { class: "brand-mark" }, "◆"),
-          el("span", { class: "brand-text" }, "Sam Sparking — Verwaltung"),
+          el("span", { class: "brand-text" }, "Sam Sparkling — Verwaltung"),
           DEMO
             ? el(
                 "span",
@@ -825,7 +819,7 @@ function renderLogin(message) {
     el("div", { class: "login" }, [
       el("div", { class: "login-box" }, [
         el("span", { class: "brand-mark big" }, "◆"),
-        el("h1", {}, "Sam Sparking"),
+        el("h1", {}, "Sam Sparkling"),
         el("p", { class: "muted" }, "Verwaltung der Website"),
         form,
         hint,
