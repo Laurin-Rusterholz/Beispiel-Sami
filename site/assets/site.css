@@ -784,10 +784,12 @@ blockquote.lede footer{
   transition:transform .25s cubic-bezier(.22,.8,.28,1),border-color .25s;
 }
 .venue-list a:hover{transform:translateY(-2px);border-color:rgba(46,107,255,.5);}
-/* Die wichtigsten Referenzen stehen oben und nehmen die ganze Breite ein. */
-@media(min-width:860px){.venue-list .lead{grid-column:1/-1;}}
-.venue-list .lead a{border-color:rgba(46,107,255,.45);background:linear-gradient(90deg,rgba(46,107,255,.10),var(--card) 55%);}
-.venue-list .lead .venue-idx{color:var(--spark);opacity:1;}
+/* Die vier wichtigsten Referenzen stehen einzeln und ueber die ganze Breite —
+   deshalb hier eine Spalte statt zwei. */
+.venue-lead-list{display:flex;flex-direction:column;gap:14px;}
+@media(min-width:860px){.venue-lead-list{display:flex;}}
+.venue-lead-list a{border-color:rgba(46,107,255,.45);background:linear-gradient(90deg,rgba(46,107,255,.10),var(--card) 55%);}
+.venue-lead-list .venue-idx{color:var(--spark);opacity:1;}
 /* Der Name steht immer auf EINER Zeile. Die Grundgrösse ist darum bewusst
    zurückhaltend; passt ein langer Name trotzdem nicht, verkleinert ihn
    assets/site.js so weit, bis er in die Zeile geht (--venue-fit). */
@@ -796,14 +798,85 @@ blockquote.lede footer{
   text-transform:uppercase;font-variation-settings:'wdth' 116,'wght' 700;
   display:block;min-width:0;white-space:nowrap;overflow:hidden;
 }
-/* Die beiden wichtigsten Referenzen stehen gross über die ganze Breite. */
-.venue-list .lead .venue-name{font-size:calc(clamp(1.5rem,4vw,2.9rem) * var(--venue-fit,1));}
+/* Die vier wichtigsten Referenzen stehen gross über die ganze Breite. */
+.venue-lead-list .venue-name{font-size:calc(clamp(1.9rem,5.4vw,3.8rem) * var(--venue-fit,1));}
 .venue-city{font-family:var(--font-m);font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;color:var(--bone-dim);}
 .venue-idx{font-family:var(--font-m);font-size:.72rem;color:var(--warm);opacity:.65;font-variant-numeric:tabular-nums;}
+
+/* ---------- REFERENCES: die weiteren ----------
+   Alles, was nicht zu den vier grossen gehoert, steht hier — und zwar
+   ausdruecklich gleich gross. Keine Nummer, keine Kachel, kein Groessen-
+   Ausgleich: eine ruhige Aufzaehlung, die sagt "da war ich auch", ohne den
+   vier grossen die Aufmerksamkeit wegzunehmen. */
+.venue-more{margin-top:34px;}
+.venue-more-head{
+  display:block;color:var(--bone-dim);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;padding-bottom:12px;border-bottom:1px solid var(--line);
+}
+.venue-rest{
+  list-style:none;display:flex;flex-wrap:wrap;gap:0 28px;
+  padding-top:6px;
+}
+.venue-rest li{border-bottom:1px solid var(--line);flex:1 1 240px;}
+.venue-rest a{
+  display:flex;align-items:baseline;justify-content:space-between;gap:14px;
+  padding:13px 2px;min-height:var(--tap);
+  transition:color .2s,border-color .2s;
+}
+.venue-rest a:hover .rest-name{color:var(--spark);}
+/* Feste Groesse — hier wird nichts eingepasst, sonst waeren sie wieder
+   verschieden gross. Ein zu langer Name bricht lieber um. */
+.rest-name{
+  font-size:1rem;text-transform:uppercase;
+  font-variation-settings:'wdth' 112,'wght' 600;
+  line-height:1.35;
+}
+.rest-city{
+  font-family:var(--font-m);font-size:.64rem;letter-spacing:.12em;
+  text-transform:uppercase;color:var(--bone-dim);white-space:nowrap;
+}
 .live-note{margin-top:26px;color:var(--bone-dim);font-size:.92rem;}
+
+/* ---------- JOIN THE MOVEMENT ----------
+   Der Aufruf nach dem Booking. Alle Kanaele sind gleich viel wert und stehen
+   darum auch gleich gross nebeneinander — keiner wird herausgehoben. */
+.follow-lede{max-width:56ch;margin-bottom:clamp(24px,4vw,38px);}
+.follow-list{
+  list-style:none;display:grid;gap:14px;
+  grid-template-columns:repeat(auto-fit,minmax(200px,1fr));
+}
+.follow-list a{
+  display:flex;flex-direction:column;align-items:flex-start;gap:10px;
+  padding:22px 20px;background:var(--card);border:1px solid var(--line);
+  min-height:var(--tap);height:100%;
+  transition:transform .25s cubic-bezier(.22,.8,.28,1),border-color .25s;
+}
+.follow-list a:hover{transform:translateY(-2px);border-color:rgba(46,107,255,.5);}
+.follow-icon{display:block;color:var(--spark);}
+.follow-icon svg{width:26px;height:26px;display:block;}
+.follow-name{
+  font-size:1.12rem;text-transform:uppercase;
+  font-variation-settings:'wdth' 112,'wght' 700;
+}
+.follow-handle{
+  font-size:.68rem;letter-spacing:.12em;text-transform:none;color:var(--bone-dim);
+}
 
 /* ---------- SHOP ---------- */
 .shop-note{color:var(--bone-dim);max-width:60ch;margin-bottom:clamp(26px,4vw,40px);}
+/* Gratis Versand — nur in der Schweiz. Steht unter der Einleitung, an jeder
+   Ware und bei den Bezahlwegen; hier deutlich genug, um gelesen zu werden. */
+.shop-shipping{margin:-16px 0 clamp(26px,4vw,40px);}
+.shop-shipping .mono{
+  display:inline-block;color:var(--spark);font-size:.72rem;letter-spacing:.12em;
+  text-transform:uppercase;border:1px solid rgba(46,107,255,.45);
+  border-radius:999px;padding:7px 14px;
+}
+.product-ship{
+  display:block;color:var(--bone-dim);font-size:.62rem;letter-spacing:.1em;
+  text-transform:uppercase;padding-top:8px;
+}
+.pay-ship{color:var(--spark);}
 /* Alles auf einen Blick: die Karten sind bewusst klein gehalten, damit
    moeglichst viel Ware gleichzeitig sichtbar ist. Wie klein, haengt an der
    Menge — `--tile` setzt der Generator je nach Anzahl Produkte (siehe
@@ -1349,7 +1422,10 @@ footer{border-top:1px solid var(--line);padding:26px 0 34px;}
     background:none;border:0;border-bottom:1px solid var(--line);
   }
   .venue-name{font-size:calc(1.12rem * var(--venue-fit,1));}
-  .venue-list .lead .venue-name{font-size:calc(1.5rem * var(--venue-fit,1));}
+  .venue-lead-list .venue-name{font-size:calc(1.62rem * var(--venue-fit,1));}
+  .venue-rest{gap:0;}
+  .venue-rest li{flex:1 1 100%;}
+  .rest-name{font-size:.98rem;}
   .venue-city{grid-column:2;}
   .genre-list li{font-size:1.15rem;padding:16px;}
   .avail li{font-size:1.05rem;}
@@ -1574,7 +1650,8 @@ footer{border-top:1px solid var(--line);padding:26px 0 34px;}
     grid-template-columns:28px minmax(0,1fr);gap:8px;padding:12px 1px;
   }
   .venue-name{font-size:calc(.98rem * var(--venue-fit,1));}
-  .venue-list .lead .venue-name{font-size:calc(1.3rem * var(--venue-fit,1));}
+  .venue-lead-list .venue-name{font-size:calc(1.42rem * var(--venue-fit,1));}
+  .rest-name{font-size:.92rem;}
   .venue-city{font-size:.56rem;}
 
   .gal{

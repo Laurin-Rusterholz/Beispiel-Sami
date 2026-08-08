@@ -777,27 +777,100 @@ function renderShows(n, s) {
   </section>`;
 }
 
+/**
+ * Join the Movement — der Aufruf gleich nach dem Booking. Wer bis hierher
+ * gelesen hat, ohne anzufragen, soll wenigstens nicht verloren gehen.
+ *
+ * Die Kanaele sind dieselben wie im Fussbereich und oben im Kopf: gepflegt
+ * werden sie einmal unter sections.contact.socials. Kanaele ohne Adresse
+ * bleiben aussen vor — ein Kachel ohne Ziel waere nur eine Sackgasse.
+ */
+function renderFollow(n, s, contact) {
+  const kanaele = list(contact?.socials).filter((x) => str(x?.label) && safeUrl(x?.url));
+  if (!kanaele.length) {
+    return `
+  <section class="pad follow-sec" id="follow" aria-labelledby="follow-h">
+    <div class="wrap">${sectionHead(n, s, "follow")}
+      <!-- TODO Kunde: Es ist kein Kanal mit Adresse hinterlegt. Eintragen in der
+           Verwaltung unter "Join the Movement"; der Abschnitt zeigt sie dann
+           hier, im Fussbereich und oben im Kopfbereich. -->
+    </div>
+  </section>`;
+  }
+  return `
+  <section class="pad follow-sec" id="follow" aria-labelledby="follow-h">
+    <div class="wrap">${sectionHead(n, s, "follow")}
+      ${str(s.lede) ? `<p class="lede rv follow-lede">${inline(s.lede)}</p>` : ""}
+      <ul class="follow-list rv">
+        ${kanaele
+          .map(
+            (x) =>
+              `<li><a href="${href(x.url)}" target="_blank" rel="noopener me">
+            <span class="follow-icon" aria-hidden="true">${socialIcon(x.label, x.url)}</span>
+            <span class="follow-name">${esc(x.label)}</span>
+            ${str(x.handle) ? `<span class="follow-handle mono">${esc(x.handle)}</span>` : ""}
+          </a></li>`
+          )
+          .join("\n        ")}
+      </ul>
+    </div>
+  </section>`;
+}
+
+/** So viele Referenzen stehen gross. Alles darueber waere keine Auszeichnung mehr. */
+const REF_GROSS = 4;
+
 function renderReferences(n, s) {
   const items = list(s.items).filter((i) => str(i?.name));
+  // Vier stehen gross: die angewaehlten (`highlight`), und wenn keine
+  // angewaehlt sind, die obersten vier — die Liste ist nach Wichtigkeit
+  // sortiert. Alle uebrigen stehen darunter, jede gleich gross wie die
+  // naechste; nichts sticht dort heraus, das ist der Punkt.
+  const markiert = items.filter((v) => v.highlight === true).slice(0, REF_GROSS);
+  const gross = markiert.length ? markiert : items.slice(0, REF_GROSS);
+  const klein = items.filter((v) => !gross.includes(v));
+
+  const zeile = (v, i) => {
+    const url = safeUrl(v.url) || anchor("#booking");
+    const ext = /^https?:/i.test(url) ? ' target="_blank" rel="noopener"' : "";
+    return `<li><a href="${esc(url)}"${ext}><span class="venue-idx">${num(
+      i + 1
+    )}</span><span class="venue-name">${esc(v.name)}</span><span class="venue-city">${esc(
+      v.city
+    )}</span></a></li>`;
+  };
+
+  // Die kleinen kommen ohne Nummer und ohne Kachel aus: Name, Ort, fertig.
+  // Sie tragen bewusst eine eigene Klasse — der Groessen-Ausgleich in
+  // assets/site.js fasst nur `.venue-name` an, hier bleibt alles gleich gross.
+  const kleinListe = klein.length
+    ? `<div class="venue-more rv">
+        ${
+          str(s.moreLabel)
+            ? `<span class="mono venue-more-head">${esc(str(s.moreLabel))} (${num(klein.length)})</span>`
+            : ""
+        }
+        <ul class="venue-rest">
+          ${klein
+            .map((v) => {
+              const url = safeUrl(v.url) || anchor("#booking");
+              const ext = /^https?:/i.test(url) ? ' target="_blank" rel="noopener"' : "";
+              return `<li><a href="${esc(url)}"${ext}><span class="rest-name">${esc(
+                v.name
+              )}</span>${str(v.city) ? `<span class="rest-city">${esc(v.city)}</span>` : ""}</a></li>`;
+            })
+            .join("\n          ")}
+        </ul>
+      </div>`
+    : "";
+
   return `
   <section class="pad" id="references" aria-labelledby="references-h">
     <div class="wrap">${sectionHead(n, s, "references")}
-      <ul class="venue-list rv">
-        ${items
-          .map((v, i) => {
-            const url = safeUrl(v.url) || anchor("#booking");
-            const ext = /^https?:/i.test(url) ? ' target="_blank" rel="noopener"' : "";
-            // Die Liste ist nach Wichtigkeit sortiert. Die oben stehenden
-            // Referenzen tragen "highlight" und bekommen die ganze Zeilenbreite
-            // — so ist die Reihenfolge auch optisch eine Rangfolge.
-            return `<li${v.highlight ? ' class="lead"' : ""}><a href="${esc(url)}"${ext}><span class="venue-idx">${num(
-              i + 1
-            )}</span><span class="venue-name">${esc(v.name)}</span><span class="venue-city">${esc(
-              v.city
-            )}</span></a></li>`;
-          })
-          .join("\n        ")}
+      <ul class="venue-list venue-lead-list rv">
+        ${gross.map(zeile).join("\n        ")}
       </ul>
+      ${kleinListe}
       ${
         str(s.note)
           ? `<p class="live-note rv">${inline(s.note)} <a class="accent" href="${anchorHref(
@@ -933,9 +1006,14 @@ function payMethods(s) {
   const twint = str(s.twint);
   const bank = s.bank || {};
   const hasBank = str(bank.iban);
+  // Stripe laeuft ueber Zahlungslinks je Ware — ohne einen einzigen Link gaebe
+  // es nichts anzuklicken, dann wird der Weg auch nicht behauptet.
+  const stripe = s.stripe || {};
+  const stripeLinks = list(s.items).some((p) => /^https?:\/\//i.test(String(p?.linkUrl || "")));
+  const hasStripe = stripe.enabled === true && stripeLinks;
   // Fehlen Nummer und IBAN noch, steht hier bewusst der Platzhalter statt
   // nichts — sonst faellt beim Abnehmen niemandem auf, dass die Angaben fehlen.
-  const missing = !twint && !hasBank;
+  const missing = !twint && !hasBank && !hasStripe;
   const qr = safeUrl(s.qr?.src)
     ? `<figure class="pay-qr">
             ${picture(s.qr, { widths: [280, 560], sizes: "220px" })}
@@ -947,10 +1025,17 @@ function payMethods(s) {
              unter Shop → Bezahlung hochladen; es erscheint dann hier.
              Offene Frage: TWINT-QR, Bank-QR oder beide? -->
         <div class="pay-qr pay-qr-missing"><span class="mono">${esc(UI.payQrMissing)}</span></div>`;
+  const stripeZeile = hasStripe
+    ? `<li class="pay-stripe"><b>Stripe</b><span>${esc(
+        str(stripe.label, "Card & TWINT — secure checkout with Stripe")
+      )}</span></li>`
+    : "";
   const details = missing
-    ? `<li><b>TWINT</b><span>${esc(UI.payPending)}</span></li>
+    ? `${stripeZeile}
+              <li><b>TWINT</b><span>${esc(UI.payPending)}</span></li>
               <li><b>${esc(UI.payBank)}</b><span>${esc(UI.payPending)}</span></li>`
-    : `${twint ? `<li><b>TWINT</b><span>${esc(twint)}</span></li>` : ""}
+    : `${stripeZeile}
+              ${twint ? `<li><b>TWINT</b><span>${esc(twint)}</span></li>` : ""}
               ${hasBank ? `<li><b>${esc(str(bank.label, UI.payBank))}</b><span>${esc(bank.iban)}</span></li>` : ""}
               ${hasBank && str(bank.holder) ? `<li><b>${esc(UI.payHolder)}</b><span>${esc(bank.holder)}</span></li>` : ""}
               ${hasBank && str(bank.bank) ? `<li><b>${esc(UI.payBankName)}</b><span>${esc(bank.bank)}</span></li>` : ""}`;
@@ -970,7 +1055,8 @@ function payMethods(s) {
             <ul class="pay-list">
               ${details}
             </ul>
-            <p class="pay-note">${esc(UI.payNote)}</p>
+            <p class="pay-note">${esc(hasStripe && str(stripe.note) ? str(stripe.note) : UI.payNote)}</p>
+            ${str(s.shipping) ? `<p class="pay-note pay-ship">${esc(str(s.shipping))}</p>` : ""}
           </div>
           ${qr}
         </div>
@@ -1121,16 +1207,29 @@ function renderShop(n, s, contactEmail, site) {
               ${str(p.price) ? `<span class="price">${esc(price)}</span>` : ""}
               ${cta}
             </div>
+            ${
+              sold || !str(s.shipping)
+                ? ""
+                : `<span class="product-ship mono">${esc(str(s.shipping))}</span>`
+            }
           </div>
         </article>`;
     })
     .join("\n        ");
+
+  // Gratis Versand gilt nur innerhalb der Schweiz. Das steht ueberall im
+  // Shop, wo es zaehlt: hier unter der Einleitung, auf jeder Ware und im
+  // Bestellformular — nicht erst im Kleingedruckten beim Bestellen.
+  const versand = str(s.shipping)
+    ? `<p class="shop-shipping rv"><span class="mono">${esc(str(s.shipping))}</span></p>`
+    : "";
 
   if (!items.length) {
     return `
   <section class="pad shop-sec" id="shop" aria-labelledby="shop-h">
     <div class="wrap">${sectionHead(n, s, "shop")}
       ${str(s.note) ? `<p class="shop-note rv">${inline(s.note)}</p>` : ""}
+      ${versand}
       <div class="empty-state rv"><span class="mono">Shop</span><p>${esc(
         str(s.emptyText, "Merch ist in Arbeit.")
       )}</p></div>
@@ -1145,6 +1244,7 @@ function renderShop(n, s, contactEmail, site) {
   <section class="pad shop-sec" id="shop" aria-labelledby="shop-h">
     <div class="wrap">${sectionHead(n, s, "shop")}
       ${str(s.note) ? `<p class="shop-note rv">${inline(s.note)}</p>` : ""}
+      ${versand}
       <div class="shop-grid" style="--tile:${kachelbreite(items.length)}px">
       ${cards}
       </div>
@@ -1946,6 +2046,7 @@ function renderPage(c, page, pages, lang, langs) {
     experience: renderExperience,
     shows: renderShows,
     references: renderReferences,
+    follow: (n, s) => renderFollow(n, s, sections.contact),
     gallery: renderGallery,
     shop: (n, s) => renderShop(n, s, str(sections.contact?.email), site),
     booking: (n, s) => renderBooking(n, s, site),

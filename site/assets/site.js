@@ -226,18 +226,27 @@
   // Die Schriftgrössen im CSS sind so gewählt, dass die Namen normalerweise
   // passen. Für die wirklich langen ("Firehouse Party Wittenbach") wird hier
   // so weit verkleinert, bis der Name in seine Zeile geht — nie umbrechen.
+  // Sie stehen als Gruppe nebeneinander, also werden sie auch als Gruppe
+  // verkleinert: der längste Name gibt das Mass vor, alle vier bekommen es.
+  // Jeden für sich einzupassen hiesse vier verschiedene Schriftgrössen — und
+  // genau das soll die Auszeichnung ja nicht sein.
   var venueNames = Array.prototype.slice.call(document.querySelectorAll(".venue-name"));
   if (venueNames.length) {
     var einpassen = function () {
       venueNames.forEach(function (n) {
         n.style.setProperty("--venue-fit", "1");
-        var faktor = 1;
-        // Höchstens acht Schritte à 6 % — darunter wäre der Name unlesbar.
-        for (var i = 0; i < 8 && n.scrollWidth > n.clientWidth + 1; i++) {
-          faktor -= 0.06;
-          n.style.setProperty("--venue-fit", String(faktor));
-        }
       });
+      var faktor = 1;
+      var passtNicht = function (n) {
+        return n.scrollWidth > n.clientWidth + 1;
+      };
+      // Höchstens acht Schritte à 6 % — darunter wäre der Name unlesbar.
+      for (var i = 0; i < 8 && venueNames.some(passtNicht); i++) {
+        faktor -= 0.06;
+        venueNames.forEach(function (n) {
+          n.style.setProperty("--venue-fit", String(faktor));
+        });
+      }
     };
     einpassen();
     var fitTimer;
