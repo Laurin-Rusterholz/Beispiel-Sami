@@ -127,47 +127,139 @@ if (uebersetzt[0].url !== "https://www.instagram.com/sam_sparking/") {
 }
 
 /* ------------------------------------------------------------------------
-   nachziehen(): die Datenbank traegt noch den Stand von vor der Umbenennung.
-   Erwartet: jede Schreibweise korrigiert, Hostname unversehrt, Referenzen und
-   Kanaele aus der Vorlage, Shop aus — und beim zweiten Aufruf passiert nichts
-   mehr, weil der Stand jetzt in der Datenbank steht.
+   nachziehen(): korrigiert den Stand aus der Verwaltung.
+
+   Zwei Arten von Regeln — die Schreibweise immer, alles andere nur solange
+   die Stelle unangetastet ist. Genau daran ist die fruehere Fassung mit einer
+   Nummer gescheitert: die Verwaltung uebernahm die Nummer aus den Defaults
+   und schrieb sie mit dem UNkorrigierten Stand in die Datenbank; danach hielt
+   der Build sie fuer aktuell und "Sam Sparkling" kam zurueck.
    ------------------------------------------------------------------------ */
+const korr = JSON.parse(await readFile(resolve(ROOT, "content/korrekturen.json"), "utf8"));
+
 {
-  const alt = JSON.parse(JSON.stringify(template));
-  delete alt.contentRevision;
-  alt.site.artist = "Sam Sparkling";
-  alt.site.logoText = "Sam Sparkling";
-  alt.hero.nameMain = "Sparkling";
-  alt.site.domain = "https://djsamsparkling.netlify.app";
-  alt.site.keywords = ["Sam Sparkling", "Hardstyle DJ"];
-  alt.sections.about.paragraphs = ["Der Name **Sparkling** ist kein Zufall."];
-  alt.sections.contact.socials = [{ label: "Mixcloud", url: "https://www.mixcloud.com/samsparking/" }];
-  alt.sections.references.items = [{ city: "St. Gallen", name: "Kugl" }];
-  alt.sections.shop.enabled = true;
+  // Der Stand, wie er nach jenem Speichern in der Datenbank stand
+  const db = JSON.parse(JSON.stringify(template));
+  db.contentRevision = 4;                       // Altlast, darf nichts mehr bewirken
+  db.site.artist = "Sam Sparkling";
+  db.site.logoText = "Sam Sparkling";
+  db.hero.nameMain = "Sparkling";
+  db.site.domain = "https://djsamsparkling.netlify.app";
+  db.sections.about.paragraphs = ["Der Name **Sparkling** ist kein Zufall."];
+  db.sections.references.items = korr.alteReferenzen.map((n) => ({ name: n, city: "?" }));
+  db.sections.contact.socials = [{ label: "Mixcloud", url: "https://www.mixcloud.com/samsparking/" }];
+  db.sections.shop.enabled = true;
+  db.hero.stats = [];
+  db.sections.booking.photo = { src: "", alt: "", credit: "" };
 
-  const vorher = nachziehen(alt, template);
-  if (vorher !== 0) meckern(`nachziehen() meldet Stand ${vorher} statt 0`);
-
-  const alsText = JSON.stringify(alt);
+  const getan = nachziehen(db, korr);
+  const alsText = JSON.stringify(db);
   const hosts = (alsText.match(/djsamsparkling/gi) || []).length;
   const reste = (alsText.match(/[Ss]parkling/g) || []).length - hosts;
+
   if (reste !== 0) meckern(`${reste}x "Sparkling" nach dem Nachziehen uebrig`);
-  if (!hosts) meckern("Hostname djsamsparkling wurde mitkorrigiert — Canonical und Sitemap zeigen ins Leere");
-  if (alt.site.artist !== "Sam Sparking") meckern("Kuenstlername nicht korrigiert: " + alt.site.artist);
-  if (alt.site.domain !== "https://djsamsparkling.netlify.app") meckern("Domain veraendert: " + alt.site.domain);
-  if (alt.sections.references.items.length !== template.sections.references.items.length)
-    meckern("Referenzliste nicht aus der Vorlage uebernommen");
-  if (!alt.sections.contact.socials.some((s) => s.label === "Instagram"))
-    meckern("Instagram fehlt nach dem Nachziehen");
-  if (alt.sections.shop.enabled !== false) meckern("Shop steht nach dem Nachziehen wieder auf sichtbar");
-  if (alt.contentRevision !== template.contentRevision) meckern("Stand nicht mitgeschrieben");
-  if (nachziehen(alt, template) !== null) meckern("nachziehen() greift ein zweites Mal");
+  if (!hosts) meckern("Hostname djsamsparkling mitkorrigiert — Canonical und Sitemap zeigen ins Leere");
+  if (db.site.artist !== "Sam Sparking") meckern("Kuenstlername nicht korrigiert: " + db.site.artist);
+  if (db.sections.references.items.length !== korr.referenzen.length)
+    meckern("Referenzliste nicht ersetzt: " + db.sections.references.items.length);
+  if (!db.sections.contact.socials.some((x) => /instagram/i.test(x.label))) meckern("Instagram fehlt");
+  if (!db.hero.stats.length) meckern("Kennzahlen fehlen");
+  if (!db.sections.booking.photo.src) meckern("Booking-Bild fehlt");
+  if (db.sections.shop.enabled !== true)
+    meckern("Der Shop-Schalter aus der Verwaltung wurde ueberschrieben");
+  if (!getan.includes("Schreibweise")) meckern("Schreibweise nicht als Aenderung gemeldet");
+}
+
+{
+  // Der Kunde hat die Referenzen selbst bearbeitet — dann nichts anfassen.
+  const eigen = JSON.parse(JSON.stringify(template));
+  eigen.sections.references.items = [{ name: "Nur ein Club", city: "Chur" }];
+  eigen.sections.contact.socials = [{ label: "Instagram", url: "https://instagram.com/anders" }];
+  eigen.hero.stats = [{ value: "9", label: "Eigene Zahl" }];
+  eigen.sections.booking.photo = { src: "eigenes.jpg", alt: "", credit: "" };
+
+  nachziehen(eigen, korr);
+  if (eigen.sections.references.items.length !== 1)
+    meckern("Eigene Referenzliste wurde ueberschrieben");
+  if (eigen.sections.contact.socials.length !== 1)
+    meckern("Instagram doppelt eingetragen, obwohl schon vorhanden");
+  if (eigen.hero.stats[0].value !== "9") meckern("Eigene Kennzahlen ueberschrieben");
+  if (eigen.sections.booking.photo.src !== "eigenes.jpg") meckern("Eigenes Booking-Bild ueberschrieben");
+}
+
+{
+  /* Die Korrekturen vom August 2026: Kennzahl-Aufschrift, Ort der Show,
+     Instagram aus dem Kopf, Waehrung und die neue Seitenaufteilung. Alle
+     greifen nur, solange die Stelle in der Verwaltung unangetastet ist. */
+  const db = JSON.parse(JSON.stringify(template));
+  db.hero.stats = korr.alteHeroStats.map((label) => ({ value: "1", label }));
+  db.hero.meta = "Euphoric Hardstyle / Melodic Hardstyle";
+  db.sections.shows.items = [{ name: "Aftersun ", city: "Herisau", date: "2026-08-29" }];
+  db.sections.contact.socials = [
+    { label: "Instagram", url: "https://www.instagram.com/sam_sparking/" },
+    { label: "Mixcloud", url: "https://www.mixcloud.com/samsparking/" },
+  ];
+  db.sections.shop.currency = "CHF 5";
+  db.sections.shop.items = [{ name: "Beispiel", note: "as", alt: "as", linkUrl: "asd", price: "35" }];
+  db.pages = [{ slug: "", navLabel: "Home", sections: ["about", "booking", "shop"] }];
+
+  nachziehen(db, korr);
+
+  if (db.hero.stats[1].label !== "Shows")
+    meckern('Kennzahl heisst weiter "' + db.hero.stats[1].label + '" statt "Shows"');
+  if (db.hero.meta) meckern("Genre-Zeile im Hero nicht geraeumt");
+  if (db.sections.shows.items[0].city !== "Luzern")
+    meckern("Aftersun steht weiter in " + db.sections.shows.items[0].city);
+  if (db.sections.shows.items[0].name !== "Aftersun") meckern("Leerzeichen im Show-Namen geblieben");
+  const insta = db.sections.contact.socials.find((x) => /instagram/i.test(x.label));
+  if (insta.inHeader !== false) meckern("Instagram steht weiter im Kopf");
+  if (db.sections.shop.currency !== "CHF") meckern("Waehrung nicht korrigiert: " + db.sections.shop.currency);
+  if (db.sections.shop.items[0].linkUrl) meckern('Tipprest "asd" als Kauf-Link geblieben');
+  if (db.sections.shop.items[0].price !== "35") meckern("Preis der Ware angefasst");
+  if (db.pages.length !== 3) meckern("Booking und Shop haben keine eigene Seite bekommen");
+  if (db.pages[1].slug !== "booking" || db.pages[2].slug !== "shop")
+    meckern("Seitenadressen stimmen nicht: " + db.pages.map((p) => p.slug).join(", "));
+  if (db.pages[0].sections.includes("booking"))
+    meckern("Booking steht weiter als Abschnitt auf der Startseite");
+}
+
+{
+  // Eigene Stellen bleiben unberuehrt — auch die neuen Regeln fassen nichts an,
+  // was in der Verwaltung schon jemand gesetzt hat.
+  const eigen = JSON.parse(JSON.stringify(template));
+  eigen.hero.stats = [{ value: "9", label: "Eigene Zahl" }];
+  eigen.sections.shows.items = [{ name: "Aftersun", city: "Zug", date: "2026-08-29" }];
+  eigen.sections.shop.currency = "EUR";
+  eigen.sections.contact.socials = [
+    { label: "Instagram", url: "https://instagram.com/x", inHeader: true },
+  ];
+  eigen.pages = [
+    { slug: "", navLabel: "Home", sections: ["about"] },
+    { slug: "extra", navLabel: "Extra", sections: ["gallery"] },
+  ];
+
+  nachziehen(eigen, korr);
+  if (eigen.hero.stats[0].label !== "Eigene Zahl") meckern("Eigene Kennzahl umbenannt");
+  if (eigen.sections.shows.items[0].city !== "Zug") meckern("Eigener Ort der Show ueberschrieben");
+  if (eigen.sections.shop.currency !== "EUR") meckern("Eigene Waehrung ueberschrieben");
+  if (eigen.sections.contact.socials[0].inHeader !== true)
+    meckern("Ausdruecklich eingeschalteter Kopf-Kanal wieder abgeschaltet");
+  if (eigen.pages.length !== 2) meckern("Eigene Seitenaufteilung ueberschrieben");
+}
+
+{
+  // Ohne Korrekturdatei bleibt wenigstens die Schreibweise.
+  const nur = JSON.parse(JSON.stringify(template));
+  nur.site.artist = "Sam Sparkling";
+  nachziehen(nur, null);
+  if (nur.site.artist !== "Sam Sparking") meckern("Schreibweise braucht die Korrekturdatei — darf sie nicht");
 }
 
 if (fehler) {
-  console.error(`\n${fehler} Fehler — adoptTexts schmiert Texte über die Listen.`);
+  console.error(`\n${fehler} Fehler.`);
   process.exit(1);
 }
 console.log("adoptTexts: Orte, Kanäle und Einträge bleiben unangetastet; gleich lange Listen werden weiter übernommen.");
 console.log("localize: Kanal-Namen bleiben in jeder Sprache stehen, auch bei veralteten Übersetzungen.");
-console.log("nachziehen: Schreibweise korrigiert, Hostname unversehrt, Shop bleibt aus, greift nur einmal.");
+console.log("nachziehen: Schreibweise immer; Listen, Kanaele und Bilder nur solange sie in der\n            Verwaltung unangetastet sind. Schalter und eigene Eintraege bleiben unberuehrt.");
+console.log("nachziehen: Kennzahl \"Shows\", Aftersun in Luzern, Instagram aus dem Kopf, Waehrung\n            CHF, eigene Seiten fuer Booking und Shop — jeweils nur auf dem alten Stand.");

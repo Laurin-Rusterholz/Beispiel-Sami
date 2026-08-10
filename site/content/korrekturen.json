@@ -1,0 +1,417 @@
+{
+  "_kommentar": [
+    "Korrekturen, die der Generator auf den Stand aus der Verwaltung anwendet.",
+    "",
+    "WARUM EIGENE DATEI: content/site.json wird bei JEDEM Build mit dem Stand",
+    "aus der Verwaltung ueberschrieben. Als Bezugspunkt fuer Korrekturen taugt",
+    "sie deshalb nicht — steht in der Datenbank der alte Stand, wird er in die",
+    "Vorlage geschrieben und die Korrektur verliert ihren Massstab. Diese Datei",
+    "fasst der Build nie an.",
+    "",
+    "Jede Regel greift nur, solange die Stelle in der Verwaltung unangetastet",
+    "ist (siehe nachziehen() in scripts/build.mjs). Wer dort etwas aendert,",
+    "behaelt das letzte Wort."
+  ],
+  "alteReferenzen": [
+    "Sektor 11",
+    "Jugendopenair",
+    "Kugl",
+    "B9 eventlocation",
+    "IVY",
+    "Ultrawild Festival",
+    "Monoevents",
+    "Amadeusbar",
+    "Dorffest Herisau",
+    "Turnunterhaltung Sirnach",
+    "Xploration Events",
+    "Winterzauber Bazenheid",
+    "Firehouse Party Wittenbach",
+    "BBC",
+    "The Q"
+  ],
+  "referenzen": [
+    {
+      "name": "Kugl",
+      "city": "St. Gallen",
+      "highlight": true
+    },
+    {
+      "name": "Sektor 11",
+      "city": "Zürich",
+      "highlight": true
+    },
+    {
+      "name": "Ultrawild Festival",
+      "city": "St. Gallen",
+      "highlight": true
+    },
+    {
+      "name": "BBC",
+      "city": "Gossau",
+      "highlight": true
+    },
+    {
+      "name": "Jugendopenair",
+      "city": "St. Gallen",
+      "highlight": true
+    },
+    {
+      "name": "Amadeusbar",
+      "city": "Herisau",
+      "group": "Ostschweiz"
+    },
+    {
+      "name": "B9 eventlocation",
+      "city": "St. Gallen",
+      "group": "Ostschweiz"
+    },
+    {
+      "name": "Club Eden",
+      "city": "St. Gallen",
+      "group": "Ostschweiz"
+    },
+    {
+      "name": "Dorffest Herisau",
+      "city": "Herisau",
+      "group": "Ostschweiz"
+    },
+    {
+      "name": "Firehouse Party Wittenbach",
+      "city": "Wittenbach",
+      "group": "Ostschweiz"
+    },
+    {
+      "name": "Jugendopenair",
+      "city": "Wattwil",
+      "group": "Ostschweiz"
+    },
+    {
+      "name": "Monoevents",
+      "city": "St. Gallen",
+      "group": "Ostschweiz"
+    },
+    {
+      "name": "Picante",
+      "city": "St. Gallen",
+      "group": "Ostschweiz"
+    },
+    {
+      "name": "Turnunterhaltung Sirnach",
+      "city": "Sirnach",
+      "group": "Ostschweiz"
+    },
+    {
+      "name": "Winterzauber Bazenheid",
+      "city": "Bazenheid",
+      "group": "Ostschweiz"
+    },
+    {
+      "name": "Aftersun Festival",
+      "city": "Luzern",
+      "group": "Schweiz"
+    },
+    {
+      "name": "Xploration Events",
+      "city": "Glarus",
+      "group": "Schweiz"
+    },
+    {
+      "name": "The Q",
+      "city": "Schaan, FL",
+      "group": "International"
+    }
+  ],
+  "instagram": {
+    "label": "Instagram",
+    "url": "https://www.instagram.com/sam_sparking/"
+  },
+  "heroStats": [
+    {
+      "value": "2021",
+      "label": "First set"
+    },
+    {
+      "value": "7+",
+      "label": "Shows"
+    },
+    {
+      "value": "150",
+      "label": "BPM home base"
+    }
+  ],
+  "bookingBild": {
+    "src": "https://firebasestorage.googleapis.com/v0/b/jupidu-36804.firebasestorage.app/o/samsparking%2Fmedia%2F-OyU22YYzpKFXkDykqQP%2Fdsc01430.jpg?alt=media&token=a2b80100-cb77-4120-878b-cc9ac62aff65",
+    "alt": "Sam Sparking on stage",
+    "credit": "Sarto Photography"
+  },
+  "i18n": {
+    "de": {
+      "referenzen": {
+        "0": {
+          "city": "St. Gallen"
+        },
+        "1": {
+          "city": "Zürich"
+        },
+        "2": {
+          "city": "St. Gallen"
+        },
+        "3": {
+          "city": "Gossau"
+        },
+        "4": {
+          "city": "St. Gallen"
+        },
+        "5": {
+          "city": "Herisau"
+        },
+        "6": {
+          "city": "St. Gallen"
+        },
+        "7": {
+          "city": "St. Gallen"
+        },
+        "8": {
+          "city": "Herisau"
+        },
+        "9": {
+          "city": "Wittenbach"
+        },
+        "10": {
+          "city": "Wattwil"
+        },
+        "11": {
+          "city": "St. Gallen"
+        },
+        "12": {
+          "city": "St. Gallen"
+        },
+        "13": {
+          "city": "Sirnach"
+        },
+        "14": {
+          "city": "Bazenheid"
+        },
+        "15": {
+          "city": "Luzern"
+        },
+        "16": {
+          "city": "Glarus"
+        },
+        "17": {
+          "city": "Schaan, FL"
+        }
+      },
+      "heroStats": {
+        "0": {
+          "label": "Erstes Set"
+        },
+        "1": {
+          "label": "Shows"
+        },
+        "2": {
+          "label": "BPM Zuhause"
+        }
+      },
+      "seiten": {
+        "0": {
+          "navLabel": "Start"
+        },
+        "1": {
+          "navLabel": "Booking"
+        },
+        "2": {
+          "navLabel": "Shop"
+        }
+      }
+    },
+    "fr": {
+      "referenzen": {
+        "0": {
+          "city": "Saint-Gall"
+        },
+        "1": {
+          "city": "Zurich"
+        },
+        "2": {
+          "city": "Saint-Gall"
+        },
+        "3": {
+          "city": "Gossau"
+        },
+        "4": {
+          "city": "Saint-Gall"
+        },
+        "5": {
+          "city": "Herisau",
+          "group": "Suisse orientale"
+        },
+        "6": {
+          "city": "Saint-Gall",
+          "group": "Suisse orientale"
+        },
+        "7": {
+          "city": "Saint-Gall",
+          "group": "Suisse orientale"
+        },
+        "8": {
+          "city": "Herisau",
+          "group": "Suisse orientale"
+        },
+        "9": {
+          "city": "Wittenbach",
+          "group": "Suisse orientale"
+        },
+        "10": {
+          "city": "Wattwil",
+          "group": "Suisse orientale"
+        },
+        "11": {
+          "city": "Saint-Gall",
+          "group": "Suisse orientale"
+        },
+        "12": {
+          "city": "Saint-Gall",
+          "group": "Suisse orientale"
+        },
+        "13": {
+          "city": "Sirnach",
+          "group": "Suisse orientale"
+        },
+        "14": {
+          "city": "Bazenheid",
+          "group": "Suisse orientale"
+        },
+        "15": {
+          "city": "Lucerne",
+          "group": "Suisse"
+        },
+        "16": {
+          "city": "Glaris",
+          "group": "Suisse"
+        },
+        "17": {
+          "city": "Schaan, FL",
+          "group": "International"
+        }
+      },
+      "heroStats": {
+        "0": {
+          "label": "Premier set"
+        },
+        "1": {
+          "label": "Shows"
+        },
+        "2": {
+          "label": "BPM de référence"
+        }
+      },
+      "seiten": {
+        "0": {
+          "navLabel": "Accueil"
+        },
+        "1": {
+          "navLabel": "Booking"
+        },
+        "2": {
+          "navLabel": "Boutique"
+        }
+      }
+    }
+  },
+  "alteHeroStats": [
+    "First set",
+    "Clubs & Festivals",
+    "BPM home base"
+  ],
+  "shows": [
+    {
+      "name": "Aftersun",
+      "alteNamen": [
+        "Aftersun"
+      ],
+      "city": "Luzern",
+      "alteStadt": "Herisau",
+      "country": "CH"
+    }
+  ],
+  "kanaele": {
+    "ausDemKopf": [
+      "Instagram"
+    ],
+    "erwartet": [
+      "Instagram",
+      "TikTok",
+      "Spotify",
+      "Mixcloud"
+    ]
+  },
+  "seiten": [
+    {
+      "slug": "",
+      "navLabel": "Home",
+      "title": "",
+      "hero": "full",
+      "ticker": true,
+      "inNav": true,
+      "enabled": true,
+      "sections": [
+        "about",
+        "shows",
+        "references",
+        "gallery",
+        "contact"
+      ]
+    },
+    {
+      "slug": "booking",
+      "navLabel": "Booking",
+      "title": "Booking",
+      "hero": "compact",
+      "ticker": false,
+      "inNav": true,
+      "enabled": true,
+      "sections": [
+        "booking",
+        "contact"
+      ]
+    },
+    {
+      "slug": "shop",
+      "navLabel": "Shop",
+      "title": "Shop",
+      "hero": "compact",
+      "ticker": false,
+      "inNav": true,
+      "enabled": true,
+      "sections": [
+        "shop"
+      ]
+    }
+  ],
+  "shop": {
+    "alteWaehrung": "CHF 5",
+    "waehrung": "CHF",
+    "platzhalter": {
+      "_hinweis": "Tippreste aus dem ersten Einrichten. Sie werden nur geraeumt, solange exakt diese Werte dastehen — sobald jemand echte Ware eintraegt, bleibt sie unangetastet.",
+      "name": "Beispiel",
+      "felder": {
+        "note": "as",
+        "alt": "as",
+        "linkUrl": "asd"
+      }
+    },
+    "sichtbar": true,
+    "_sichtbarWarum": [
+      "Ausdrueckliche Vorgabe vom 10.08.2026: /shop/ muss oeffentlich mit 200",
+      "antworten, waehrend die Startseite noch 'Coming soon' zeigt. Ohne",
+      "eingeschalteten Abschnitt gaebe es die Seite gar nicht — pagesOf() laesst",
+      "eine Unterseite ohne Abschnitt weg, und /shop/ wuerde 404 liefern.",
+      "",
+      "ACHTUNG, das ist die einzige Regel, die einen Schalter der Verwaltung",
+      "ueberstimmt. Soll der Shop wieder verschwinden: hier \"sichtbar\" auf false",
+      "setzen (oder die Zeile loeschen) — der Schalter in der Verwaltung allein",
+      "reicht dafuer nicht."
+    ]
+  }
+}

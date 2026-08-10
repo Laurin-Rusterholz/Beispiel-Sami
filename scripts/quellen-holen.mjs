@@ -46,6 +46,13 @@ const QUELLEN = [
     nach: resolve(HIER, "site"),
     auslassen: [
       ".git", ".github", "netlify.toml", "README-ANLEITUNG.md", ".gitignore", "node_modules",
+      // Die Server-Endpunkte gehoeren zur echten Website. Hier gaebe es
+      // niemanden, der sie ausfuehrt — ausgeliefert wuerde stattdessen ihr
+      // Quelltext. Die Vorfuehr-Fassung schaltet die Formulare deshalb auf
+      // FORMS_DEMO (siehe netlify.toml) und sendet gar nicht erst.
+      "netlify",
+      // Die Wartungsseite der echten Website hat hier keine Aufgabe.
+      "coming-soon.html",
       // Vom Generator erzeugt — kommt hier aus `node site/scripts/build.mjs`
       // mit SITE_BASE=/site und sieht deshalb zwangsläufig anders aus.
       "index.html", "404.html", "sitemap.xml", "robots.txt", "de", "fr", "legal",

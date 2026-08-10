@@ -168,27 +168,43 @@
     );
   }
 
-  /* Galerie-Bilder erst zeigen, wenn sie geladen sind — kein hartes Aufpoppen */
+  /* Galerie-Bilder erst zeigen, wenn sie geladen sind — kein hartes Aufpoppen.
+     Laesst sich ein Bild nicht laden, verschwindet die Kachel ganz: das
+     Bruchstueck-Symbol des Browsers mitten in der Galerie sieht schlimmer aus
+     als ein Foto weniger. Damit der Fehler auffindbar bleibt, steht die
+     Adresse in der Konsole. */
   Array.prototype.forEach.call(document.querySelectorAll(".gal img"), function (img) {
+    var kaputt = function () {
+      var fig = img.closest ? img.closest("figure") : null;
+      if (fig) fig.hidden = true;
+      if (window.console) console.warn("[Galerie] Bild nicht ladbar:", img.currentSrc || img.src);
+    };
     if (img.complete && img.naturalWidth) img.classList.add("ld");
+    else if (img.complete && !img.naturalWidth) kaputt();
     else {
       img.addEventListener("load", function () { img.classList.add("ld"); });
-      img.addEventListener("error", function () { img.classList.add("ld"); });
+      img.addEventListener("error", kaputt);
     }
   });
 
   /* ------------------------------------------------- Kennzahlen im Hero */
-  // Die fertige Zahl steht bereits im HTML. Hier wird sie nur kurz von 1 auf
-  // ihren Wert hochgezählt — in zwei Sekunden, sobald der Hero im Bild ist.
-  // Bei "Bewegung reduzieren" bleibt schlicht die fertige Zahl stehen.
+  // Die fertige Zahl steht bereits im HTML. Hier wird sie in drei Sekunden
+  // hochgezählt, sobald der Hero im Bild ist. Bei "Bewegung reduzieren"
+  // bleibt schlicht die fertige Zahl stehen.
   var heroStats = Array.prototype.slice.call(document.querySelectorAll(".hstat-value[data-to]"));
   if (heroStats.length && !reduce) {
-    var COUNT_MS = 2000;
+    var COUNT_MS = 3000;
+    // Alle Zahlen laufen gleich lang. Zaehlte jede ab 1, raste die 2021 durch
+    // 2020 Schritte, waehrend die 7 sechs Schritte kriecht — dieselbe Dauer,
+    // voellig verschiedenes Tempo. Darum legt nicht der Startwert 1, sondern
+    // eine feste Zahl SCHRITTE die Strecke fest: je groesser das Ziel, desto
+    // hoeher faengt es an. Kleine Zahlen zaehlen einfach ab 1.
+    var SCHRITTE = 40;
     var zaehlen = function (node) {
       if (node._counted) return;
       node._counted = true;
-      var from = parseInt(node.getAttribute("data-from"), 10);
       var to = parseInt(node.getAttribute("data-to"), 10);
+      var from = Math.max(1, to - SCHRITTE);
       var pre = node.getAttribute("data-pre") || "";
       var post = node.getAttribute("data-post") || "";
       if (!isFinite(from) || !isFinite(to) || to <= from) return;
@@ -226,18 +242,33 @@
   // Die Schriftgrössen im CSS sind so gewählt, dass die Namen normalerweise
   // passen. Für die wirklich langen ("Firehouse Party Wittenbach") wird hier
   // so weit verkleinert, bis der Name in seine Zeile geht — nie umbrechen.
-  var venueNames = Array.prototype.slice.call(document.querySelectorAll(".venue-name"));
-  if (venueNames.length) {
-    var einpassen = function () {
-      venueNames.forEach(function (n) {
-        n.style.setProperty("--venue-fit", "1");
-        var faktor = 1;
-        // Höchstens acht Schritte à 6 % — darunter wäre der Name unlesbar.
-        for (var i = 0; i < 8 && n.scrollWidth > n.clientWidth + 1; i++) {
-          faktor -= 0.06;
-          n.style.setProperty("--venue-fit", String(faktor));
-        }
+  var venueList = document.querySelector(".venue-list");
+  if (venueList) {
+    // Entscheidend ist EIN gemeinsamer Faktor je Gruppe: würde jede Kachel für
+    // sich verkleinert, hätte jede eine andere Schriftgrösse und die Liste
+    // wirkt zusammengewürfelt. Der längste Name bestimmt darum die Grösse
+    // aller anderen — grosse Referenzen und kleine je für sich.
+    var gruppe = function (auswahl, variable) {
+      var namen = Array.prototype.slice.call(venueList.querySelectorAll(auswahl));
+      if (!namen.length) return;
+      venueList.style.setProperty(variable, "1");
+      // In einem Rutsch statt tastend: der Name, der am staerksten ueber seine
+      // Zeile hinausragt, gibt das Verhaeltnis vor. Ein Schleifendurchlauf, der
+      // nach jedem Schritt neu misst, haengt davon ab, dass der Browser
+      // zwischendrin wirklich neu rechnet — hier reicht eine einzige Messung.
+      var faktor = 1;
+      namen.forEach(function (n) {
+        var platz = n.clientWidth;
+        var breite = n.scrollWidth;
+        if (platz > 0 && breite > platz) faktor = Math.min(faktor, platz / breite);
       });
+      // Nicht unter 60 % — darunter waere der Name nicht mehr lesbar.
+      faktor = Math.max(0.6, Math.floor(faktor * 100) / 100);
+      venueList.style.setProperty(variable, String(faktor));
+    };
+    var einpassen = function () {
+      gruppe(".lead .venue-name", "--venue-lead-fit");
+      gruppe("li:not(.lead) .venue-name", "--venue-fit");
     };
     einpassen();
     var fitTimer;
@@ -275,6 +306,17 @@
       galleryToggle.setAttribute("aria-expanded", open ? "true" : "false");
       galleryToggle.textContent =
         galleryToggle.getAttribute(open ? "data-less" : "data-more") || "";
+      // Die zusaetzlichen Bilder standen bis eben auf display:none. Ein
+      // Browser laedt "lazy" markierte Bilder in einem unsichtbaren Element
+      // nicht — und holt das nach dem Einblenden nicht immer nach. Beim
+      // Aufklappen deshalb ausdruecklich anfordern.
+      if (open) {
+        Array.prototype.forEach.call(gallery.querySelectorAll('[data-extra] img[loading="lazy"]'),
+          function (img) {
+            img.setAttribute("loading", "eager");
+            if (!img.complete) img.src = img.src;   // Ladevorgang anstossen
+          });
+      }
     });
   }
 
@@ -937,17 +979,22 @@
         }
       }
 
-      // Spam-Schutz: Honeypot + minimale Ausfüllzeit
+      // Spam-Schutz. Der Honeypot und die Ausfuellzeit werden MITGESENDET und
+      // erst auf dem Server ausgewertet — frueher hat die Seite hier selbst
+      // entschieden und bei einem schnellen Absenden "Danke!" gemeldet, ohne
+      // etwas zu verschicken. Genau das darf nicht passieren: was "Danke"
+      // sagt, muss auch angekommen sein.
       var hp = form.elements.website;
-      if ((hp && hp.value) || Date.now() - opened < 2500) {
+      data.website = hp ? String(hp.value || "") : "";
+      data.elapsedMs = Date.now() - opened;
+      data.source = location.hostname || "website";
+
+      // Vorfuehr-Fassung ohne Server: offen sagen, dass nichts rausgeht.
+      if (form.getAttribute("data-demo") === "true") {
         form.classList.add("sent");
-        setMsg(msg ? msg.getAttribute("data-success") : "Thanks!", "ok");
+        setMsg(msg ? msg.getAttribute("data-success") : "", "ok");
         return;
       }
-
-      data.createdAt = new Date().toISOString();
-      data.status = "new";
-      data.source = location.hostname || "website";
 
       form.classList.add("busy");
       setMsg(sendingText, "");
@@ -959,9 +1006,15 @@
       })
         .then(function (res) {
           if (!res.ok) throw new Error("HTTP " + res.status);
+          return res.json().catch(function () {
+            return {};
+          });
+        })
+        .then(function () {
           form.classList.remove("busy");
           form.classList.add("sent");
           form.reset();
+          newCaptcha();
           setMsg(msg.getAttribute("data-success"), "ok");
         })
         .catch(function () {
@@ -980,6 +1033,7 @@
     var oEndpoint = oform.getAttribute("data-endpoint");
     var oSending = oform.getAttribute("data-sending") || "…";
     var oInvalid = oform.getAttribute("data-invalid") || "";
+    var oPaying = oform.getAttribute("data-paying") || oSending;
     var oMsg = oform.querySelector(".bform-msg");
     var oOpened = Date.now();
     var FIELDS = ["product", "quantity", "name", "email", "street", "zip", "city", "country"];
@@ -999,9 +1053,6 @@
         var f = oform.elements[k];
         data[k] = f ? String(f.value || "").trim() : "";
       });
-      var pay = oform.querySelector('input[name="payment"]:checked');
-      data.payment = pay ? pay.value : "";
-
       var bad = null;
       FIELDS.forEach(function (k) {
         var f = oform.elements[k];
@@ -1012,26 +1063,23 @@
         f.setAttribute("aria-invalid", ok ? "false" : "true");
         if (!ok && !bad) bad = f;
       });
-      if (!bad && oform.querySelector('input[name="payment"]') && !data.payment) {
-        bad = oform.querySelector('input[name="payment"]');
-      }
       if (bad) {
         setOMsg(oInvalid, "err");
         bad.focus();
         return;
       }
 
+      // Wie beim Booking: Honeypot und Ausfuellzeit entscheidet der Server.
       var hp = oform.elements.website;
-      if ((hp && hp.value) || Date.now() - oOpened < 2500) {
+      data.website = hp ? String(hp.value || "") : "";
+      data.elapsedMs = Date.now() - oOpened;
+      data.source = location.hostname || "website";
+
+      if (oform.getAttribute("data-demo") === "true") {
         oform.classList.add("sent");
-        setOMsg(oMsg ? oMsg.getAttribute("data-success") : "Danke!", "ok");
+        setOMsg(oMsg ? oMsg.getAttribute("data-success") : "", "ok");
         return;
       }
-
-      data.kind = "order";
-      data.createdAt = new Date().toISOString();
-      data.status = "new";
-      data.source = location.hostname || "website";
 
       oform.classList.add("busy");
       setOMsg(oSending, "");
@@ -1043,8 +1091,21 @@
       })
         .then(function (res) {
           if (!res.ok) throw new Error("HTTP " + res.status);
+          return res.json().catch(function () {
+            return {};
+          });
+        })
+        .then(function (out) {
           oform.classList.remove("busy");
           oform.classList.add("sent");
+          // Die Bestellung ist aufgenommen und gemeldet. Gibt es eine
+          // Bezahlseite, geht es dort weiter — die Bestellnummer faehrt als
+          // client_reference_id mit, damit der Webhook beides zusammenbringt.
+          if (out && out.paymentUrl) {
+            setOMsg(oPaying, "ok");
+            location.assign(out.paymentUrl);
+            return;
+          }
           oform.reset();
           setOMsg(oMsg.getAttribute("data-success"), "ok");
         })
