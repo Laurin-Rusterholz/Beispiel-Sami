@@ -13,76 +13,148 @@
     "behaelt das letzte Wort."
   ],
   "alteReferenzen": [
-    "Kugl",
-    "Sektor 11",
-    "The Q",
-    "IVY",
-    "BBC",
-    "B9",
-    "Ultrawild Festival"
+    [
+      "Kugl",
+      "Sektor 11",
+      "The Q",
+      "IVY",
+      "BBC",
+      "B9",
+      "Ultrawild Festival"
+    ],
+    [
+      "Sektor 11",
+      "Jugendopenair",
+      "Kugl",
+      "B9 eventlocation",
+      "IVY",
+      "Ultrawild Festival",
+      "Monoevents",
+      "Amadeusbar",
+      "Dorffest Herisau",
+      "Turnunterhaltung Sirnach",
+      "Xploration Events",
+      "Winterzauber Bazenheid",
+      "Firehouse Party Wittenbach",
+      "BBC",
+      "The Q"
+    ],
+    [
+      "Kugl",
+      "Sektor 11",
+      "Ultrawild Festival",
+      "BBC",
+      "Jugendopenair",
+      "Amadeusbar",
+      "B9 eventlocation",
+      "Club Eden",
+      "Dorffest Herisau",
+      "Firehouse Party Wittenbach",
+      "Jugendopenair",
+      "Monoevents",
+      "Picante",
+      "Turnunterhaltung Sirnach",
+      "Winterzauber Bazenheid",
+      "Aftersun Festival",
+      "Xploration Events",
+      "The Q"
+    ],
+    [
+      "Kugl",
+      "Sektor 11",
+      "Ultrawild Festival",
+      "BBC",
+      "Aftersun Festival",
+      "Amadeusbar",
+      "B9 eventlocation",
+      "Dorffest Herisau",
+      "Firehouse Party Wittenbach",
+      "IVY",
+      "Jugendopenair",
+      "Monoevents",
+      "Picante",
+      "The Q",
+      "Turnunterhaltung Sirnach",
+      "Winterzauber Bazenheid",
+      "Xploration Events"
+    ]
   ],
   "referenzen": [
     {
-      "city": "Zürich",
+      "name": "Kugl",
+      "city": "St. Gallen",
+      "highlight": true
+    },
+    {
       "name": "Sektor 11",
+      "city": "Zürich",
       "highlight": true
     },
     {
-      "city": "Wattwil",
-      "name": "Jugendopenair",
+      "name": "Ultrawild Festival",
+      "city": "St. Gallen",
       "highlight": true
     },
     {
-      "city": "St. Gallen",
-      "name": "Kugl"
-    },
-    {
-      "city": "St. Gallen",
-      "name": "B9 eventlocation"
-    },
-    {
-      "city": "St. Gallen",
-      "name": "IVY"
-    },
-    {
-      "city": "St. Gallen",
-      "name": "Ultrawild Festival"
-    },
-    {
-      "city": "St. Gallen",
-      "name": "Monoevents"
-    },
-    {
-      "city": "Herisau",
-      "name": "Amadeusbar"
-    },
-    {
-      "city": "Herisau",
-      "name": "Dorffest Herisau"
-    },
-    {
-      "city": "Sirnach",
-      "name": "Turnunterhaltung Sirnach"
-    },
-    {
-      "city": "Glarus",
-      "name": "Xploration Events"
-    },
-    {
-      "city": "Bazenheid",
-      "name": "Winterzauber Bazenheid"
-    },
-    {
-      "city": "Wittenbach",
-      "name": "Firehouse Party Wittenbach"
-    },
-    {
+      "name": "BBC",
       "city": "Gossau",
-      "name": "BBC"
+      "highlight": true
     },
     {
-      "city": "Schaan, FL",
-      "name": "The Q"
+      "name": "Aftersun Festival",
+      "city": "Luzern"
+    },
+    {
+      "name": "Amadeusbar",
+      "city": "Herisau"
+    },
+    {
+      "name": "B9 eventlocation",
+      "city": "St. Gallen"
+    },
+    {
+      "name": "Club Eden",
+      "city": "St. Gallen"
+    },
+    {
+      "name": "Dorffest Herisau",
+      "city": "Herisau"
+    },
+    {
+      "name": "Firehouse Party Wittenbach",
+      "city": "Wittenbach"
+    },
+    {
+      "name": "Jugendopenair",
+      "city": "St. Gallen"
+    },
+    {
+      "name": "Jugendopenair",
+      "city": "Wattwil"
+    },
+    {
+      "name": "Monoevents",
+      "city": "St. Gallen"
+    },
+    {
+      "name": "Picante",
+      "city": "St. Gallen"
+    },
+    {
+      "name": "The Q",
+      "city": "Schaan, FL"
+    },
+    {
+      "name": "Turnunterhaltung Sirnach",
+      "city": "Sirnach"
+    },
+    {
+      "name": "Winterzauber Bazenheid",
+      "city": "Bazenheid"
+    },
+    {
+      "name": "Xploration Events",
+      "city": "Glarus"
     }
   ],
   "instagram": {
@@ -96,7 +168,7 @@
     },
     {
       "value": "7+",
-      "label": "Clubs & Festivals"
+      "label": "Shows"
     },
     {
       "value": "150",
@@ -112,49 +184,58 @@
     "de": {
       "referenzen": {
         "0": {
-          "city": "Zürich"
+          "city": "St. Gallen"
         },
         "1": {
-          "city": "Wattwil"
+          "city": "Zürich"
         },
         "2": {
           "city": "St. Gallen"
         },
         "3": {
-          "city": "St. Gallen"
+          "city": "Gossau"
         },
         "4": {
-          "city": "St. Gallen"
+          "city": "Luzern"
         },
         "5": {
-          "city": "St. Gallen"
+          "city": "Herisau"
         },
         "6": {
           "city": "St. Gallen"
         },
         "7": {
-          "city": "Herisau"
+          "city": "St. Gallen"
         },
         "8": {
           "city": "Herisau"
         },
         "9": {
-          "city": "Sirnach"
-        },
-        "10": {
-          "city": "Glarus"
-        },
-        "11": {
-          "city": "Bazenheid"
-        },
-        "12": {
           "city": "Wittenbach"
         },
+        "10": {
+          "city": "St. Gallen"
+        },
+        "11": {
+          "city": "Wattwil"
+        },
+        "12": {
+          "city": "St. Gallen"
+        },
         "13": {
-          "city": "Gossau"
+          "city": "St. Gallen"
         },
         "14": {
           "city": "Schaan, FL"
+        },
+        "15": {
+          "city": "Sirnach"
+        },
+        "16": {
+          "city": "Bazenheid"
+        },
+        "17": {
+          "city": "Glarus"
         }
       },
       "heroStats": {
@@ -162,59 +243,79 @@
           "label": "Erstes Set"
         },
         "1": {
-          "label": "Clubs & Festivals"
+          "label": "Shows"
         },
         "2": {
           "label": "BPM Zuhause"
+        }
+      },
+      "seiten": {
+        "0": {
+          "navLabel": "Start"
+        },
+        "1": {
+          "navLabel": "Booking"
+        },
+        "2": {
+          "navLabel": "Shop"
         }
       }
     },
     "fr": {
       "referenzen": {
         "0": {
-          "city": "Zurich"
+          "city": "Saint-Gall"
         },
         "1": {
-          "city": "Wattwil"
+          "city": "Zurich"
         },
         "2": {
           "city": "Saint-Gall"
         },
         "3": {
-          "city": "Saint-Gall"
+          "city": "Gossau"
         },
         "4": {
-          "city": "Saint-Gall"
+          "city": "Lucerne"
         },
         "5": {
-          "city": "Saint-Gall"
+          "city": "Herisau"
         },
         "6": {
           "city": "Saint-Gall"
         },
         "7": {
-          "city": "Herisau"
+          "city": "Saint-Gall"
         },
         "8": {
           "city": "Herisau"
         },
         "9": {
-          "city": "Sirnach"
-        },
-        "10": {
-          "city": "Glaris"
-        },
-        "11": {
-          "city": "Bazenheid"
-        },
-        "12": {
           "city": "Wittenbach"
         },
+        "10": {
+          "city": "Saint-Gall"
+        },
+        "11": {
+          "city": "Wattwil"
+        },
+        "12": {
+          "city": "Saint-Gall"
+        },
         "13": {
-          "city": "Gossau"
+          "city": "Saint-Gall"
         },
         "14": {
           "city": "Schaan, FL"
+        },
+        "15": {
+          "city": "Sirnach"
+        },
+        "16": {
+          "city": "Bazenheid"
+        },
+        "17": {
+          "city": "Glarus"
         }
       },
       "heroStats": {
@@ -222,12 +323,175 @@
           "label": "Premier set"
         },
         "1": {
-          "label": "Clubs & Festivals"
+          "label": "Shows"
         },
         "2": {
           "label": "BPM de référence"
         }
+      },
+      "seiten": {
+        "0": {
+          "navLabel": "Accueil"
+        },
+        "1": {
+          "navLabel": "Booking"
+        },
+        "2": {
+          "navLabel": "Boutique"
+        }
       }
     }
+  },
+  "alteHeroStats": [
+    "First set",
+    "Clubs & Festivals",
+    "BPM home base"
+  ],
+  "shows": [
+    {
+      "name": "Aftersun",
+      "alteNamen": [
+        "Aftersun"
+      ],
+      "city": "Luzern",
+      "alteStadt": "Herisau",
+      "country": "CH"
+    }
+  ],
+  "kanaele": {
+    "ausDemKopf": [
+      "Instagram"
+    ],
+    "erwartet": [
+      "Instagram",
+      "TikTok",
+      "Spotify",
+      "Mixcloud"
+    ]
+  },
+  "seiten": [
+    {
+      "slug": "",
+      "navLabel": "Home",
+      "title": "",
+      "hero": "full",
+      "ticker": true,
+      "inNav": true,
+      "enabled": true,
+      "sections": [
+        "about",
+        "shows",
+        "references",
+        "gallery",
+        "contact"
+      ]
+    },
+    {
+      "slug": "booking",
+      "navLabel": "Booking",
+      "title": "Booking",
+      "hero": "compact",
+      "ticker": false,
+      "inNav": true,
+      "enabled": true,
+      "sections": [
+        "booking",
+        "contact"
+      ]
+    },
+    {
+      "slug": "shop",
+      "navLabel": "Shop",
+      "title": "Shop",
+      "hero": "compact",
+      "ticker": false,
+      "inNav": true,
+      "enabled": true,
+      "sections": [
+        "shop"
+      ]
+    }
+  ],
+  "shop": {
+    "alteWaehrung": "CHF 5",
+    "waehrung": "CHF",
+    "platzhalter": {
+      "_hinweis": "Tippreste aus dem ersten Einrichten. Sie werden nur geraeumt, solange exakt diese Werte dastehen — sobald jemand echte Ware eintraegt, bleibt sie unangetastet.",
+      "name": "Beispiel",
+      "felder": {
+        "note": "as",
+        "alt": "as",
+        "linkUrl": "asd"
+      }
+    },
+    "sichtbar": true,
+    "_sichtbarWarum": [
+      "Ausdrueckliche Vorgabe vom 10.08.2026: /shop/ muss oeffentlich mit 200",
+      "antworten, waehrend die Startseite noch 'Coming soon' zeigt. Ohne",
+      "eingeschalteten Abschnitt gaebe es die Seite gar nicht — pagesOf() laesst",
+      "eine Unterseite ohne Abschnitt weg, und /shop/ wuerde 404 liefern.",
+      "",
+      "ACHTUNG, das ist die einzige Regel, die einen Schalter der Verwaltung",
+      "ueberstimmt. Soll der Shop wieder verschwinden: hier \"sichtbar\" auf false",
+      "setzen (oder die Zeile loeschen) — der Schalter in der Verwaltung allein",
+      "reicht dafuer nicht."
+    ]
+  },
+  "heroShows": {
+    "_warum": [
+      "Vorgabe: die Kennzahl im Hero nennt die Gesamtzahl der Shows, und die",
+      "ist 30. In der Datenbank stand zuletzt 2 — die Praesentation zeigte",
+      "darum '2+ SHOWS'.",
+      "",
+      "Warum das hier steht und nicht im Schnappschuss: content/site.json wird",
+      "bei jedem Build aus der Datenbank ueberschrieben. Ein dort geaenderter",
+      "Wert waere beim naechsten Build wieder weg.",
+      "",
+      "Gefunden wird die Kennzahl ueber ihre Aufschrift, nicht ueber ihren Platz",
+      "in der Liste — sonst traefe die Regel eine fremde Kennzahl, sobald jemand",
+      "die Reihenfolge aendert.",
+      "ACHTUNG: Diese Regel setzt den Wert IMMER — wie shop.sichtbar",
+      "ueberstimmt sie damit das Feld in der Verwaltung. Soll die Verwaltung",
+      "die Zahl wieder selbst bestimmen: diesen Block loeschen."
+    ],
+    "label": "Shows",
+    "wert": "30",
+    "auchLabel": [
+      "Clubs & Festivals"
+    ]
+  },
+  "_alteReferenzenWarum": [
+    "Der Massstab, gegen den die Ersetzung prueft — MEHRERE bekannte Altstaende.",
+    "",
+    "Warum mehrere: In der Datenbank steht die 7er-Liste (Kugl, Sektor 11, The Q,",
+    "IVY, BBC, B9, Ultrawild Festival). Stand hier nur EIN Massstab und der war",
+    "ein anderer, traf der Abgleich nie zu und die Ersetzung lief still ins",
+    "Leere — die Website zeigte weiter die alte Liste. Genau das ist am",
+    "10.08.2026 passiert.",
+    "",
+    "Verglichen wird ohne Ruecksicht auf die Reihenfolge: die Verwaltung",
+    "sortiert die Liste beim Speichern um, eine Reihenfolge-treue Pruefung",
+    "waere schon dadurch hinfaellig.",
+    "",
+    "Die Schutzwirkung bleibt: Eine Liste, die zu KEINEM dieser Staende passt,",
+    "hat jemand selbst gepflegt und wird nicht angefasst."
+  ],
+  "entfernteKennzahlen": {
+    "_warum": [
+      "Ausdruecklicher Kundenwunsch vom 10.08.2026: der Bereich \"First set 2021\"",
+      "soll ganz verschwinden. Er stand doppelt auf der Startseite — als Kennzahl",
+      "im Hero und als erste Zeile der Faktenliste in \"Ueber mich\".",
+      "",
+      "Getroffen wird ueber die Aufschrift, nicht ueber den Platz in der Liste.",
+      "Die englische Aufschrift reicht: die Korrektur laeuft auf dem Master-Stand,",
+      "die Uebersetzungen haengen am Platz und werden mitgekuerzt.",
+      "",
+      "ACHTUNG: Diese Regel ueberstimmt die Verwaltung dauerhaft. Soll die",
+      "Kennzahl zurueck, gehoert dieser Block geloescht — ein Eintrag in der",
+      "Verwaltung allein reicht nicht."
+    ],
+    "labels": [
+      "First set"
+    ]
   }
 }
