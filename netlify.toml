@@ -18,6 +18,13 @@
   # Die Website liegt hier in einem Unterverzeichnis, nicht an der Wurzel.
   SITE_BASE = "/site"
 
+  # Vorführ-Fassung: hier liegt nur die gebaute Website, ohne die Endpunkte
+  # dahinter (netlify/functions/ gehört zum Original-Repo). Ein Formular, das
+  # ins Leere sendet, sähe aus wie eines, das funktioniert — deshalb sagen die
+  # Formulare hier offen, dass sie nichts verschicken, und senden gar nicht
+  # erst. Echte Anfragen laufen über samsparking.ch.
+  FORMS_DEMO = "1"
+
   # Inhaltsquelle: derselbe öffentlich lesbare Knoten, aus dem auch die echte
   # Website gebaut wird. Ist er nicht erreichbar, greift der eingecheckte
   # Stand site/content/site.json.

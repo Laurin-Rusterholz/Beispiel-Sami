@@ -20,6 +20,8 @@ import { fileURLToPath } from "node:url";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const LOCAL_CONTENT = resolve(ROOT, "content/site.json");
+/** Schnappschuss der Bildmasse aus der Medienbibliothek (siehe ladeBildmasse). */
+const LOCAL_MASSE = resolve(ROOT, "content/bildmasse.json");
 
 /** Verzeichnisse, die der Generator nie anfasst. */
 const KEEP_DIRS = new Set(["assets", "img", "media", "content", "scripts", "presskit", "node_modules"]);
@@ -178,21 +180,30 @@ function looksLikeLegacy(live, legacy) {
 }
 
 /**
- * Stand der Vorlage. Wird erhöht, wenn im Repo etwas geändert wurde, das die
- * Verwaltung noch nicht kennt — die Datenbank gewinnt sonst über `withDefaults`
- * gegen jede Korrektur im Repo, und der Build würde den alten Stand
- * wiederherstellen.
+ * Korrekturen an dem, was aus der Verwaltung kommt.
  *
- * Solange die Datenbank eine kleinere Zahl trägt, zieht `nachziehen()` die
- * betroffenen Stellen aus der Vorlage nach. Sobald in der Verwaltung einmal
- * gespeichert wurde, steht die Zahl auch dort und der Build lässt die
- * Datenbank wieder unangetastet gewinnen.
+ * Hintergrund: `withDefaults` laesst bei jedem Wert die Datenbank gewinnen.
+ * Eine Korrektur, die nur im Repo steht, waere daher wirkungslos.
  *
- *   2  Schreibweise "Sam Sparking", vollständige Referenzliste, Instagram als
- *      Kanal, Kennzahlen im Hero statt Fakten unter About, Shop/Sound/Erlebnis
- *      ausgeschaltet.
+ * Eine frueher hier eingebaute Fassungsnummer (contentRevision) hat sich als
+ * falsch erwiesen: sie stand in defaults/site.json, die Verwaltung uebernahm
+ * sie beim Laden in ihren Inhalt und schrieb sie beim Speichern in die
+ * Datenbank — zusammen mit dem UNkorrigierten Stand. Danach hielt der Build
+ * die Datenbank fuer aktuell und der alte Name kam zurueck. Genau so ist
+ * "Sam Sparkling" wieder aufgetaucht.
+ *
+ * Deshalb ohne Nummer, mit zwei Arten von Regeln:
+ *
+ *   IMMER          Die Schreibweise. Sie kann nie falsch sein und nie zu oft
+ *                  laufen — der Name heisst "Sam Sparking", fertig.
+ *
+ *   NUR SOLANGE    Alles andere greift nur, solange die Daten noch exakt den
+ *   UNANGETASTET   alten Stand tragen. Sobald in der Verwaltung etwas daran
+ *                  geaendert wurde, passt die Bedingung nicht mehr und der
+ *                  Build laesst die Stelle in Ruhe. Die Verwaltung behaelt
+ *                  damit immer das letzte Wort, ohne dass jemand irgendwo
+ *                  eine Nummer mitfuehren muss.
  */
-const VORLAGEN_STAND = 2;
 
 /**
  * "Sam Sparkling" war jahrelang falsch geschrieben. Ausgenommen ist der
@@ -240,40 +251,266 @@ function schreibweiseTief(node) {
  * von vor dieser Änderung tragen. Alles andere — Bilder, Videos, Termine,
  * Texte, Links — bleibt unangetastet: die Verwaltung behält die Hoheit.
  */
-export function nachziehen(live, template) {
-  const stand = Number(live?.contentRevision || 0);
-  if (stand >= VORLAGEN_STAND) return null;
+const kopie = (v) => JSON.parse(JSON.stringify(v));
 
+/**
+ * Jeder Schritt gehört genau zu der Fassung, die ihn gebracht hat, und läuft
+ * nur einmal. Das ist der springende Punkt: würde bei jeder neuen Fassung
+ * wieder der ganze Satz laufen, käme mit Fassung 3 auch die Sichtbarkeit aus
+ * Fassung 2 zurück — ein in der Verwaltung eingeschalteter Shop wäre beim
+ * nächsten Build wieder aus, ohne dass jemand etwas dagegen tun kann.
+ */
+const LOCAL_KORREKTUREN = resolve(ROOT, "content/korrekturen.json");
+
+/** Wird in loadContent() gefuellt; leer heisst: keine Korrekturen hinterlegt. */
+let KORREKTUREN = null;
+
+const gleicheNamen = (items, namen) =>
+  Array.isArray(items) &&
+  Array.isArray(namen) &&
+  items.length === namen.length &&
+  items.every((i, n) => str(i?.name) === namen[n]);
+
+/**
+ * Korrigiert den Stand aus der Verwaltung. Gibt zurueck, was angefasst wurde —
+ * fuer das Build-Protokoll, damit nachvollziehbar bleibt, warum sich etwas
+ * geaendert hat.
+ */
+export function nachziehen(live, korr) {
+  const getan = [];
+  if (!live || typeof live !== "object") return getan;
+
+  // --- immer ---------------------------------------------------------------
+  const vorher = JSON.stringify(live);
   schreibweiseTief(live);
+  if (JSON.stringify(live) !== vorher) getan.push("Schreibweise");
+
+  if (!korr || typeof korr !== "object") return getan;
 
   const ls = live.sections || (live.sections = {});
-  const ts = template.sections || {};
 
-  // Listen: die Datenbank gewinnt bei Listen immer, darum hier gezielt setzen.
-  if (ts.references?.items) ls.references = { ...ls.references, items: JSON.parse(JSON.stringify(ts.references.items)) };
-  if (ts.contact?.socials) ls.contact = { ...ls.contact, socials: JSON.parse(JSON.stringify(ts.contact.socials)) };
-  if (ts.about) ls.about = { ...ls.about, facts: JSON.parse(JSON.stringify(ts.about.facts || [])) };
-  if (template.hero?.stats) live.hero = { ...live.hero, stats: JSON.parse(JSON.stringify(template.hero.stats)) };
+  // --- nur solange die Stelle noch unangetastet ist ------------------------
 
-  // Sichtbarkeit und Aufbau: Shop, Sound und Erlebnis stehen in der Datenbank
-  // noch auf "an" — der Kunde will sie aus. Ab jetzt entscheidet wieder die
-  // Verwaltung, dieser Abgleich läuft nur bis zum ersten Speichern dort.
-  for (const [k, sec] of Object.entries(ts)) {
-    if (ls[k] && typeof sec?.enabled === "boolean") ls[k].enabled = sec.enabled;
+  // Referenzen: nur ersetzen, solange exakt die alte Liste dasteht.
+  if (list(korr.referenzen).length && gleicheNamen(ls.references?.items, korr.alteReferenzen)) {
+    ls.references = { ...ls.references, items: kopie(korr.referenzen) };
+    getan.push(`Referenzliste (${korr.referenzen.length})`);
   }
-  if (template.layout) live.layout = list(template.layout).slice();
-  if (Array.isArray(template.pages) && Array.isArray(live.pages)) {
-    live.pages.forEach((p, i) => {
-      const t = template.pages[i];
-      if (p && t && Array.isArray(t.sections)) p.sections = t.sections.slice();
+
+  // Orte nachtragen, wo in der Verwaltung noch das blosse Kantonskuerzel steht.
+  const nachName = new Map(list(korr.referenzen).map((i) => [str(i.name), str(i.city)]));
+  let orte = 0;
+  list(ls.references?.items).forEach((i) => {
+    const ort = nachName.get(str(i?.name));
+    if (ort && /^[A-Z]{2}$/.test(str(i.city)) && ort !== str(i.city)) {
+      i.city = ort;
+      orte++;
+    }
+  });
+  if (orte) getan.push(`${orte} Ort(e)`);
+
+  // Instagram: nur ergaenzen, wenn ueberhaupt kein Instagram hinterlegt ist.
+  const istInsta = (x) => /instagram/i.test(str(x?.url) + str(x?.label));
+  if (korr.instagram && !list(ls.contact?.socials).some(istInsta)) {
+    ls.contact = { ...ls.contact, socials: [kopie(korr.instagram), ...list(ls.contact?.socials)] };
+    getan.push("Instagram");
+  }
+
+  // Kennzahlen und Booking-Bild: nur, wenn dort noch nichts steht.
+  if (list(korr.heroStats).length && !list(live.hero?.stats).length) {
+    live.hero = { ...live.hero, stats: kopie(korr.heroStats) };
+    getan.push("Kennzahlen");
+  }
+
+  // Die mittlere Kennzahl hiess "Clubs & Festivals" und zaehlte damit etwas
+  // anderes, als sie zeigte. Sie heisst neu "Shows" — ersetzt wird nur,
+  // solange die drei Aufschriften noch die alten sind.
+  const alteStats = list(korr.alteHeroStats);
+  const stats = list(live.hero?.stats);
+  if (
+    list(korr.heroStats).length &&
+    alteStats.length === stats.length &&
+    stats.every((s, i) => str(s?.label) === alteStats[i])
+  ) {
+    stats.forEach((s, i) => {
+      const neu = korr.heroStats[i];
+      if (neu && str(neu.label)) s.label = neu.label;
     });
+    getan.push("Kennzahl-Aufschriften");
   }
 
-  live.contentRevision = VORLAGEN_STAND;
-  return stand;
+  // Die Genre-Zeile im Hero ist weg (siehe renderPage). Der Wert bleibt in der
+  // Datenbank stehen und wird nur nicht mehr gelesen — hier wird er auch aus
+  // dem Schnappschuss geraeumt, damit niemand ihn dort noch pflegt.
+  if (str(live.hero?.meta)) {
+    delete live.hero.meta;
+    for (const lang of ["de", "fr"]) delete live.i18n?.[lang]?.hero?.meta;
+    getan.push("Genre-Zeile");
+  }
+
+  // Aftersun spielt in Luzern, in der Verwaltung stand Herisau.
+  for (const s of list(korr.shows)) {
+    const treffer = list(ls.shows?.items).filter(
+      (i) => list(s.alteNamen).includes(str(i?.name).trim()) && str(i?.city) === str(s.alteStadt)
+    );
+    treffer.forEach((i) => {
+      i.name = str(i.name).trim();
+      i.city = str(s.city);
+      if (str(s.country)) i.country = str(s.country);
+    });
+    if (treffer.length) getan.push(`Show ${str(s.name)} → ${str(s.city)}`);
+  }
+
+  // Kanaele: das Instagram-Zeichen gehoert nicht mehr in den Kopf. Der Kopf
+  // zeigt nur noch, was ausdruecklich inHeader:true traegt — hier wird der
+  // alte Zustand einmal sauber nachgezogen, damit der Schalter in der
+  // Verwaltung auch dann stimmt, wenn ihn nie jemand angefasst hat.
+  let ausDemKopf = 0;
+  list(ls.contact?.socials).forEach((x) => {
+    const passt = list(korr.kanaele?.ausDemKopf).some((l) =>
+      new RegExp(l, "i").test(str(x?.label) + str(x?.url))
+    );
+    // Nur wo noch gar nichts gesetzt ist. Wer den Kanal in der Verwaltung
+    // ausdruecklich in den Kopf geholt hat, behaelt ihn dort.
+    if (passt && x.inHeader === undefined) {
+      x.inHeader = false;
+      ausDemKopf++;
+    }
+  });
+  if (ausDemKopf) getan.push(`${ausDemKopf} Kanal/Kanaele aus dem Kopf`);
+
+  // Waehrung: in der Verwaltung stand "CHF 5" im Feld fuer die Waehrung —
+  // daraus wurde auf der Seite "CHF 5 35.—".
+  if (korr.shop?.alteWaehrung && str(ls.shop?.currency) === korr.shop.alteWaehrung) {
+    ls.shop.currency = str(korr.shop.waehrung, "CHF");
+    getan.push("Waehrung");
+  }
+
+  // Tippreste aus dem ersten Einrichten ("as", "asd") aus der Beispielware
+  // raeumen. Sonst steht beim Einschalten des Shops eine Ware mit der
+  // Beschreibung "as" und einem toten Kauf-Link auf der Seite. Geraeumt wird
+  // nur, was Zeichen fuer Zeichen noch der Tippfehler ist.
+  const ph = korr.shop?.platzhalter;
+  if (ph?.name) {
+    let weg = 0;
+    list(ls.shop?.items).forEach((p) => {
+      if (str(p?.name) !== ph.name) return;
+      for (const [feld, wert] of Object.entries(ph.felder || {})) {
+        if (str(p[feld]) === wert) {
+          delete p[feld];
+          weg++;
+        }
+      }
+    });
+    if (weg) getan.push(`${weg} Platzhalter im Shop`);
+  }
+
+  // Seitenaufteilung: Booking und Shop haben eigene Seiten bekommen. Ersetzt
+  // wird nur die unangetastete Einseiter-Aufteilung — sobald in der Verwaltung
+  // eine zweite Seite steht, entscheidet sie.
+  if (list(korr.seiten).length && list(live.pages).length <= 1) {
+    live.pages = kopie(korr.seiten);
+    for (const lang of ["de", "fr"]) {
+      const q = korr.i18n?.[lang]?.seiten;
+      if (q && live.i18n?.[lang]) live.i18n[lang].pages = kopie(q);
+    }
+    getan.push(`Seiten (${korr.seiten.length})`);
+  }
+  if (korr.bookingBild?.src && !ls.booking?.photo?.src) {
+    ls.booking = { ...ls.booking, photo: kopie(korr.bookingBild) };
+    getan.push("Booking-Bild");
+  }
+
+  // Uebersetzungen zu den ersetzten Listen mitziehen.
+  for (const lang of ["de", "fr"]) {
+    const q = korr.i18n?.[lang];
+    if (!q) continue;
+    const zielS = live.i18n?.[lang]?.sections;
+    if (q.referenzen && zielS?.references) zielS.references.items = kopie(q.referenzen);
+    if (q.heroStats && live.i18n?.[lang]?.hero) live.i18n[lang].hero.stats = kopie(q.heroStats);
+    if (q.seiten && live.i18n?.[lang]) live.i18n[lang].pages = kopie(q.seiten);
+  }
+
+  /* Sichtbarkeit und Reihenfolge bleiben grundsaetzlich unangetastet — darueber
+     entscheidet die Verwaltung. Ein frueherer Versuch, sie hier zu erzwingen,
+     hat den Schalter fuer den Shop wirkungslos gemacht.
+
+     Eine einzige Ausnahme, und die steht in der Korrekturdatei statt hier im
+     Code: der Shop. Vorgabe vom 10.08.2026 ist, dass /shop/ oeffentlich
+     erreichbar sein muss (200), waehrend die Startseite noch "Coming soon"
+     zeigt. Ohne eingeschalteten Abschnitt gaebe es die Seite nicht — eine
+     Unterseite ohne Abschnitt wird nicht gebaut, /shop/ liefe auf 404.
+
+     Der Preis dafuer ist ehrlich zu benennen: solange `shop.sichtbar` in
+     content/korrekturen.json auf true steht, ist der Shop-Schalter in der
+     Verwaltung wirkungslos. Ausschalten geht ueber die Korrekturdatei. */
+  if (korr.shop?.sichtbar === true && ls.shop && ls.shop.enabled !== true) {
+    ls.shop.enabled = true;
+    getan.push("Shop sichtbar (Vorgabe, siehe korrekturen.json)");
+  }
+
+  return getan;
+}
+
+/**
+ * Bildmasse aus der Medienbibliothek der Verwaltung. Sie stehen dort seit dem
+ * Hochladen (width/height je Datei), kamen bisher aber nie in der Website an.
+ *
+ * Die Masse liegen bewusst NICHT im Inhalt: dort muessten sie bei jedem
+ * Bildwechsel mitgepflegt werden und waeren schnell falsch. Der Generator
+ * schlaegt sie stattdessen ueber die Bild-Adresse nach und schreibt einen
+ * Schnappschuss mit, damit ein Build ohne API (und die lokale Vorschau)
+ * dieselben Zahlen hat.
+ */
+async function ladeBildmasse() {
+  const api = process.env.MEDIA_API_URL || process.env.CONTENT_API_URL?.replace(/content\.json/, "media.json");
+  const map = new Map();
+
+  if (api && /media\.json/.test(api)) {
+    try {
+      const res = await fetch(api, { headers: { Accept: "application/json" } });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = (await res.json()) || {};
+      for (const m of Object.values(data)) {
+        const url = str(m?.url);
+        const w = Number(m?.width) || 0;
+        const h = Number(m?.height) || 0;
+        if (url && w > 0 && h > 0) map.set(url, { w, h });
+      }
+      if (map.size) {
+        await writeFile(LOCAL_MASSE, JSON.stringify(Object.fromEntries(map), null, 2) + "\n");
+        console.log(`[build] Bildmasse aus der Medienbibliothek: ${map.size} Bild(er)`);
+        return map;
+      }
+    } catch (err) {
+      console.warn("[build] Medienbibliothek nicht lesbar:", err.message);
+    }
+  }
+
+  try {
+    const roh = JSON.parse(await readFile(LOCAL_MASSE, "utf8"));
+    for (const [url, m] of Object.entries(roh)) {
+      if (Number(m?.w) > 0 && Number(m?.h) > 0) map.set(url, { w: Number(m.w), h: Number(m.h) });
+    }
+    if (map.size) console.log(`[build] Bildmasse aus dem Schnappschuss: ${map.size} Bild(er)`);
+  } catch (e) {
+    /* noch kein Schnappschuss — dann bleiben die Bilder ohne width/height */
+  }
+  return map;
+}
+
+/** Korrekturen laden. Fehlt die Datei, bleibt nur die Schreibweise. */
+async function ladeKorrekturen() {
+  try {
+    return JSON.parse(await readFile(LOCAL_KORREKTUREN, "utf8"));
+  } catch (e) {
+    console.warn("[build] content/korrekturen.json nicht lesbar:", e.message);
+    return null;
+  }
 }
 
 async function loadContent() {
+  KORREKTUREN = await ladeKorrekturen();
   const apiUrl = process.env.CONTENT_API_URL;
   if (apiUrl) {
     try {
@@ -311,13 +548,9 @@ async function loadContent() {
           );
           adoptTexts(live, template);
         }
-        const vorher = nachziehen(live, template);
-        if (vorher !== null) {
-          console.log(
-            `[build] Datenbank trägt Stand ${vorher} < ${VORLAGEN_STAND} — ` +
-              `Schreibweise, Referenzen, Kanäle und Sichtbarkeit aus der Vorlage ` +
-              `nachgezogen. Nach dem ersten Speichern in der Verwaltung entfällt das.`
-          );
+        const korrigiert = nachziehen(live, KORREKTUREN);
+        if (korrigiert.length) {
+          console.log(`[build] Aus der Vorlage nachgezogen: ${korrigiert.join(", ")}.`);
         }
         content = withDefaults(live, template);
       } catch (e) {
@@ -340,8 +573,19 @@ async function loadContent() {
     }
   }
   const raw = await readFile(LOCAL_CONTENT, "utf8");
-  console.log("[build] Inhalt aus content/site.json geladen");
-  return JSON.parse(raw);
+  const lokal = JSON.parse(raw);
+  // Auch hier korrigieren: der eingecheckte Stand ist ein Abzug der Datenbank
+  // und traegt darum dieselben alten Stellen. Ohne diesen Schritt haette die
+  // Vorschau ohne API einen anderen Inhalt als die Website.
+  const korrigiert = nachziehen(lokal, KORREKTUREN);
+  console.log(
+    "[build] Inhalt aus content/site.json geladen" +
+      (korrigiert.length ? ` — nachgezogen: ${korrigiert.join(", ")}` : "")
+  );
+  // Korrigierten Stand zurueckschreiben, sonst weicht die eingecheckte Datei
+  // von dem ab, was gebaut wurde.
+  if (korrigiert.length) await writeFile(LOCAL_CONTENT, JSON.stringify(lokal, null, 2) + "\n");
+  return lokal;
 }
 
 /* --------------------------------------------------------------- bausteine */
@@ -374,15 +618,36 @@ function cdnUrl(src, w) {
   return `/.netlify/images?url=${encodeURIComponent(rooted(clean))}&w=${w}&q=72`;
 }
 
+/**
+ * Bildmasse aus der Medienbibliothek, nach Adresse. Wird in ladeBildmasse()
+ * gefüllt. Ohne Eintrag bleibt das Bild ohne width/height — dann verhält es
+ * sich wie bisher.
+ */
+let BILDMASSE = new Map();
+
+/** Masse eines Bildes: erst am Inhalt, sonst aus der Medienbibliothek. */
+function masseVon(media, raw) {
+  const w = Number(media?.width) || 0;
+  const h = Number(media?.height) || 0;
+  if (w > 0 && h > 0) return { w, h };
+  const m = BILDMASSE.get(raw);
+  return m && m.w > 0 && m.h > 0 ? m : null;
+}
+
 function picture(media, { className = "", eager = false, sizes = "", widths = [480, 800, 1200], style = "" } = {}) {
   const raw = String(media?.src || "").trim();
   if (!raw || !safeUrl(raw)) return "";
   const srcset = CDN
     ? ` srcset="${widths.map((w) => `${esc(cdnUrl(raw, w))} ${w}w`).join(", ")}"`
     : "";
+  // width/height reservieren den Platz, bevor das Bild da ist — ohne sie
+  // springt der Text beim Nachladen nach unten (Layout Shift). Die Zahlen
+  // sind nur das Seitenverhältnis; die tatsächliche Grösse macht das CSS.
+  const masse = masseVon(media, raw);
   const attrs = [
     `src="${esc(cdnUrl(raw, widths[widths.length - 1]))}"`,
     `alt="${esc(media?.alt || "")}"`,
+    masse ? `width="${masse.w}" height="${masse.h}"` : "",
     eager ? 'fetchpriority="high" decoding="async"' : 'loading="lazy" decoding="async"',
     sizes ? `sizes="${esc(sizes)}"` : "",
     className ? `class="${esc(className)}"` : "",
@@ -523,7 +788,7 @@ function heroStats(hero) {
       // "7+" → Ziffern "7", Nachsatz "+";  "CHF 5" → Vorsatz "CHF ", Ziffern "5"
       const m = value.match(/^([^\d]*)(\d[\d'’.,]*)(.*)$/);
       const data = m
-        ? ` data-from="1" data-to="${esc(m[2].replace(/[^\d]/g, ""))}"` +
+        ? ` data-to="${esc(m[2].replace(/[^\d]/g, ""))}"` +
           ` data-pre="${esc(m[1])}" data-post="${esc(m[3])}"`
         : "";
       return `<div class="hstat">
@@ -777,27 +1042,77 @@ function renderShows(n, s) {
   </section>`;
 }
 
+/**
+ * Referenzen in zwei Stufen.
+ *
+ * Oben die wichtigsten Adressen — die tragen `highlight` und behalten die
+ * Reihenfolge aus der Verwaltung, denn das ist eine Rangfolge und keine
+ * Sortierung. Darunter alles Weitere: alphabetisch, kleiner gesetzt und nach
+ * `group` gebündelt ("Ostschweiz", "Schweiz", "International"). Eine Liste aus
+ * fünfzehn gleich grossen Zeilen liest niemand; so springt ins Auge, was zählt,
+ * und der Rest bleibt trotzdem vollständig nachlesbar.
+ */
 function renderReferences(n, s) {
   const items = list(s.items).filter((i) => str(i?.name));
-  return `
-  <section class="pad" id="references" aria-labelledby="references-h">
-    <div class="wrap">${sectionHead(n, s, "references")}
-      <ul class="venue-list rv">
-        ${items
+  const lead = items.filter((v) => v.highlight);
+  const rest = items.filter((v) => !v.highlight);
+
+  const linkOf = (v) => {
+    const url = safeUrl(v.url) || anchor("#booking");
+    const ext = /^https?:/i.test(url) ? ' target="_blank" rel="noopener"' : "";
+    return { url, ext };
+  };
+
+  const leadList = lead.length
+    ? `<ul class="venue-list rv">
+        ${lead
           .map((v, i) => {
-            const url = safeUrl(v.url) || anchor("#booking");
-            const ext = /^https?:/i.test(url) ? ' target="_blank" rel="noopener"' : "";
-            // Die Liste ist nach Wichtigkeit sortiert. Die oben stehenden
-            // Referenzen tragen "highlight" und bekommen die ganze Zeilenbreite
-            // — so ist die Reihenfolge auch optisch eine Rangfolge.
-            return `<li${v.highlight ? ' class="lead"' : ""}><a href="${esc(url)}"${ext}><span class="venue-idx">${num(
+            const { url, ext } = linkOf(v);
+            return `<li class="lead"><a href="${esc(url)}"${ext}><span class="venue-idx">${num(
               i + 1
             )}</span><span class="venue-name">${esc(v.name)}</span><span class="venue-city">${esc(
-              v.city
+              str(v.city)
             )}</span></a></li>`;
           })
           .join("\n        ")}
-      </ul>
+      </ul>`
+    : "";
+
+  // Gruppen in der Reihenfolge ihres ersten Auftretens; Einträge ohne Gruppe
+  // bilden den ersten, namenlosen Block.
+  const gruppen = [];
+  for (const v of rest) {
+    const key = str(v.group);
+    let g = gruppen.find((x) => x.key === key);
+    if (!g) gruppen.push((g = { key, items: [] }));
+    g.items.push(v);
+  }
+  const restList = gruppen
+    .map((g) => {
+      const zeilen = g.items
+        .slice()
+        .sort((a, b) => str(a.name).localeCompare(str(b.name), "de"))
+        .map((v) => {
+          const { url, ext } = linkOf(v);
+          return `<li><a href="${esc(url)}"${ext}><span class="venue-name">${esc(
+            v.name
+          )}</span><span class="venue-city">${esc(str(v.city))}</span></a></li>`;
+        })
+        .join("\n          ");
+      return `<div class="venue-group">
+          ${g.key ? `<span class="mono venue-group-h">${esc(g.key)}</span>` : ""}
+          <ul class="venue-more">
+          ${zeilen}
+          </ul>
+        </div>`;
+    })
+    .join("\n        ");
+
+  return `
+  <section class="pad" id="references" aria-labelledby="references-h">
+    <div class="wrap">${sectionHead(n, s, "references")}
+      ${leadList}
+      ${rest.length ? `<div class="venue-rest rv">\n        ${restList}\n      </div>` : ""}
       ${
         str(s.note)
           ? `<p class="live-note rv">${inline(s.note)} <a class="accent" href="${anchorHref(
@@ -822,20 +1137,16 @@ function afterMovies(s) {
     (m) => str(m?.title) && (safeUrl(m?.src) || safeUrl(m?.embedUrl))
   );
   const head = `<div class="after-head">
-          <span class="mono">${esc(UI.afterMovies)}</span>
           ${str(s.aftermoviesNote) ? `<p>${inline(s.aftermoviesNote)}</p>` : ""}
         </div>`;
+  // Ohne Videos bleibt der Block ganz weg: ein aufklappbarer Kasten, in dem
+  // dann "noch nichts da" steht, ist ein leeres Versprechen. Der Hinweis für
+  // die Pflege steht als Kommentar in der Seite.
   if (!movies.length) {
-    return `<div class="after rv">
-        <!-- TODO Kunde: Aftermovie-Dateien oder YouTube-/Vimeo-Adressen liefern.
-             Eintragen in der Verwaltung unter Galerie → After Movies je Video:
-             Titel, Event, Video (src oder embedUrl) und Vorschaubild (poster).
-             Solange nichts hinterlegt ist, steht hier der Platzhaltertext. -->
-        ${head}
-        <div class="empty-state"><span class="mono">${esc(UI.afterMovies)}</span><p>${esc(
-      str(s.aftermoviesEmpty, UI.afterMoviesEmpty)
-    )}</p></div>
-      </div>`;
+    return `<!-- TODO Kunde: Aftermovie-Dateien oder YouTube-/Vimeo-Adressen liefern.
+           Eintragen in der Verwaltung unter Galerie → After Movies je Video:
+           Titel, Event, Video (src oder embedUrl) und Vorschaubild (poster).
+           Solange nichts hinterlegt ist, erscheint der Block gar nicht. -->`;
   }
   const cards = movies
     .map((m) => {
@@ -853,12 +1164,21 @@ function afterMovies(s) {
         </article>`;
     })
     .join("\n        ");
-  return `<div class="after rv">
+  // Aufklappbar: die Aftermovies sassen bisher vor der Bilderwand und haben
+  // sie nach unten gedrueckt. Zugeklappt ist die Galerie sofort zu sehen, ein
+  // Klick holt die Videos. <details> braucht dafuer kein Javascript und bleibt
+  // auch ohne es bedienbar.
+  return `<details class="after rv">
+        <summary class="after-sum">
+          <span class="mono">${esc(UI.afterMovies)}</span>
+          <span class="after-count mono">${movies.length}</span>
+          <span class="after-arr" aria-hidden="true">▾</span>
+        </summary>
         ${head}
         <div class="after-grid">
         ${cards}
         </div>
-      </div>`;
+      </details>`;
 }
 
 function renderGallery(n, s) {
@@ -925,55 +1245,32 @@ function priceTag(price, currency) {
 }
 
 /**
- * Bezahlmöglichkeiten: TWINT und Banküberweisung, dazu — sofern hinterlegt —
- * der QR-Code zum Abscannen. Alles rein statisch; es wird nichts eingezogen,
- * die Kundin überweist selbst und der Versand geht nach Zahlungseingang raus.
+ * Bezahlung. Bis August 2026 stand hier TWINT/Bank samt QR-Code zum
+ * Abscannen — die Kundin überwies selbst, der Versand ging nach Zahlungs-
+ * eingang raus. Das ist keine Bezahlung im Shop, sondern eine Rechnung ohne
+ * Kontrolle: niemand weiss, ob und wann Geld kam, und der QR-Code taugt
+ * ausdrücklich nicht als Ersatz für eine Bezahlseite.
+ *
+ * Bezahlt wird deshalb über Stripe. Der Ablauf steht in AUDIT.md; hier steht
+ * nur, was die Kundin vor dem Absenden wissen muss.
  */
-function payMethods(s) {
-  const twint = str(s.twint);
-  const bank = s.bank || {};
-  const hasBank = str(bank.iban);
-  // Fehlen Nummer und IBAN noch, steht hier bewusst der Platzhalter statt
-  // nichts — sonst faellt beim Abnehmen niemandem auf, dass die Angaben fehlen.
-  const missing = !twint && !hasBank;
-  const qr = safeUrl(s.qr?.src)
-    ? `<figure class="pay-qr">
-            ${picture(s.qr, { widths: [280, 560], sizes: "220px" })}
-            <figcaption class="mono">${esc(str(s.qr.caption, UI.payQrCaption))}</figcaption>
-          </figure>`
-    : `<!-- TODO Kunde: QR-Code fehlt noch. Benötigt wird entweder der TWINT-QR
-             (in der TWINT-App unter "Geld empfangen" → QR speichern) oder der
-             Einzahlungsschein-QR der Bank (QR-Rechnung). Bild in der Verwaltung
-             unter Shop → Bezahlung hochladen; es erscheint dann hier.
-             Offene Frage: TWINT-QR, Bank-QR oder beide? -->
-        <div class="pay-qr pay-qr-missing"><span class="mono">${esc(UI.payQrMissing)}</span></div>`;
-  const details = missing
-    ? `<li><b>TWINT</b><span>${esc(UI.payPending)}</span></li>
-              <li><b>${esc(UI.payBank)}</b><span>${esc(UI.payPending)}</span></li>`
-    : `${twint ? `<li><b>TWINT</b><span>${esc(twint)}</span></li>` : ""}
-              ${hasBank ? `<li><b>${esc(str(bank.label, UI.payBank))}</b><span>${esc(bank.iban)}</span></li>` : ""}
-              ${hasBank && str(bank.holder) ? `<li><b>${esc(UI.payHolder)}</b><span>${esc(bank.holder)}</span></li>` : ""}
-              ${hasBank && str(bank.bank) ? `<li><b>${esc(UI.payBankName)}</b><span>${esc(bank.bank)}</span></li>` : ""}`;
+function payMethods(s, site) {
+  const bereit = !!safeUrl(site.stripePaymentLink) || site.stripeReady === true;
   return `
       <div class="pay-methods rv">${
-        missing
-          ? `
-        <!-- TODO Kunde: Zahlungsangaben fehlen noch. Benoetigt werden die
-             TWINT-Nummer und/oder IBAN samt Empfaenger und Bank. Eintragen in
-             der Verwaltung unter Shop → Bezahlung; sobald etwas hinterlegt ist,
-             ersetzt es diesen Platzhalter und die Auswahl im Bestellformular. -->`
-          : ""
+        bereit
+          ? ""
+          : `
+        <!-- TODO Kunde: Es fehlt noch der echte Stripe-Zahlungslink. Anlegen im
+             Stripe-Dashboard unter "Payment links" fuer den Artikel dieses
+             Shops und die Adresse als Umgebungsvariable STRIPE_PAYMENT_LINK_URL
+             in Netlify hinterlegen (Site settings → Environment variables).
+             Bis dahin nimmt das Formular die Bestellung entgegen und meldet sie
+             per E-Mail, die Bezahlseite oeffnet sich aber noch nicht. Details:
+             AUDIT.md, Abschnitt "Stripe". -->`
       }
-        <div class="pay-cols">
-          <div>
-            <span class="mono">${esc(UI.payTitle)}</span>
-            <ul class="pay-list">
-              ${details}
-            </ul>
-            <p class="pay-note">${esc(UI.payNote)}</p>
-          </div>
-          ${qr}
-        </div>
+        <span class="mono">${esc(UI.payTitle)}</span>
+        <p class="pay-note">${esc(UI.payStripeNote)}</p>
       </div>`;
 }
 
@@ -983,8 +1280,7 @@ function payMethods(s) {
  * Bestellung landet im selben Eingang wie die Booking-Anfragen (kind:"order").
  */
 function orderForm(s, site, items, cur) {
-  const endpoint = safeUrl(site.shopApi) || safeUrl(site.bookingApi);
-  if (!endpoint || !items.length) return "";
+  if (!items.length) return "";
   const options = items
     .filter((p) => p.status !== "soldout")
     .map((p) => {
@@ -995,13 +1291,10 @@ function orderForm(s, site, items, cur) {
     })
     .join("\n              ");
   if (!options) return "";
-  const pay = [
-    str(s.twint) ? ["twint", "TWINT"] : null,
-    str(s.bank?.iban) ? ["bank", str(s.bank?.label, UI.payBank)] : null,
-  ].filter(Boolean);
   return `
-      <form class="oform rv" id="order-form" data-endpoint="${esc(endpoint)}"
-            data-sending="${esc(UI.sending)}" data-invalid="${esc(UI.formInvalid)}" novalidate>
+      <form class="oform rv" id="order-form" data-endpoint="${esc(ORDER_ENDPOINT)}"
+            data-sending="${esc(UI.sending)}" data-invalid="${esc(UI.formInvalid)}"
+            data-paying="${esc(UI.oPaying)}"${formDemoAttr} novalidate>
         <div class="bform-head">
           <span class="mono">${esc(UI.orderTitle)}</span>
           <h3>${esc(UI.orderHeadline)}</h3>
@@ -1036,21 +1329,9 @@ function orderForm(s, site, items, cur) {
               str(s.defaultCountry, "Schweiz")
             )}" autocomplete="country-name">
           </label>
-          ${
-            pay.length
-              ? `<fieldset class="span-2 opay">
-            <legend class="lbl">${esc(UI.oPayment)} <i aria-hidden="true">*</i></legend>
-            ${pay
-              .map(
-                ([v, label], i) =>
-                  `<label class="opay-opt"><input name="payment" type="radio" value="${esc(
-                    v
-                  )}" required${i === 0 ? " checked" : ""}><span>${esc(label)}</span></label>`
-              )
-              .join("\n            ")}
-          </fieldset>`
-              : ""
-          }
+          ${/* Keine Auswahl der Zahlungsart mehr: bezahlt wird über Stripe.
+               Die frühere Auswahl TWINT/Bank stand für "Ich überweise dann
+               mal" — der Shop wusste danach nie, ob das jemand tat. */ ""}
           <label class="hp" aria-hidden="true" tabindex="-1"><span class="lbl">${esc(UI.fHoneypot)}</span>
             <input name="website" type="text" tabindex="-1" autocomplete="off">
           </label>
@@ -1060,6 +1341,7 @@ function orderForm(s, site, items, cur) {
           <span class="mono reply-note">${esc(UI.oReplyNote)}</span>
           <p class="bform-msg" role="status" aria-live="polite"
              data-success="${esc(UI.oSuccess)}" data-error="${esc(UI.oError)}"></p>
+          ${formDemoNote()}
         </div>
       </form>`;
 }
@@ -1081,7 +1363,7 @@ function kachelbreite(anzahl) {
   return 116;
 }
 
-function renderShop(n, s, contactEmail, site) {
+function renderShop(n, s, site) {
   const items = list(s.items).filter((p) => str(p?.name));
   const cur = str(s.currency, "CHF");
   const buy = str(s.buyLabel, UI.buy);
@@ -1092,25 +1374,19 @@ function renderShop(n, s, contactEmail, site) {
       const sold = p.status === "soldout";
       // Nur echte Adressen zaehlen als Bezahl-Link — Tippreste wie "asd"
       // fallen sonst als toter Kauf-Knopf auf die Website
-      const link = /^https?:\/\//i.test(String(p.linkUrl || "")) ? safeUrl(p.linkUrl) : "";
       const price = priceTag(p.price, cur);
-      const mail = contactEmail
-        ? `mailto:${contactEmail}?subject=${encodeURIComponent(`${UI.orderSubject}: ${str(p.name)}`)}` +
-          `&body=${encodeURIComponent(UI.orderMailBody.replace("{product}", [str(p.name), price].filter(Boolean).join(" — ")))}`
-        : "";
-      // Ohne eigenen Bezahl-Link fuehrt der Knopf ins Bestellformular weiter
-      // unten und waehlt das Produkt dort schon aus. Gibt es kein Formular
-      // (kein Endpunkt hinterlegt), bleibt die Bestellung per Mail.
+      // Der Kauf-Knopf fuehrt immer ins Bestellformular und waehlt die Ware
+      // dort schon aus. Kein "Bestellen per E-Mail" mehr: eine Mail traegt
+      // weder Lieferadresse noch Bezahlung, und ohne die beiden kann niemand
+      // etwas verschicken. Ein eigener Bezahl-Link je Artikel entfaellt
+      // ebenfalls — bezahlt wird nach dem Formular ueber Stripe, sonst kaeme
+      // die Bestellung ohne Adresse an.
       const cta = sold
         ? `<span class="mono">${esc(UI.soldOut)}</span>`
-        : link
-        ? `<a class="btn sm" href="${esc(link)}" target="_blank" rel="noopener">${esc(buy)} ↗</a>`
         : hasOrderForm
         ? `<a class="btn sm order-jump" href="#order-form" data-product="${esc(p.name)}">${esc(
             buy
           )}</a>`
-        : mail
-        ? `<a class="btn sm ghost" href="${esc(mail)}">${esc(UI.orderByMail)}</a>`
         : "";
       return `<article class="product rv${sold ? " soldout" : ""}">
           ${p.src ? `<div class="product-img">${picture(p, { sizes: "(max-width:700px) 46vw, 280px", widths: [480, 800] })}</div>` : ""}
@@ -1148,7 +1424,7 @@ function renderShop(n, s, contactEmail, site) {
       <div class="shop-grid" style="--tile:${kachelbreite(items.length)}px">
       ${cards}
       </div>
-${payMethods(s)}
+${payMethods(s, site)}
 ${form}
     </div>
   </section>`;
@@ -1162,7 +1438,10 @@ ${form}
 
 function renderBooking(n, s, site) {
   const f = s.form || {};
-  const formEnabled = f.enabled !== false && !!safeUrl(site.bookingApi);
+  // Das Formular sendet an den eigenen Endpunkt, nicht an eine in der
+  // Verwaltung hinterlegte Datenbank-Adresse. Es haengt daher nur noch am
+  // Schalter in der Verwaltung.
+  const formEnabled = f.enabled !== false;
   // Anfragen ist der wichtigste Weg der Seite. Deshalb steht hier links die
   // Ansage und rechts gleich das Formular — ohne Umweg über einen Knopf.
   return `
@@ -1220,10 +1499,10 @@ function renderBooking(n, s, site) {
       ${
         formEnabled
           ? `
-      <form class="bform rv" id="booking-form" data-endpoint="${href(
-        site.bookingApi
+      <form class="bform rv" id="booking-form" data-endpoint="${esc(
+        BOOKING_ENDPOINT
       )}" data-sending="${esc(UI.sending)}" data-invalid="${esc(UI.formInvalid)}"
-            data-captcha="${esc(UI.captchaWrong)}" novalidate>
+            data-captcha="${esc(UI.captchaWrong)}"${formDemoAttr} novalidate>
         <div class="bform-head">
           <span class="mono">${esc(str(f.kicker, "Booking request"))}</span>
           <h3>${esc(str(f.title, "Tell me about your event"))}</h3>
@@ -1237,7 +1516,7 @@ function renderBooking(n, s, site) {
             <input name="email" type="email" required maxlength="160" autocomplete="email"
                    placeholder="${esc(UI.phEmail)}">
           </label>
-          <label class="span-2"><span class="lbl">${esc(UI.fPhone)} <i aria-hidden="true">*</i></span>
+          <label><span class="lbl">${esc(UI.fPhone)} <i aria-hidden="true">*</i></span>
             <input name="phone" type="tel" required maxlength="40" autocomplete="tel"
                    placeholder="${esc(UI.phPhone)}">
           </label>
@@ -1253,16 +1532,16 @@ function renderBooking(n, s, site) {
           <label><span class="lbl">${esc(UI.fSetLength)} <i aria-hidden="true">*</i></span>
             <input name="setLength" type="text" required maxlength="60" placeholder="${esc(UI.fSetLengthHint)}">
           </label>
-          <label class="span-2"><span class="lbl">${esc(UI.fMessage)} <i aria-hidden="true">*</i></span>
-            <textarea name="message" rows="5" required maxlength="4000"
-                      placeholder="${esc(UI.phMessage)}"></textarea>
-          </label>
-          <label class="span-2 bform-captcha"><span class="lbl">${esc(UI.captcha)} <i aria-hidden="true">*</i></span>
+          <label class="bform-captcha"><span class="lbl">${esc(UI.captcha)} <i aria-hidden="true">*</i></span>
             <span class="captcha-row">
               <span class="captcha-sum" aria-hidden="true"><b data-a></b> + <b data-b></b> =</span>
               <input name="captcha" type="text" required inputmode="numeric" maxlength="4"
                      autocomplete="off" aria-label="${esc(UI.captchaAria)}" placeholder="?">
             </span>
+          </label>
+          <label class="span-2"><span class="lbl">${esc(UI.fMessage)} <i aria-hidden="true">*</i></span>
+            <textarea name="message" rows="3" required maxlength="4000"
+                      placeholder="${esc(UI.phMessage)}"></textarea>
           </label>
           <label class="hp" aria-hidden="true" tabindex="-1"><span class="lbl">${esc(UI.fHoneypot)}</span>
             <input name="website" type="text" tabindex="-1" autocomplete="off">
@@ -1279,10 +1558,12 @@ function renderBooking(n, s, site) {
              data-success="${esc(str(f.successText, "Thanks — your request landed."))}"
              data-error="${esc(str(f.errorText, "Something went wrong. Please e-mail instead."))}"></p>
           <p class="bform-fine mono">${esc(UI.formFine)}</p>
+          ${formDemoNote()}
         </div>
       </form>`
           : ""
       }
+      </div>
     </div>
   </section>`;
 }
@@ -1606,8 +1887,6 @@ const UI_DEFAULTS = {
   calShow: "Termin",
   language: "Sprache",
   buy: "Kaufen",
-  orderByMail: "Per Mail bestellen",
-  orderSubject: "Bestellung",
   bookDay: "Diesen Tag anfragen",
   pickDay: "Oder Wunschdatum direkt im Kalender antippen:",
   dayBusy: "Belegt",
@@ -1623,16 +1902,10 @@ const UI_DEFAULTS = {
   showMoreImages: "{n} weitere Bilder",
   showLessImages: "Weniger Bilder",
   afterMovies: "After Movies",
-  afterMoviesEmpty: "Die Aftermovies der letzten Shows sind im Schnitt — sie erscheinen hier, sobald sie fertig sind.",
   allRequired: "Alle Felder sind Pflichtfelder.",
+  onThisPage: "Auf dieser Seite",
   payTitle: "Bezahlen",
-  payBank: "Banküberweisung",
-  payBankName: "Bank",
-  payHolder: "Empfänger",
-  payNote: "Nach dem Absenden kommt eine Bestätigung mit Betrag und Vermerk. Der Versand geht raus, sobald die Zahlung da ist.",
-  payQrCaption: "QR-Code scannen und bezahlen",
-  payQrMissing: "QR-Code folgt",
-  payPending: "folgt",
+  payStripeNote: "Bezahlt wird nach dem Absenden über Stripe — Karte, Apple Pay, Google Pay oder TWINT. Der Versand geht raus, sobald die Zahlung bestätigt ist.",
   orderTitle: "Bestellung",
   orderHeadline: "Wohin darf es gehen?",
   oProduct: "Artikel",
@@ -1641,13 +1914,13 @@ const UI_DEFAULTS = {
   oZip: "PLZ",
   oCity: "Ort",
   oCountry: "Land",
-  oPayment: "Bezahlung",
-  oSubmit: "Bestellung abschicken",
-  oReplyNote: "Bestätigung mit Zahlungsangaben folgt per Mail",
-  oSuccess: "Danke — deine Bestellung ist da. Die Zahlungsangaben kommen gleich per Mail.",
-  oError: "Das hat nicht geklappt. Schreib mir bitte direkt eine Mail.",
+  oSubmit: "Weiter zur Bezahlung",
+  oPaying: "Bezahlseite wird geöffnet …",
+  oReplyNote: "Weiter zu Stripe — die Bestätigung kommt danach per Mail",
+  oSuccess: "Danke — deine Bestellung ist da. Du bekommst gleich eine Bestätigung per Mail.",
+  oError: "Das hat nicht geklappt. Schreib mir bitte direkt eine Mail an info@samsparking.ch.",
+  formDemo: "Vorführ-Fassung: dieses Formular sendet nichts.",
   follow: "Kanäle",
-  orderMailBody: "Hoi Sam\n\nIch bestelle: {product}\nLieferadresse:\n\nDanke!",
   notFoundTitle: "Nichts hier.",
   notFoundText: "Diese Seite gibt es nicht (mehr). Zurück zum Start — dort steht alles Aktuelle.",
   notFoundCta: "Zur Startseite",
@@ -1841,17 +2114,23 @@ function pagesOf(c) {
       seo: p.seo || {},
     }));
 
-  if (pages.length) {
+  // Eine Unterseite ohne Abschnitt waere eine leere Seite mit einem Menuepunkt,
+  // der ins Nichts fuehrt — genau das passiert, sobald der Shop in der
+  // Verwaltung ausgeschaltet wird. Solche Seiten fallen weg; die Startseite
+  // bleibt immer, auch wenn dort gerade nichts eingeschaltet ist.
+  const bewohnt = pages.filter((p, i) => i === 0 || p.sections.length);
+
+  if (bewohnt.length) {
     // Doppelte Slugs entschärfen, sonst überschreiben sich die Dateien.
     const seen = new Set();
-    pages.forEach((p, i) => {
+    bewohnt.forEach((p, i) => {
       let sl = p.slug;
       while (sl !== "" && seen.has(sl)) sl += "-2";
       if (i > 0 && sl === "") sl = "seite-" + i;
       p.slug = sl;
       seen.add(sl);
     });
-    return pages;
+    return bewohnt;
   }
 
   return [
@@ -1916,6 +2195,49 @@ function rooted(url) {
 
 /* --------------------------------------------------------------- dokument */
 
+/**
+ * Welche Abschnitte diese Website überhaupt bauen kann — dieselben Schlüssel
+ * wie `renderers` weiter unten, und beide gehören zusammen.
+ *
+ * Der Grund für die Liste: Der Inhalt kommt aus der Verwaltung und trägt
+ * mitunter Abschnitte, die es hier nicht mehr gibt — der Shop etwa, den der
+ * Kunde 2026 von der Seite genommen hat, liegt in der Datenbank weiter. Ein
+ * solcher Abschnitt fiel bisher zwar aus dem Rumpf (kein Baustein), stand aber
+ * weiter im Menü: ein Menüpunkt „Shop", der auf `#shop` zeigt und ins Leere
+ * läuft. Unbekannte Abschnitte fallen deshalb schon hier weg — im Menü wie im
+ * Rumpf.
+ */
+const BAUBAR = new Set([
+  "about",
+  "shows",
+  "references",
+  "gallery",
+  "booking",
+  "shop",
+  "contact",
+]);
+
+/**
+ * Wohin die Formulare senden. Bewusst eigene Adressen dieser Website und
+ * nicht die Datenbank-Adresse aus der Verwaltung: der Browser darf den
+ * Eingang nicht direkt kennen (sonst kann jeder hineinschreiben), und eine
+ * Bestellung oder Anfrage muss serverseitig eine E-Mail ausloesen. Die
+ * Funktionen dahinter stehen in netlify/functions/.
+ */
+const BOOKING_ENDPOINT = "/api/booking";
+const ORDER_ENDPOINT = "/api/order";
+
+/**
+ * Vorführ-Fassung (Beispiel-Sami): dort liegt nur die gebaute Website, ohne
+ * die Funktionen dahinter. Ein Formular, das dann ins Leere sendet, sähe
+ * funktionsfähig aus und wäre es nicht — deshalb sagen die Formulare dort
+ * offen, dass sie nichts verschicken, und senden gar nicht erst.
+ */
+const FORMS_DEMO = process.env.FORMS_DEMO === "1";
+const formDemoAttr = FORMS_DEMO ? ' data-demo="true"' : "";
+const formDemoNote = () =>
+  FORMS_DEMO ? `<p class="bform-demo mono">${esc(UI.formDemo)}</p>` : "";
+
 function renderPage(c, page, pages, lang, langs) {
   const master = langs[0];
   UI = { ...UI_DEFAULTS, ...(c.ui || {}) };
@@ -1924,21 +2246,47 @@ function renderPage(c, page, pages, lang, langs) {
   const base = site.domain.replace(/\/+$/, "");
   const sections = c.sections || {};
   const isHome = !page.slug;
-  const hasShows = list(sections.shows?.items).some((item) => str(item?.name));
+  // Shows gehoeren nur dann auf die Seite — und damit ins Menue —, wenn noch
+  // ein Termin aussteht. Steht in der Verwaltung nur Vergangenes, fuehrte der
+  // Menuepunkt bisher auf eine Seite, die nichts als "keine Termine" sagt.
+  // Der Rueckblick ("Already played") bleibt erhalten, sobald wieder ein
+  // kommender Termin dabei ist.
+  const heute = today();
+  const hasShows = list(sections.shows?.items).some(
+    (item) => str(item?.name) && (!isoDate(item.date) || isoDate(item.date) >= heute)
+  );
   const order = list(page.sections).filter(
     (key) =>
       sections[key] &&
+      BAUBAR.has(key) &&
       sections[key].enabled !== false &&
       (key !== "shows" || hasShows)
   );
   const effectivePage = { ...page, sections: order };
   CTX = { page: effectivePage, pages, hideHead: null, prefix: navPrefix(lang, master) };
-  const hasBooking = order.includes("booking");
-  const hasBookingForm =
-    hasBooking &&
-    sections.booking?.form?.enabled !== false &&
-    !!safeUrl(site.bookingApi);
-  const bookingTarget = hasBooking ? (hasBookingForm ? "#booking-form" : "#booking") : "";
+  // Das Formular haengt nicht mehr an einer in der Verwaltung hinterlegten
+  // Adresse: es sendet immer an den eigenen Endpunkt /api/booking. Abschalten
+  // laesst es sich weiterhin in der Verwaltung (form.enabled).
+  const bookingPage = pages.find((p) => list(p.sections).includes("booking"));
+  const hasBooking = !!bookingPage;
+  const hasBookingForm = hasBooking && sections.booking?.form?.enabled !== false;
+  // Der Knopf zeigt direkt auf das Formular — auch von einer anderen Seite aus.
+  // `anchor()` kennt nur Abschnitts-Schluessel, "#booking-form" ist keiner;
+  // der Weg zur Booking-Seite wird deshalb hier gebaut.
+  const bookingTarget = (() => {
+    if (!hasBooking) return "";
+    const hash = hasBookingForm ? "#booking-form" : "#booking";
+    return bookingPage.slug === page.slug ? hash : `${pagePath(bookingPage.slug)}${hash}`;
+  })();
+
+  // Dasselbe fuer den Shop: er liegt auf einer eigenen Seite, ist aber nur da,
+  // solange er in der Verwaltung eingeschaltet ist und Ware enthaelt.
+  const shopPage = pages.find((p) => list(p.sections).includes("shop"));
+  const shopTarget = !shopPage
+    ? ""
+    : shopPage.slug === page.slug
+    ? "#shop"
+    : `${pagePath(shopPage.slug)}`;
 
   const renderers = {
     about: renderAbout,
@@ -1947,7 +2295,7 @@ function renderPage(c, page, pages, lang, langs) {
     shows: renderShows,
     references: renderReferences,
     gallery: renderGallery,
-    shop: (n, s) => renderShop(n, s, str(sections.contact?.email), site),
+    shop: (n, s) => renderShop(n, s, site),
     booking: (n, s) => renderBooking(n, s, site),
     contact: (n, s) => renderContact(n, s, bookingTarget),
   };
@@ -1966,32 +2314,37 @@ function renderPage(c, page, pages, lang, langs) {
     .join("\n");
 
   const navPages = pages.filter((p) => p.inNav);
-  // Eine einzige Seite: das Menü springt direkt zu den Abschnitten.
-  const nav =
-    navPages.length > 1
-      ? navPages
-          .map(
-            (p) =>
-              `<li><a href="${esc(pagePath(p.slug))}"${
-                p.slug === page.slug ? ' aria-current="page"' : ""
-              }>${esc(p.navLabel)}</a></li>`
-          )
-          .join("\n          ")
-      : order
-          .map((key) => {
-            const cls = key === "booking" ? ' class="nav-cta"' : key === "shop" ? ' class="nav-hot"' : "";
-            return `<li${cls}><a href="#${esc(key)}">${esc(
-              str(sections[key]?.navLabel, str(sections[key]?.title, key))
-            )}</a></li>`;
-          })
-          .join("\n          ");
 
-  // Auf einer Seite mit mehreren Abschnitten zusätzlich Sprungmarken anbieten
-  // — nur im Mehrseiten-Betrieb; als Einseiter springt schon das Hauptmenü.
+  /**
+   * Ein Menü für beides. Booking und Shop liegen seit August 2026 auf eigenen
+   * Seiten (/booking/, /shop/) — trotzdem darf das Menü nicht auf drei
+   * Seitennamen zusammenschrumpfen: die Abschnitte der Startseite müssen
+   * erreichbar bleiben. Deshalb stehen zuerst die anderen Seiten (Booking als
+   * Hauptknopf, danach der Shop) und darunter die Abschnitte der Seite, auf
+   * der man gerade steht.
+   */
+  const pageCls = (slug) =>
+    slug === "booking" ? ' class="nav-cta"' : slug === "shop" ? ' class="nav-hot"' : "";
+  const pageLinks = navPages
+    .filter((p) => p.slug !== page.slug)
+    .map(
+      (p) => `<li${pageCls(p.slug)}><a href="${esc(pagePath(p.slug))}">${esc(p.navLabel)}</a></li>`
+    );
+  const sectionLinks = order.map((key) => {
+    const cls = key === "booking" ? ' class="nav-cta"' : key === "shop" ? ' class="nav-hot"' : "";
+    return `<li${cls}><a href="#${esc(key)}">${esc(
+      str(sections[key]?.navLabel, str(sections[key]?.title, key))
+    )}</a></li>`;
+  });
+  const nav = [...pageLinks, ...sectionLinks].join("\n          ");
+
+  // Auf einer Unterseite mit mehreren Abschnitten zusätzlich Sprungmarken
+  // anbieten. Bei einem einzigen Abschnitt wäre das eine Leiste mit einem
+  // Eintrag — die bleibt weg.
   const subNav =
-    navPages.length > 1 && order.length > 1
+    navPages.length > 1 && order.length > 1 && page.slug
       ? `
-    <nav class="subnav" aria-label="Auf dieser Seite">
+    <nav class="subnav" aria-label="${esc(ui.onThisPage)}">
       <div class="wrap subnav-inner">
         ${order
           .map(
@@ -2009,10 +2362,11 @@ function renderPage(c, page, pages, lang, langs) {
   const footSocials = list(sections.contact?.socials).filter(
     (x) => str(x?.label) && safeUrl(x?.url)
   );
-  // Zusätzlich als reine Zeichen oben im Kopf — jeder Kanal hat sein eigenes
-  // (socialIcon), Instagram sieht also anders aus als Mixcloud. In der
-  // Verwaltung lässt sich das je Kanal abschalten.
-  const headSocials = footSocials.filter((x) => x.inHeader !== false);
+  // Im Kopf steht standardmaessig KEIN Kanal-Zeichen mehr: der Kopf traegt den
+  // Namen und das Menue, mehr nicht — das Instagram-Zeichen sass dort im Weg
+  // und stand doppelt zum Fuss. Wer einen Kanal doch oben will, schaltet ihn
+  // in der Verwaltung je Kanal ausdruecklich ein (inHeader: true).
+  const headSocials = footSocials.filter((x) => x.inHeader === true);
   const headSocialsBlock = headSocials.length
     ? `<div class="head-social">${headSocials
         .map(
@@ -2056,13 +2410,15 @@ function renderPage(c, page, pages, lang, langs) {
   </div>`
       : "";
 
+  // "Book me" im Hero fuehrt auf das Formular — seit Booking eine eigene Seite
+  // hat, also quer auf /booking/#booking-form. bookingTarget rechnet den Weg
+  // schon fertig aus (samt SITE_BASE); nur ein in der Verwaltung abweichend
+  // gesetztes Ziel geht vor und wird hier selbst aufgeloest.
   const configuredHeroCta = str(c.hero?.ctaHref, "#booking");
   const heroCtaHref =
-    configuredHeroCta === "#booking" &&
-    sections.booking?.enabled !== false &&
-    sections.booking?.form?.enabled !== false
-      ? "#booking-form"
-      : configuredHeroCta;
+    configuredHeroCta === "#booking" && bookingTarget
+      ? bookingTarget
+      : anchor(configuredHeroCta);
 
   const hero =
     page.hero === "none"
@@ -2091,18 +2447,24 @@ function renderPage(c, page, pages, lang, langs) {
           : ""
       }${esc(c.hero?.nameMain || site.artist)}</h1>
       <div class="hero-sub">
+        ${/* Unter dem Namen steht genau ein Satz — der Anspruch, in der
+             Akzentfarbe. Die Genre-Zeile ("Euphoric Hardstyle / Melodic
+             Hardstyle") stand bis August 2026 daneben und ist weg: sie
+             wiederholte, was der Sound-Abschnitt ohnehin sagte, und nahm dem
+             Satz die Wirkung. `hero.meta` wird darum nicht mehr gelesen. */ ""}
         ${c.hero?.tagline ? `<span class="tag">${esc(c.hero.tagline)}</span>` : ""}
-        ${c.hero?.meta ? `<span class="mono">${esc(c.hero.meta)}</span>` : ""}
         ${
           c.hero?.ctaLabel
-            ? `<a class="hero-cta" href="${anchorHref(heroCtaHref)}">${esc(
+            ? `<a class="hero-cta" href="${esc(heroCtaHref)}">${esc(
                 c.hero.ctaLabel
               )}<span class="cta-arr" aria-hidden="true">→</span></a>`
             : ""
         }
         ${
-          sections.shop && sections.shop.enabled !== false && order.includes("shop")
-            ? `<a class="hero-cta alt" href="#shop">${esc(str(sections.shop.navLabel, "Shop"))}</a>`
+          shopTarget
+            ? `<a class="hero-cta alt" href="${esc(shopTarget)}">${esc(
+                str(sections.shop?.navLabel, "Shop")
+              )}</a>`
             : ""
         }
       </div>
@@ -2553,6 +2915,7 @@ Sitemap: ${base}/sitemap.xml
 
 async function main() {
   const content = await loadContent();
+  BILDMASSE = await ladeBildmasse();
   if (!content.site || !content.site.domain) {
     throw new Error("content: site.domain fehlt");
   }
@@ -2597,9 +2960,13 @@ async function main() {
       const html = renderPage(localized, page, localizedPages, lang, langs);
       await writeFile(file, html);
       written.push(rel);
+      // Gemeldet wird, was wirklich in der Datei steht — nicht, was der Inhalt
+      // vorschlägt. Sonst führt die Meldung Abschnitte auf, die es hier gar
+      // nicht mehr gibt (siehe BAUBAR) und die niemand auf der Seite findet.
+      const gebaut = list(page.sections).filter((k) => BAUBAR.has(k));
       console.log(
         `[build] ${rel.padEnd(30)} ${(html.length / 1024).toFixed(1).padStart(5)} kB  ` +
-          `(${page.sections.join(", ") || "keine Abschnitte"})`
+          `(${gebaut.join(", ") || "keine Abschnitte"})`
       );
     }
   }
