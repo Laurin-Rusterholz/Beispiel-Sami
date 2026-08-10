@@ -9,6 +9,7 @@ import {
   textField,
   textArea,
   checkboxField,
+  flagField,
   colorField,
   selectField,
   imageField,
@@ -55,6 +56,23 @@ export function renderDesign() {
       textField("hero.ctaLabel", "Button-Text"),
       textField("hero.ctaHref", "Button-Ziel", { mono: true, hint: "#booking, #contact oder eine ganze URL." }),
     ], { cols: 2 }),
+    group("Kennzahlen im Hero", [
+      objectList("hero.stats", null, {
+        addLabel: "Zahl hinzufügen",
+        newItem: { value: "", label: "" },
+        titleOf: (i) => [i.value, i.label].filter(Boolean).join(" — ") || "(leer)",
+        emptyText: "Keine Zahlen — die Leiste im Hero wird dann nicht angezeigt.",
+        fields: (base) => [
+          textField(`${base}.value`, "Zahl / Wert", { placeholder: "7+" }),
+          textField(`${base}.label`, "Beschriftung", { placeholder: "Clubs & Festivals" }),
+        ],
+      }),
+    ], {
+      hint:
+        "Stehen unter dem Namen auf dem ersten Bildschirm. Die Zahl zählt beim " +
+        "Erscheinen in zwei Sekunden von 1 auf ihren Wert hoch. Zusätze wie „+“ " +
+        "oder „ab“ bleiben stehen — hochgezählt wird nur der Zahlenteil.",
+    }),
     heroBackground(),
     group("Hintergrundbild der Seite", [
       imageField("site.backgroundImage", "Bild hinter allem", {
@@ -79,6 +97,28 @@ export function renderDesign() {
       }),
     ]),
   ]);
+}
+
+/**
+ * Zuschnitt eines Videos. Die Datei bleibt unverändert — die Website spielt
+ * nur den gewählten Ausschnitt und wiederholt ihn. Beide Felder leer lassen
+ * heisst: ganzes Video.
+ */
+function videoZuschnitt(base) {
+  return [
+    textField(`${base}.clipStart`, "Abspielen ab Sekunde", {
+      type: "number",
+      placeholder: "0",
+      hint: "Leer oder 0 = von Anfang an.",
+    }),
+    textField(`${base}.clipEnd`, "Abspielen bis Sekunde", {
+      type: "number",
+      placeholder: "",
+      hint:
+        "Leer = bis zum Ende. Beispiel: 4 und 12 zeigt die Sekunden 4 bis 12 " +
+        "und springt danach zurück auf Sekunde 4.",
+    }),
+  ];
 }
 
 /**
@@ -154,6 +194,7 @@ function heroBackground() {
               hint:
                 "Wird sofort angezeigt, während das Video lädt, und ersetzt es bei „Bewegung reduzieren“. Ohne Poster bleibt der Hero kurz schwarz.",
             }),
+            ...videoZuschnitt("hero.media"),
           ]
         : [])
     );
@@ -449,7 +490,13 @@ export function renderShows() {
 
 /* -------------------------------------------------- Abschnitt: Referenzen */
 
+/** So viele Referenzen stehen gross — alle weiteren stehen klein darunter. */
+const REFERENZEN_GROSS = 4;
+
 export function renderReferences() {
+  const alle = () => getPath(S.content, "sections.references.items") || [];
+  const grosse = () => alle().filter((i) => i && i.highlight === true);
+
   return view([
     head("Referenzen", "Wo Sam schon gespielt hat."),
     sectionBasics("references"),
@@ -457,12 +504,49 @@ export function renderReferences() {
       objectList("sections.references.items", null, {
         addLabel: "Referenz hinzufügen",
         newItem: { name: "", city: "", url: "" },
-        titleOf: (i) => [i.name, i.city].filter(Boolean).join(" — ") || "(leer)",
-        fields: (base) => [
+        titleOf: (i) =>
+          (i.highlight === true ? "★ " : "") +
+          ([i.name, i.city].filter(Boolean).join(" — ") || "(leer)"),
+        fields: (base, item, i, render) => [
           textField(`${base}.name`, "Club / Festival"),
           textField(`${base}.city`, "Ort"),
           textField(`${base}.url`, "Link (optional)", { mono: true, hint: "Leer = führt zum Booking-Abschnitt." }),
+          flagField(
+            `${base}.highlight`,
+            "Gross zeigen",
+            "Angewählt steht diese Referenz gross und über die ganze Breite.",
+            {
+              // Gross ist nur etwas wert, solange es die Ausnahme bleibt.
+              allow: (an) => {
+                if (an && grosse().length >= REFERENZEN_GROSS) {
+                  toast(
+                    `Es stehen schon ${REFERENZEN_GROSS} Referenzen gross. ` +
+                      "Zuerst eine davon abwählen.",
+                    "err"
+                  );
+                  return false;
+                }
+                return true;
+              },
+              onChange: () => render(),
+            }
+          ),
         ],
+      }),
+    ], {
+      hint:
+        `Die angewählten Referenzen (höchstens ${REFERENZEN_GROSS}) stehen gross über die ganze Breite. ` +
+        "Alle übrigen erscheinen darunter gleich gross in einer ruhigen Liste — mit der Zeile, " +
+        "dass Sam ausserdem dort gespielt hat. Die Reihenfolge hier ist auch die Reihenfolge " +
+        "auf der Website; mit ↑ ↓ verschiebst du einen Eintrag.",
+    }),
+    group("Zeile über den kleinen Referenzen", [
+      textField("sections.references.moreLabel", "Text", {
+        placeholder: "Also played at",
+        hint:
+          "Steht zwischen den grossen und den kleinen Referenzen. Die Anzahl hängt die " +
+          "Website selbst an — aus „Also played at“ wird also „Also played at (11)“. " +
+          "Leer = die kleinen Referenzen stehen ohne Zwischenzeile da.",
       }),
     ]),
     group("Abschlusszeile", [
@@ -476,7 +560,11 @@ export function renderReferences() {
 
 export function renderGallery() {
   return view([
-    head("Galerie", "Bilder mit Lightbox; auf dem Handy startet die Galerie bewusst als kurze Auswahl."),
+    head(
+      "Galerie",
+      "Bilder mit Lightbox; auf dem Handy startet die Galerie bewusst als kurze Auswahl. " +
+        "Videos in der Galerie laufen erst, wenn der Zeiger auf der Kachel liegt."
+    ),
     sectionBasics("gallery"),
     group("Mobile Darstellung", [
       selectField("sections.gallery.mobileLimit", "Bilder vor „Mehr anzeigen“", [
@@ -494,16 +582,18 @@ export function renderGallery() {
       objectList("sections.gallery.items", null, {
         // Der übliche Weg ist „Bilder aussuchen“ — der leere Platz ist die
         // Ausnahme (z. B. wenn die Adresse von Hand kommt).
-        addLabel: "Bilder aus den Medien hinzufügen",
+        addLabel: "Bilder und Videos aus den Medien hinzufügen",
         onAdd: async (items, render) => {
-          const chosen = await pickMany({ kind: "image" });
+          // Ohne `kind` zeigt die Auswahl Bilder UND Videos — die Galerie kann
+          // beides, und Videos liessen sich sonst gar nicht einsetzen.
+          const chosen = await pickMany();
           if (!chosen || !chosen.length) return;
           chosen.forEach((m) =>
             items.push({ src: m.url, alt: m.alt || "", credit: getPath(S.content, "site.photoCredit") || "" })
           );
           markDirty();
           render();
-          toast(`${chosen.length} Bild(er) hinzugefügt`);
+          toast(`${chosen.length} Medien hinzugefügt`);
         },
         newItem: { src: "", alt: "", credit: "" },
         titleOf: (i, n) => i.alt || `Bild ${n + 1}`,
@@ -521,15 +611,142 @@ export function renderGallery() {
         fields: (base) => {
           const istVideo = looksLikeVideo(getPath(S.content, `${base}.src`));
           return [
-            imageField(base, null, { credit: true, kind: "image" }),
-            istVideo
-              ? selectField(`${base}.fit`, "Anzeige des Videos", [
-                  ["fill", "Fläche füllen — Ränder abgeschnitten"],
-                  ["full", "ganzes Video zeigen — mit Rand"],
-                ], { hint: "Gilt nur für Videos in der Galerie." })
-              : document.createDocumentFragment(),
+            // Kein `kind`: hier darf auch ein Video stehen (siehe onAdd).
+            imageField(base, null, { credit: true, emptyText: "Bild oder Video wählen" }),
+            ...(istVideo
+              ? [
+                  selectField(`${base}.fit`, "Anzeige des Videos", [
+                    ["fill", "Fläche füllen — Ränder abgeschnitten"],
+                    ["full", "ganzes Video zeigen — mit Rand"],
+                  ], { hint: "Gilt nur für Videos in der Galerie." }),
+                  imageField(`${base}.poster`, "Vorschaubild (Poster)", {
+                    asObject: false,
+                    kind: "image",
+                    hint:
+                      "Steht auf der Kachel, solange das Video nicht läuft. " +
+                      "Ohne Poster bleibt die Kachel bis zum ersten Abspielen dunkel.",
+                  }),
+                  ...videoZuschnitt(base),
+                ]
+              : []),
           ];
         },
+      }),
+    ]),
+  ]);
+}
+
+/* -------------------------------------------------------- Abschnitt: Shop */
+
+export function renderShop() {
+  return view([
+    head("Shop", "Merch mit Bestellung per E-Mail. Ohne Ware bleibt der Abschnitt leer."),
+    sectionBasics("shop"),
+    group("Grunddaten", [
+      textField("sections.shop.currency", "Währung", {
+        placeholder: "CHF",
+        hint: "Steht vor jedem Preis.",
+      }),
+      textField("sections.shop.buyLabel", "Button-Text", { placeholder: "Kaufen" }),
+      textField("sections.shop.note", "Zeile unter der Ware"),
+      textArea("sections.shop.emptyText", "Text ohne Ware", { rows: 2 }),
+    ], { cols: 2 }),
+    group("Versand", [
+      textField("sections.shop.shipping", "Versandzeile", {
+        placeholder: "Free shipping — within Switzerland only",
+        hint:
+          "Steht überall im Shop: unter der Einleitung, auf jedem Artikel und im " +
+          "Bestellformular. Einmal hier geschrieben, überall gleich. " +
+          "Leer = es steht nichts zum Versand da.",
+      }),
+    ], {
+      hint:
+        "Gratis Versand gilt nur innerhalb der Schweiz — das gehört so deutlich hin, " +
+        "dass es niemand erst im Bestellformular entdeckt.",
+    }),
+    group("Ware", [
+      objectList("sections.shop.items", null, {
+        addLabel: "Artikel hinzufügen",
+        newItem: { name: "", price: "", note: "", src: "", alt: "", linkUrl: "", status: "available" },
+        titleOf: (i) => [i.name, i.price].filter(Boolean).join(" — ") || "(neuer Artikel)",
+        emptyText: "Keine Ware — es steht dann nur der Text von oben da.",
+        fields: (base) => [
+          imageField(base, "Bild", { credit: false, kind: "image" }),
+          textField(`${base}.name`, "Name"),
+          textField(`${base}.price`, "Preis", { placeholder: "35" }),
+          textField(`${base}.note`, "Kurze Zeile darunter"),
+          selectField(`${base}.status`, "Verfügbarkeit", [
+            ["available", "verfügbar"],
+            ["soldout", "ausverkauft"],
+          ]),
+          textField(`${base}.linkUrl`, "Link (optional)", {
+            mono: true,
+            hint: "Leer = Bestellung läuft über die Kontakt-Adresse.",
+          }),
+        ],
+      }),
+    ]),
+  ]);
+}
+
+/* ------------------------------------------------- Abschnitt: Sound & Genres */
+
+export function renderSound() {
+  return view([
+    head("Sound & Genres", "Womit Sam auflegt und wo man es hören kann."),
+    sectionBasics("sound"),
+    group("Einleitung", [textArea("sections.sound.note", "Text unter der Überschrift", { rows: 2 })]),
+    group("Genres", [
+      objectList("sections.sound.genres", null, {
+        addLabel: "Genre hinzufügen",
+        newItem: { name: "", meta: "Genre" },
+        titleOf: (i) => i.name || "(leer)",
+        emptyText: "Keine Genres.",
+        fields: (base) => [
+          textField(`${base}.name`, "Name", { placeholder: "Euphoric Hardstyle" }),
+          textField(`${base}.meta`, "Kleine Zeile", { placeholder: "Genre" }),
+        ],
+      }),
+    ]),
+    group("Mixe", [
+      objectList("sections.sound.mixes", null, {
+        addLabel: "Mix hinzufügen",
+        newItem: { kicker: "", title: "", text: "", linkLabel: "", linkUrl: "" },
+        titleOf: (i) => i.title || "(neuer Mix)",
+        emptyText: "Keine Mixe.",
+        fields: (base) => [
+          textField(`${base}.kicker`, "Kleine Zeile", { placeholder: "Latest Mix" }),
+          textField(`${base}.title`, "Titel"),
+          textArea(`${base}.text`, "Text", { rows: 3 }),
+          textField(`${base}.linkLabel`, "Link-Text", { placeholder: "Auf Mixcloud hören" }),
+          textField(`${base}.linkUrl`, "Link", { mono: true }),
+        ],
+      }),
+    ]),
+  ]);
+}
+
+/* ---------------------------------------------------- Abschnitt: Erlebnis */
+
+export function renderExperience() {
+  return view([
+    head("Erlebnis", "Wie ein Set von Sam abläuft — der Bogen von Warm-up bis Schluss."),
+    sectionBasics("experience"),
+    group("Einleitung", [
+      textArea("sections.experience.lede", "Einstieg (gross gesetzt)", { rows: 3 }),
+      textField("sections.experience.embedLabel", "Beschriftung beim Video", { placeholder: "Aftermovie" }),
+    ]),
+    group("Momente", [
+      objectList("sections.experience.moments", null, {
+        addLabel: "Moment hinzufügen",
+        newItem: { kicker: "", title: "", text: "" },
+        titleOf: (i) => [i.kicker, i.title].filter(Boolean).join(" — ") || "(neuer Moment)",
+        emptyText: "Keine Momente — der Abschnitt bleibt dann leer.",
+        fields: (base) => [
+          textField(`${base}.kicker`, "Kleine Zeile", { placeholder: "Peak time" }),
+          textField(`${base}.title`, "Titel", { placeholder: "The Drop" }),
+          textArea(`${base}.text`, "Text", { rows: 3 }),
+        ],
       }),
     ]),
   ]);
@@ -541,6 +758,13 @@ export function renderBooking() {
   return view([
     head("Booking", "Verfügbarkeit, Presskit und das Anfrage-Formular."),
     sectionBasics("booking"),
+    group("Bild", [
+      imageField("sections.booking.photo", "Bild neben der Anfrage", {
+        credit: true,
+        kind: "image",
+        hint: "Steht unter „Verfügbar für“. Ohne Bild entfällt der Platz dafür.",
+      }),
+    ]),
     group("Verfügbar für", [
       textField("sections.booking.availableKicker", "Kleine Zeile"),
       stringList("sections.booking.available", "Einträge", { addLabel: "Eintrag hinzufügen" }),
@@ -575,19 +799,68 @@ export function renderContact() {
       textField("sections.contact.phone", "Telefon"),
       textField("sections.contact.base", "Standort"),
     ], { cols: 2 }),
-    group("Social Media & Musik", [
-      objectList("sections.contact.socials", null, {
-        addLabel: "Link hinzufügen",
-        newItem: { label: "", url: "" },
-        titleOf: (i) => i.label || "(leer)",
-        hint: "Instagram, Mixcloud, SoundCloud, Spotify, YouTube …",
-        fields: (base) => [
-          textField(`${base}.label`, "Name"),
-          textField(`${base}.url`, "URL", { mono: true }),
-        ],
+    group("Social Media & Musik", [socialsList()], {
+      hint:
+        "Dieselbe Liste wie unter „Join the Movement“ — hier wie dort dieselben Kanäle. " +
+        "Sie stehen im Abschnitt nach dem Booking, im Fussbereich und, wo angewählt, " +
+        "oben im Kopfbereich.",
+    }),
+  ]);
+}
+
+/* --------------------------------------- Abschnitt: Join the Movement */
+
+export function renderFollow() {
+  return view([
+    head(
+      "Join the Movement",
+      "Der Aufruf gleich nach dem Booking: alle Kanäle an einem Ort, damit niemand suchen muss."
+    ),
+    sectionBasics("follow"),
+    group("Einleitung", [
+      textArea("sections.follow.lede", "Text unter dem Titel", {
+        rows: 3,
+        hint: "Ein, zwei Sätze — warum es sich lohnt, Sam zu folgen.",
       }),
     ]),
+    group("Kanäle", [socialsList()], {
+      hint:
+        "Alle Kanäle stehen gleichwertig nebeneinander — TikTok, Instagram, Mixcloud und was " +
+        "noch dazukommt. Es ist dieselbe Liste, die im Fussbereich steht und (wenn angewählt) " +
+        "oben im Kopfbereich: einmal gepflegt, überall aktuell.",
+    }),
   ]);
+}
+
+/**
+ * Die Kanalliste. Sie gehört zum Kontakt-Abschnitt (dort liegt sie seit jeher
+ * gespeichert), bearbeitet wird sie aber hier — „Join the Movement“ ist der
+ * Ort, an dem die Kanäle auf der Website gross herauskommen.
+ */
+function socialsList() {
+  return objectList("sections.contact.socials", null, {
+    addLabel: "Kanal hinzufügen",
+    newItem: { label: "", handle: "", url: "", inHeader: false },
+    titleOf: (i) => [i.label, i.handle].filter(Boolean).join(" — ") || "(leer)",
+    emptyText: "Noch kein Kanal.",
+    fields: (base) => [
+      textField(`${base}.label`, "Kanal", { placeholder: "TikTok" }),
+      textField(`${base}.handle`, "Name / Handle", {
+        placeholder: "@sam_sparking",
+        hint: "Steht klein unter dem Kanal. Leer = nur der Kanalname.",
+      }),
+      textField(`${base}.url`, "URL", {
+        mono: true,
+        hint: "Ohne Adresse bleibt der Kanal auf der Website aussen vor.",
+      }),
+      checkboxField(
+        `${base}.inHeader`,
+        "Zeichen oben im Kopfbereich zeigen",
+        "Im Abschnitt und im Fussbereich steht der Kanal immer. Jeder Kanal bekommt " +
+          "sein eigenes Zeichen — Instagram sieht also anders aus als Mixcloud."
+      ),
+    ],
+  });
 }
 
 /* ------------------------------------------------------------------ Seiten */
@@ -600,7 +873,7 @@ function sectionPicker(basePath) {
     const page = getPath(S.content, basePath);
     if (!Array.isArray(page.sections)) page.sections = [];
     const chosen = page.sections;
-    const all = S.content.layout || Object.keys(S.content.sections || {});
+    const all = alleAbschnitte();
     host.innerHTML = "";
 
     // Zuerst die gewählten in ihrer Reihenfolge, danach der Rest
@@ -649,7 +922,7 @@ function sectionPicker(basePath) {
 
 export function renderPages() {
   const used = new Set((S.content.pages || []).flatMap((p) => p.sections || []));
-  const orphan = (S.content.layout || []).filter(
+  const orphan = alleAbschnitte().filter(
     (k) => !used.has(k) && S.content.sections[k]?.enabled !== false
   );
 
@@ -685,6 +958,12 @@ export function renderPages() {
           (i === 0 ? "/ — " : "/" + (p.slug || "?") + "/ — ") + (p.navLabel || "(ohne Namen)"),
         emptyText: "Keine Seiten — die Website wird dann als einzelne Seite gebaut.",
         fields: (base, item, i) => [
+          checkboxField(
+            `${base}.enabled`,
+            "Seite auf der Website veröffentlichen",
+            "Ausgeschaltet steht die Seite weiter hier in der Verwaltung, wird aber " +
+              "nicht gebaut und taucht auch im Menü nicht auf."
+          ),
           textField(`${base}.navLabel`, "Name im Menü"),
           i === 0
             ? el("div", { class: "field" }, [
@@ -721,19 +1000,33 @@ export function renderPages() {
 
 /* ----------------------------------------------- Abschnitte & Reihenfolge */
 
+/**
+ * Jeder Abschnitt, den es im Inhalt gibt, steht hier — auch die, die gerade
+ * auf keiner Seite eingeplant sind. Sonst verschwindet ein ausgeschalteter
+ * Abschnitt aus der Verwaltung und lässt sich nie wieder einschalten.
+ */
+function alleAbschnitte() {
+  if (!Array.isArray(S.content.layout)) S.content.layout = [];
+  const layout = S.content.layout;
+  const rest = Object.keys(S.content.sections || {}).filter((k) => !layout.includes(k));
+  return layout.concat(rest);
+}
+
 export function renderLayout() {
   const host = el("div", { class: "layout-list" });
 
   const render = () => {
     const layout = S.content.layout;
+    const keys = alleAbschnitte();
     host.innerHTML = "";
-    layout.forEach((key, i) => {
+    keys.forEach((key, i) => {
       const sec = S.content.sections[key] || {};
       const on = sec.enabled !== false;
       const toggle = el("input", {
         type: "checkbox",
         onchange: (e) => {
           sec.enabled = e.target.checked;
+          if (e.target.checked) einplanen(key);
           markDirty();
           render();
         },
@@ -741,44 +1034,64 @@ export function renderLayout() {
       toggle.checked = on;
       host.appendChild(
         el("div", { class: "layout-row" + (on ? "" : " off") }, [
-          el("span", { class: "layout-num" }, on ? String(numberOf(layout, key)).padStart(2, "0") : "—"),
+          el("span", { class: "layout-num" }, on ? String(numberOf(key)).padStart(2, "0") : "—"),
           el("strong", { class: "layout-name" }, sec.navLabel || key),
           el("span", { class: "layout-key mono-input" }, "#" + key),
           el("label", { class: "check" }, [toggle, el("span", {}, on ? "sichtbar" : "aus")]),
           el("div", { class: "row-tools" }, [
             el("button", {
               class: "tool", title: "Nach oben", "aria-label": "Nach oben",
-              onclick: () => move(i, i - 1),
+              onclick: () => move(key, -1),
             }, "↑"),
             el("button", {
               class: "tool", title: "Nach unten", "aria-label": "Nach unten",
-              onclick: () => move(i, i + 1),
+              onclick: () => move(key, 1),
             }, "↓"),
           ]),
         ])
       );
     });
   };
-  const move = (from, to) => {
+
+  /**
+   * Ein wieder eingeschalteter Abschnitt muss auch irgendwo stehen: fehlt er
+   * in der Reihenfolge oder auf jeder Seite, erscheint er sonst trotz Häkchen
+   * nirgends. Darum hier beides nachziehen.
+   */
+  const einplanen = (key) => {
+    if (!Array.isArray(S.content.layout)) S.content.layout = [];
+    if (!S.content.layout.includes(key)) S.content.layout.push(key);
+    const pages = S.content.pages || [];
+    const irgendwo = pages.some((p) => (p.sections || []).includes(key));
+    if (!irgendwo && pages[0]) {
+      if (!Array.isArray(pages[0].sections)) pages[0].sections = [];
+      pages[0].sections.push(key);
+    }
+  };
+
+  const move = (key, delta) => {
     const layout = S.content.layout;
-    if (to < 0 || to >= layout.length) return;
-    const [k] = layout.splice(from, 1);
-    layout.splice(to, 0, k);
+    const from = layout.indexOf(key);
+    const to = from + delta;
+    if (from < 0 || to < 0 || to >= layout.length) return;
+    layout.splice(to, 0, layout.splice(from, 1)[0]);
     markDirty();
     render();
   };
-  const numberOf = (layout, key) =>
-    layout.filter((k) => S.content.sections[k]?.enabled !== false).indexOf(key) + 1;
+  const numberOf = (key) =>
+    alleAbschnitte().filter((k) => S.content.sections[k]?.enabled !== false).indexOf(key) + 1;
   render();
 
   return view([
     head(
       "Abschnitte & Reihenfolge",
-      "Reihenfolge auf der Seite, Sichtbarkeit und die Beschriftung im Menü. Die Nummerierung (01, 02, …) und die Navigation richten sich automatisch danach."
+      "Jeder Abschnitt der Website steht hier — auch die ausgeschalteten. Das Häkchen " +
+        "entscheidet, ob er in der Live-Fassung erscheint; die Pfeile bestimmen die " +
+        "Reihenfolge. Nummerierung (01, 02, …) und Menü richten sich automatisch danach."
     ),
     group(null, [host]),
     group("Beschriftungen", [
-      ...(S.content.layout || []).map((key) =>
+      ...alleAbschnitte().map((key) =>
         el("div", { class: "label-row" }, [
           el("span", { class: "label-key" }, key),
           textField(`sections.${key}.navLabel`, "Menü", { class: "inline" }),

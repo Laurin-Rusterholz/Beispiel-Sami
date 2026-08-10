@@ -268,7 +268,14 @@ header nav a:hover::after,header nav a[aria-current]::after{width:100%;}
 }
 .hero-sub{display:flex;flex-wrap:wrap;gap:16px 34px;align-items:center;justify-content:center;
   margin:26px auto 0;max-width:min(900px,90%);border-top:1px solid rgba(233,237,245,.25);padding-top:20px;}
-.hero-sub .tag{font-size:1rem;color:var(--bone);}
+/* Der Anspruch steht als einzige Zeile unter dem Namen — in der Akzentfarbe,
+   damit er traegt. Frueher stand daneben noch die Genre-Zeile; zu zweit hoben
+   sich die beiden gegenseitig auf. Etwas kraeftiger und breiter gesetzt als
+   der Fliesstext, sonst geht Blau auf fast Schwarz unter. */
+.hero-sub .tag{
+  font-size:1.12rem;color:var(--spark);
+  font-variation-settings:'wdth' 106,'wght' 620;letter-spacing:.01em;
+}
 .hero-cta{
   display:inline-flex;align-items:center;min-height:var(--tap);
   font-family:var(--font-m);font-size:.75rem;letter-spacing:.16em;text-transform:uppercase;
@@ -954,6 +961,12 @@ blockquote.lede footer{
 .scard:hover .scard-arrow{transform:translate(3px,-3px);opacity:1;}
 .scard-ico{position:absolute;top:16px;left:18px;width:22px;height:22px;color:#080c16;opacity:.85;}
 .scard-ico svg{width:100%;height:100%;display:block;}
+/* Kanal ohne hinterlegte Adresse: er wird genannt, ist aber kein Link. Er
+   liegt darum flacher, hebt sich beim Zeigen nicht an und traegt keinen
+   Pfeil — sonst sieht er aus wie etwas, das sich anklicken laesst. */
+.scard-soon{background:transparent;border:1px dashed rgba(8,12,22,.28);color:rgba(8,12,22,.62);box-shadow:none;cursor:default;}
+.scard-soon:hover{transform:none;background:transparent;box-shadow:none;}
+.scard-soon .scard-ico{color:rgba(8,12,22,.55);opacity:.6;}
 @media(max-width:900px){
   .contact-grid{grid-template-columns:1fr;}
   .contact-mark{font-size:clamp(5rem,30vw,9rem);}
@@ -1169,12 +1182,29 @@ span.bcal-day:not(.busy){opacity:.35;}
 .reply-note::before{content:"";display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--ok,#25c07a);background:#25c07a;margin-right:9px;vertical-align:1px;}
 .bform.sent .reply-note{display:none;}
 .bform-msg{font-size:.9rem;}
-.bform-msg.ok,.bform-msg.err{padding:12px 16px;border:1px solid;}
+.bform-msg.ok,.bform-msg.err{padding:14px 18px;border:1px solid;}
 /* Bestaetigung und Fehler muessen auf dem dunklen Grund sicher lesbar sein.
-   Die helle Variante bleibt stehen — das fruehere color:var(--spark) (Blau auf
-   fast Schwarz) kam nicht auf das noetige Verhaeltnis von 4.5:1. */
-.bform-msg.ok{border-color:rgba(37,192,122,.5);background:rgba(37,192,122,.12);color:#8ee9c0;}
+   Die helle Schrift bleibt — das fruehere color:var(--spark) (Blau auf fast
+   Schwarz) kam nicht auf das noetige Verhaeltnis von 4.5:1.
+   Die Dankesmeldung steht zusaetzlich auf einem eigenen, deutlich
+   abgesetzten Grund und traegt einen Haken: sie ist der Moment, in dem die
+   Anfrage angekommen ist, und darf nicht wie eine Randnotiz aussehen. */
+.bform-msg.ok{
+  border-color:rgba(37,192,122,.65);background:rgba(37,192,122,.16);color:#b6f5d8;
+  font-size:1rem;line-height:1.45;font-variation-settings:'wght' 600;
+  display:flex;gap:12px;align-items:flex-start;
+}
+.bform-msg.ok::before{
+  content:"✓";flex:none;width:24px;height:24px;border-radius:50%;
+  display:grid;place-items:center;background:#25c07a;color:#04120b;
+  font-size:.8rem;font-variation-settings:'wght' 800;
+}
 .bform-msg.err{border-color:rgba(255,84,112,.5);background:rgba(255,84,112,.1);color:#ffb3c0;}
+/* Vorfuehr-Fassung: das Formular sagt selbst, dass es nichts verschickt. */
+.bform-demo{
+  margin-top:10px;font-size:.62rem;letter-spacing:.14em;color:var(--warm);
+  border:1px dashed rgba(255,255,255,.28);padding:8px 12px;
+}
 .bform.sent .bform-cols,.bform.sent .bform-foot .btn{display:none;}
 @media(max-width:700px){.bform-grid{grid-template-columns:1fr;}}
 
@@ -1204,6 +1234,13 @@ footer{border-top:1px solid var(--line);padding:26px 0 34px;}
 }
 .foot-social a:hover,.foot-social a:focus-visible{color:var(--bone);border-color:var(--spark);}
 .foot-social svg{width:19px;height:19px;display:block;}
+/* Genannt, aber noch ohne Adresse — gestrichelt statt durchgezogen, damit der
+   Unterschied zu einem echten Link auch ohne Zeigegeraet sichtbar ist. */
+.foot-social .foot-soon>span{
+  display:inline-flex;align-items:center;gap:9px;min-height:var(--tap);padding:9px 15px;
+  border:1px dashed var(--line);color:var(--bone-dim);opacity:.72;
+  font-family:var(--font-m);font-size:.66rem;letter-spacing:.14em;text-transform:uppercase;
+}
 .foot{display:flex;flex-wrap:wrap;gap:14px 30px;justify-content:space-between;align-items:baseline;}
 .foot .mono{font-size:.62rem;letter-spacing:.16em;color:var(--bone-dim);}
 .foot a.mono{color:var(--bone-dim);border-bottom:1px solid transparent;transition:color .2s,border-color .2s;}
@@ -1739,3 +1776,60 @@ footer{border-top:1px solid var(--line);padding:26px 0 34px;}
 
 /* Sanftere Kante zwischen Booking und Kontakt */
 .booking{border-bottom:1px solid var(--line);}
+
+/* ---------- REFERENZEN: Rest unter den wichtigsten Adressen ---------- */
+/* Oben stehen die wichtigsten als grosse Zeilen (.venue-list .lead). Alles
+   Weitere gehoert dazu, darf aber nicht gleich laut sein.
+
+   Die erste Fassung war zu zaghaft: 1rem sind bei html{font-size:17px} genau
+   17px — also Fliesstextgroesse. Damit stand der Rest optisch gleichauf mit
+   dem uebrigen Text und war nicht als untergeordnet zu erkennen. Klein heisst
+   hier deshalb wirklich klein: gut ein Fuenftel kleiner als der Fliesstext,
+   leichter Schnitt, gedaempfte Farbe und engere Zeilen. Die Rangfolge liest
+   man jetzt auf einen Blick — gross, dann klein. */
+.venue-rest{margin-top:clamp(22px,3.2vw,36px);display:flex;flex-direction:column;gap:20px;}
+.venue-group-h{display:block;color:var(--warm);margin-bottom:10px;font-size:.62rem;letter-spacing:.18em;}
+.venue-more{list-style:none;display:grid;gap:6px 16px;grid-template-columns:repeat(auto-fill,minmax(196px,1fr));}
+.venue-more a{
+  display:flex;align-items:baseline;justify-content:space-between;gap:10px;
+  padding:7px 10px;border:1px solid var(--line);background:var(--card);
+  text-decoration:none;transition:border-color .2s,color .2s;
+}
+.venue-more a:hover{border-color:rgba(46,107,255,.45);}
+/* .venue-name traegt eine clamp()-Groesse fuer die grossen Zeilen — die wird
+   hier bewusst ueberschrieben, sonst waere der Rest genauso gross. */
+.venue-more .venue-name{
+  font-size:clamp(.72rem,.85vw,.8rem);
+  font-variation-settings:'wdth' 100,'wght' 520;
+  color:var(--bone-dim);letter-spacing:.005em;line-height:1.35;
+}
+.venue-more a:hover .venue-name{color:var(--bone);}
+.venue-more .venue-city{font-size:.52rem;white-space:nowrap;opacity:.75;}
+
+/* Auf schmalen Bildschirmen schrumpfen die grossen Zeilen mit — der Rest darf
+   dann nicht relativ dazu wachsen, sonst kippt die Rangfolge. */
+@media(max-width:700px){
+  .venue-more{grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:5px 10px;}
+  .venue-more .venue-name{font-size:.72rem;}
+  .venue-more .venue-city{font-size:.48rem;}
+}
+
+/* ---------- AFTER MOVIES: aufklappbar ---------- */
+/* Zugeklappt ist die Bilderwand sofort zu sehen; die Videos holt ein Klick.
+   <details> braucht dafuer kein Javascript. */
+.after{margin-bottom:clamp(34px,5vw,58px);border:1px solid var(--line);background:var(--card);}
+.after-sum{
+  display:flex;align-items:center;gap:12px;cursor:pointer;list-style:none;
+  padding:14px 16px;color:var(--bone);
+}
+.after-sum::-webkit-details-marker{display:none;}
+.after-sum:hover{background:rgba(255,255,255,.03);}
+.after-sum:focus-visible{outline:2px solid var(--spark);outline-offset:-2px;}
+.after-count{
+  margin-left:auto;color:var(--warm);border:1px solid var(--line);
+  padding:1px 8px;font-size:.62rem;
+}
+.after-arr{transition:transform .2s;color:var(--bone-dim);}
+.after[open] .after-arr{transform:rotate(180deg);}
+.after .after-head,.after .after-grid{padding:0 16px;}
+.after .after-grid{padding-bottom:16px;}

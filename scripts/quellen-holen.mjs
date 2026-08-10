@@ -51,8 +51,18 @@ const QUELLEN = [
       "index.html", "404.html", "sitemap.xml", "robots.txt", "de", "fr", "legal",
       // In der Demo auf /site/ umgestellt (start_url, scope, Icons)
       "manifest.webmanifest",
+      /* Diese beiden Pruefungen messen die Auslieferung des Originals gegen
+         dessen netlify.toml — welche Adresse 503 gibt, welche 200, welche
+         gesperrt ist. Die Vorführung laeuft aber nicht auf Netlify, sondern
+         auf GitHub Pages, und netlify.toml wird (eine Zeile weiter oben) gar
+         nicht erst mitkopiert. Ohne sie brechen beide Pruefungen ab; mit einer
+         mitkopierten netlify.toml wuerden sie eine Wegleitung behaupten, die
+         hier niemand ausliefert. Sie bleiben deshalb im Original. */
+      "scripts/routen.test.mjs",
+      "scripts/api.test.mjs",
     ],
     eigen: [],
+    entfernen: ["scripts/routen.test.mjs", "scripts/api.test.mjs"],
   },
   {
     name: "Verwaltung",
