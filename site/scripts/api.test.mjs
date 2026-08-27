@@ -45,6 +45,7 @@ const eingaenge = () => rufe.filter((r) => r.url.includes("inquiries.json") && r
 const { default: booking } = await import("../netlify/functions/booking.mjs");
 const { default: order } = await import("../netlify/functions/order.mjs");
 const { default: webhook } = await import("../netlify/functions/stripe-webhook.mjs");
+const { default: zaehler, seitenSchluessel } = await import("../netlify/functions/zaehler.mjs");
 
 const BOOKING_OK = {
   name: "Lea Muster",
@@ -135,9 +136,9 @@ out = await res.json();
 assert.equal(out.gespeichert, false);
 assert.equal(out.gemailt, true, "die E-Mail traegt die Anfrage allein");
 
-// Nur POST.
+// GET ist die Zustandsabfrage (siehe unten), alles andere ausser POST nicht.
 zurücksetzen();
-res = await booking(new Request("https://samsparking.ch/api/booking", { method: "GET" }));
+res = await booking(new Request("https://samsparking.ch/api/booking", { method: "PUT" }));
 assert.equal(res.status, 405);
 
 /* -------------------------------------------------------------- bestellung */
@@ -279,8 +280,137 @@ res = await webhook(unterschrieben(ereignis("evt_6")));
 assert.equal(res.status, 503, "ohne STRIPE_WEBHOOK_SECRET wird nichts angenommen");
 process.env.STRIPE_WEBHOOK_SECRET = "whsec_test";
 
+/* ------------------------------------------------------------------------
+   Routen der Functions.
+
+   Der Grund fuer diesen Test: Die drei Endpunkte trugen ein
+   `export const config = { path: "/api/..." }`. Deklariert eine Function
+   ihren eigenen Pfad, bedient Netlify sie NUR dort — die Standardadresse
+   /.netlify/functions/<name> bleibt leer. In netlify.toml steht aber eine
+   erzwungene Umschreibung /api/* -> /.netlify/functions/:splat. Jede Anfrage
+   landete damit auf einer Adresse ohne Handler, und das Formular meldete
+   "Something went wrong". Genau diese Kombination darf nie zurueckkommen.
+   ------------------------------------------------------------------------ */
+{
+  const { readFileSync, readdirSync } = await import("node:fs");
+  const { resolve, dirname } = await import("node:path");
+  const { fileURLToPath } = await import("node:url");
+  const ORDNER = resolve(dirname(fileURLToPath(import.meta.url)), "../netlify/functions");
+
+  const toml = readFileSync(resolve(ORDNER, "../../netlify.toml"), "utf8");
+  const umschreibung = /from\s*=\s*"\/api\/\*"[\s\S]{0,120}?to\s*=\s*"\/\.netlify\/functions\/:splat"/.test(toml);
+
+  for (const datei of readdirSync(ORDNER).filter((f) => f.endsWith(".mjs") && f !== "_lib.mjs")) {
+    const quelle = readFileSync(resolve(ORDNER, datei), "utf8");
+    const eigenerPfad = /^\s*export\s+const\s+config\s*=/m.test(quelle);
+    assert.ok(
+      !(eigenerPfad && umschreibung),
+      `${datei}: eigener config.path UND die /api/*-Umschreibung — die Anfrage ` +
+        `landet auf einer Adresse ohne Handler (das war der 404 im Booking-Formular).`
+    );
+  }
+}
+
+/* Zustandsabfrage: GET meldet, ob die Variablen gesetzt sind — nie ihren Wert. */
+{
+  zurücksetzen();
+  const res = await booking(new Request("https://samsparking.ch/api/booking"));
+  assert.equal(res.status, 200, "GET muss den Zustand melden statt 405");
+  const z = await res.json();
+  assert.equal(z.mailAn, "info@samsparking.ch");
+  assert.equal(z.mailSchluesselGesetzt, true, "Schluessel ist im Test gesetzt");
+  const alsText = JSON.stringify(z);
+  assert.ok(!alsText.includes(process.env.RESEND_API_KEY), "Der Schluessel darf nie in der Antwort stehen");
+  assert.ok(!alsText.includes("re_"), "Auch kein Bruchstueck des Schluessels");
+  assert.equal(rufe.length, 0, "Eine Zustandsabfrage darf nichts verschicken");
+}
+
+/* Ein einzelner Aussetzer des Eingangs darf keine Anfrage kosten. */
+{
+  zurücksetzen();
+  let n = 0;
+  antwort = (url) => {
+    if (url.includes("inquiries")) {
+      n++;
+      if (n === 1) throw new Error("fetch failed");
+    }
+    return { ok: true, status: 200, json: async () => ({ name: "-Abc" }), text: async () => "" };
+  };
+  const res = await booking(post(BOOKING_OK));
+  assert.equal(res.status, 200, "nach dem zweiten Versuch muss es klappen");
+  assert.equal((await res.json()).gespeichert, true);
+  assert.ok(n >= 2, "der Eingang wird ein zweites Mal versucht");
+}
+
+{
+  /* Der Zaehler (12.08.2026). Er darf ausschliesslich Summen anlegen — keine
+     Adresse, keine Kennung, kein Cookie. Und er muss sich gegen Muell aus dem
+     Browser wehren: die Adresse kommt von aussen. */
+  zurücksetzen();
+  const res = await zaehler(
+    post({ pfad: "/de/shop/", sprache: "de", geraet: "handy", neu: true })
+  );
+  assert.equal(res.status, 200);
+  const rufe2 = rufe.filter((r) => r.url.includes("stats.json"));
+  assert.equal(rufe2.length, 1, "genau ein Aufruf an die Datenbank");
+  assert.equal(rufe2[0].method, "PATCH", "hochgezaehlt wird mit PATCH");
+  const patch = JSON.parse(rufe2[0].body);
+
+  // Die Sprache steckt separat drin, der Seitenname ist sprachfrei.
+  assert.ok(patch["seiten/shop/aufrufe"], "die Seite wird gezaehlt: " + Object.keys(patch).join(", "));
+  assert.ok(patch["sprachen/de/aufrufe"], "die Sprache wird gezaehlt");
+  assert.ok(patch["geraete/handy/aufrufe"], "das Geraet wird gezaehlt");
+  assert.ok(patch["gesamt/aufrufe"], "die Gesamtzahl wird gezaehlt");
+  assert.ok(patch["gesamt/besuche"], "ein neuer Besuch wird gezaehlt");
+  // Hochgezaehlt wird mit dem Server-Wert, nicht mit einer selbst gerechneten Zahl.
+  for (const [feld, wert] of Object.entries(patch)) {
+    if (feld === "zuletzt") continue;
+    assert.deepEqual(wert, { ".sv": { increment: 1 } }, `${feld} zaehlt nicht mit dem Server-Wert`);
+  }
+  // Und nichts Persoenliches: kein Feld traegt Adresse, Kennung oder Browser.
+  const alsText = JSON.stringify(patch).toLowerCase();
+  for (const wort of ["ip", "agent", "referer", "cookie", "id"]) {
+    const treffer = Object.keys(patch).filter((k) => k.toLowerCase().split(/[^a-z]+/).includes(wort));
+    assert.equal(treffer.length, 0, `der Zaehler speichert "${wort}": ${treffer.join(", ")}`);
+  }
+  assert.ok(!alsText.includes("mozilla"), "kein Browser-Kennzeichen in den Zaehlern");
+
+  // Ohne "neu" wird der Aufruf gezaehlt, aber kein zweiter Besuch.
+  zurücksetzen();
+  await zaehler(post({ pfad: "/", sprache: "en", geraet: "rechner" }));
+  const ohneBesuch = JSON.parse(rufe.filter((r) => r.url.includes("stats.json"))[0].body);
+  assert.ok(ohneBesuch["seiten/start/aufrufe"], "die Startseite heisst \"start\"");
+  assert.equal(ohneBesuch["gesamt/besuche"], undefined, "ohne \"neu\" kein zweiter Besuch");
+
+  // Weissliste: eine erfundene Adresse landet in einem Sammeltopf.
+  assert.equal(seitenSchluessel("/de/../etwas/boeses"), "andere");
+  assert.equal(seitenSchluessel("/fr/booking/"), "booking");
+  assert.equal(seitenSchluessel("/site/shop/"), "shop");
+  assert.equal(seitenSchluessel("/index.html"), "start");
+  assert.equal(seitenSchluessel(""), "start");
+
+  // Kein POST, kein Zaehlen. Und nichts Riesiges annehmen.
+  zurücksetzen();
+  const get = await zaehler(new Request("https://samsparking.ch/api/zaehler"));
+  assert.equal(get.status, 405);
+  const gross = await zaehler(
+    new Request("https://samsparking.ch/api/zaehler", { method: "POST", body: "x".repeat(600) })
+  );
+  assert.equal(gross.status, 413);
+
+  /* Faellt die Datenbank aus, darf der Besucher nichts merken — aber der
+     Endpunkt darf auch nicht "ok" behaupten. */
+  zurücksetzen();
+  antwort = () => ({ ok: false, status: 500, json: async () => ({}), text: async () => "" });
+  const kaputt = await zaehler(post({ pfad: "/", sprache: "en", geraet: "rechner" }));
+  assert.equal(kaputt.status, 202);
+  assert.equal((await kaputt.json()).ok, false);
+}
+
 console.log(`booking:  vollstaendig → Eingang + E-Mail an ${process.env.MAIL_TO}; unvollstaendig → 422;
           Spam still verworfen; Zustellung komplett aus → 502 statt "Danke".
 order:    alle Kundendaten Pflicht; Bezahladresse nur aus einem echten
           Stripe-Link, mit Bestellnummer und vorbelegter E-Mail.
-webhook:  Unterschrift, Alter und Doppelmeldung geprueft; ohne Geheimnis 503.`);
+webhook:  Unterschrift, Alter und Doppelmeldung geprueft; ohne Geheimnis 503.\nrouten:   keine Function deklariert einen eigenen Pfad neben der /api/*-Regel.\nzustand:  GET meldet die Konfiguration als ja/nein, ohne einen Schluessel.
+zaehler:  nur Summen (Server-Wert increment), Seitenname nach Weissliste,
+          kein POST -> 405, zu gross -> 413, Datenbank aus -> 202 statt "ok".`);

@@ -96,18 +96,22 @@ if (!regeln.length) {
 
 /* Die Vorgabe, Adresse fuer Adresse. */
 const ERWARTET = [
-  // Die Startseiten bleiben zu — in jeder Sprache und auch als Datei.
-  ["/", 503, "/coming-soon.html"],
-  ["/index.html", 503, "/coming-soon.html"],
-  ["/de/", 503, "/coming-soon.html"],
-  ["/de/index.html", 503, "/coming-soon.html"],
-  ["/fr/", 503, "/coming-soon.html"],
-  ["/fr/index.html", 503, "/coming-soon.html"],
+  /* Die Startseiten sind seit dem Launch offen — in jeder Sprache und auch als
+     Datei. Bis dahin standen hier 503-Regeln auf coming-soon.html. */
+  ["/", 200, "/index.html"],
+  ["/index.html", 200, "/index.html"],
+  ["/de/", 200, "/de/index.html"],
+  ["/de/index.html", 200, "/de/index.html"],
+  ["/fr/", 200, "/fr/index.html"],
+  ["/fr/index.html", 200, "/fr/index.html"],
 
   // Die Unterseiten sind offen.
   ["/booking/", 200, "/booking/index.html"],
   ["/de/booking/", 200, "/de/booking/index.html"],
   ["/fr/booking/", 200, "/fr/booking/index.html"],
+  /* Der Shop hat seine eigene Seite — dort steht der Katalog. Auf der Startseite
+     steht nur die Einladung (der helle Block) mit einem Knopf hierher; das war
+     am 12.08.2026 zwischenzeitlich anders geloest und ist zurueckgedreht. */
   ["/shop/", 200, "/shop/index.html"],
   ["/de/shop/", 200, "/de/shop/index.html"],
   ["/fr/shop/", 200, "/fr/shop/index.html"],
@@ -116,12 +120,18 @@ const ERWARTET = [
   ["/api/booking", 200, "/.netlify/functions/booking"],
   ["/api/order", 200, "/.netlify/functions/order"],
   ["/api/stripe-webhook", 200, "/.netlify/functions/stripe-webhook"],
+  // Der Zaehler fuer die Seitenaufrufe (12.08.2026) — dieselbe /api/*-Regel.
+  ["/api/zaehler", 200, "/.netlify/functions/zaehler"],
 
   // Was die Unterseiten zum Funktionieren brauchen.
   ["/assets/site.css", 200, "/assets/site.css"],
   ["/assets/site.js", 200, "/assets/site.js"],
   ["/legal/", 200, "/legal/index.html"],
   ["/de/rechtliches/", 200, "/de/rechtliches/index.html"],
+  // Das Impressum: in jeder Sprache unter derselben Adresse.
+  ["/impressum/", 200, "/impressum/index.html"],
+  ["/de/impressum/", 200, "/de/impressum/index.html"],
+  ["/fr/impressum/", 200, "/fr/impressum/index.html"],
   ["/presskit/sam-sparking-presskit-2026.pdf", 200, "/presskit/sam-sparking-presskit-2026.pdf"],
 
   // Suchmaschinen.
@@ -142,21 +152,37 @@ for (const [pfad, status, ziel] of ERWARTET) {
   }
 }
 
-/* Die eigentliche Sorge: Der Inhalt der Startseite darf nirgends
-   durchscheinen. Alles, was mit 200 erreichbar ist, wird darauf geprueft. */
-const HEIKEL = ["/", "/index.html", "/de/", "/de/index.html", "/fr/", "/fr/index.html"];
-for (const pfad of HEIKEL) {
+/* Seit dem Launch die umgekehrte Sorge: KEINE Adresse darf noch in der
+   Wartungsregel haengen. Ein uebersehener Rest waere eine Seite, die weiter
+   "Coming soon" zeigt, waehrend alles andere live ist. */
+const STARTSEITEN = ["/", "/index.html", "/de/", "/de/index.html", "/fr/", "/fr/index.html"];
+for (const pfad of [...STARTSEITEN, "/booking/", "/shop/", "/api/booking"]) {
   const a = antwort(regeln, pfad);
-  if (a.status === 200) meckern(`${pfad} ist offen erreichbar — die Website liegt damit frei`);
-  if (a.ziel !== "/coming-soon.html") meckern(`${pfad} liefert ${a.ziel} statt der Wartungsseite`);
+  if (a.ziel === "/coming-soon.html") meckern(`${pfad} landet noch in der Wartungsregel`);
+  if (a.status === 503) meckern(`${pfad} antwortet weiter mit 503`);
 }
 
-/* Und umgekehrt: was offen sein soll, darf nicht versehentlich in der
-   Wartungsregel haengen. */
-for (const pfad of ["/booking/", "/shop/", "/api/booking"]) {
+/* Die Startseiten muessen ihren eigenen Inhalt liefern — nicht den einer
+   anderen Sprache und nicht die Wartungsseite. */
+for (const [pfad, datei] of [
+  ["/", "/index.html"],
+  ["/de/", "/de/index.html"],
+  ["/fr/", "/fr/index.html"],
+]) {
   const a = antwort(regeln, pfad);
-  if (a.ziel === "/coming-soon.html") meckern(`${pfad} landet in der Wartungsregel`);
+  if (a.ziel !== datei) meckern(`${pfad} liefert ${a.ziel} statt ${datei}`);
 }
+
+/* Die Video-Seite ist zurueckgenommen — es darf keine Route dorthin geben. */
+for (const pfad of ["/videos/", "/de/videos/", "/fr/videos/"]) {
+  const a = antwort(regeln, pfad);
+  if (a.status === 200) meckern(`${pfad} ist wieder erreichbar — die Video-Seite sollte weg sein`);
+}
+
+/* Keine 503-Regel mehr in der ganzen Datei. */
+const nochGesperrt = regeln.filter((r) => Number(r.status) === 503);
+if (nochGesperrt.length)
+  meckern(`${nochGesperrt.length} Regel(n) antworten noch mit 503: ${nochGesperrt.map((r) => r.from).join(", ")}`);
 
 /* Eine Regel from = "/*" mit force wuerde alles davon zunichtemachen —
    sie darf nicht (wieder) dastehen. */
@@ -171,11 +197,39 @@ if (fehler) {
 }
 console.log(
   `Routen: ${ERWARTET.length} Adressen gegen netlify.toml geprueft.\n` +
-    `  zu (503 → coming-soon.html):  /, /de/, /fr/ samt index.html\n` +
-    `  offen (200):                  /booking/, /shop/ in allen drei Sprachen,\n` +
+    `  offen (200):                  /, /de/, /fr/ samt index.html — die Website ist live,\n` +
+    `                                /booking/ und /shop/ in allen drei Sprachen,\n` +
     `                                /api/booking, /api/order, /api/stripe-webhook,\n` +
     `                                Impressum, CSS/JS, Presskit, robots, sitemap\n` +
     `  gesperrt (404):               /scripts/*, /content/*\n` +
     `Geprueft wird die Regelkette und ob die Zieldatei gebaut ist — nicht die\n` +
     `Antwort des laufenden Servers.`
 );
+
+{
+  /* Die Inhaltsquelle muss beim Bauen ANKOMMEN.
+
+     Anlass (12.08.2026): CONTENT_API_URL stand in netlify.toml mitten im
+     [images]-Block. Das ist kein Bild-Schluessel und keine Umgebungsvariable —
+     Netlify gab sie nie an den Build weiter. Jeder Netlify-Build baute darum aus
+     dem eingecheckten Schnappschuss statt aus der Verwaltung: "Publizieren"
+     konnte nicht wirken, und ein gespeicherter Artikel war nicht zu sehen, bis
+     der Zeitplan im Repo ihn eincheckte.
+
+     Geprueft wird darum beides: sie steht in [build.environment], und sie steht
+     NICHT irgendwo sonst. */
+  const toml = await readFile(resolve(ROOT, "netlify.toml"), "utf8");
+  const zeilen = toml.split("\n");
+  let block = "";
+  const treffer = [];
+  for (const z of zeilen) {
+    const tabelle = z.match(/^\s*\[+([^\]]+)\]+/);
+    if (tabelle) block = tabelle[1].trim();
+    if (/^\s*CONTENT_API_URL\s*=/.test(z)) treffer.push(block);
+  }
+  if (!treffer.length) meckern("netlify.toml nennt CONTENT_API_URL nicht — der Build baut aus dem Schnappschuss");
+  for (const wo of treffer)
+    if (wo !== "build.environment")
+      meckern(`CONTENT_API_URL steht in [${wo}] — dort erreicht sie den Build nicht`);
+  if (treffer.length > 1) meckern(`CONTENT_API_URL steht ${treffer.length}× in netlify.toml`);
+}

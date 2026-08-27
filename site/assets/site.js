@@ -266,9 +266,11 @@
       faktor = Math.max(0.6, Math.floor(faktor * 100) / 100);
       venueList.style.setProperty(variable, String(faktor));
     };
+    /* Eine Gruppe, weil alle Referenzen gleich gross sind (seit 11.08.2026 gibt
+       es keine grossen Karten mehr). Der Faktor gilt fuer die ganze Liste,
+       damit die Namen untereinander gleich gross bleiben. */
     var einpassen = function () {
-      gruppe(".lead .venue-name", "--venue-lead-fit");
-      gruppe("li:not(.lead) .venue-name", "--venue-fit");
+      gruppe(".venue-name", "--venue-fit");
     };
     einpassen();
     var fitTimer;
@@ -320,17 +322,31 @@
     });
   }
 
-  // „Kaufen" an einer Ware waehlt sie im Bestellformular gleich aus.
-  document.addEventListener("click", function (e) {
-    var jump = e.target.closest && e.target.closest(".order-jump");
-    if (!jump) return;
-    var sel = document.querySelector('#order-form select[name="product"]');
-    if (!sel) return;
-    var wanted = jump.getAttribute("data-product");
-    Array.prototype.forEach.call(sel.options, function (o) {
-      if (o.value === wanted) sel.value = o.value;
+  /* Hier waehlte „Kaufen" die Ware im Bestellformular vor. Das Formular gibt
+     es nicht mehr; der Knopf fuehrt direkt zur Bezahlseite des Artikels. */
+
+  // Referenzen: auf dem Handy stehen zunaechst nur die obersten vier, der Rest
+  // klappt hier auf. Alle Eintraege sind im Dokument — verborgen wird per CSS
+  // und nur in der schmalen Breite. Auf dem Desktop ist der Knopf unsichtbar
+  // (display:none), dieser Umschalter laeuft dort also nie.
+  /* Eigene Namen. `venueList` gibt es in diesem Gueltigkeitsbereich schon (die
+     Namens-Einpassung weiter oben) — ein zweites `var venueList` wuerde die
+     erste Referenz ueberschreiben. Genau so hat ein doppelter Name am
+     11.08.2026 den Countdown lahmgelegt. */
+  var refMehr = document.querySelector(".venue-more");
+  var refListe = document.getElementById("venue-list");
+  if (refMehr && refListe) {
+    refMehr.addEventListener("click", function () {
+      var offen = !refListe.classList.contains("offen");
+      refListe.classList.toggle("offen", offen);
+      refMehr.setAttribute("aria-expanded", offen ? "true" : "false");
+      refMehr.textContent = refMehr.getAttribute(offen ? "data-less" : "data-more") || "";
+      /* Die eben eingeblendeten Namen waren verborgen und hatten damit keine
+         Breite — die Einpassung hat sie uebersprungen. Jetzt nachrechnen,
+         sonst laeuft ein langer Name aus der Zeile. */
+      if (offen && typeof einpassen === "function") einpassen();
     });
-  });
+  }
 
   /* -------------------------------------------- scroll progress + active nav */
   var progress = document.getElementById("progress");
@@ -419,7 +435,11 @@
       var s = shots[idx];
       lbImg.src = s.src;
       lbImg.alt = s.alt;
-      lbCap.textContent = s.cap + (shots.length > 1 ? "  ·  " + (idx + 1) + " / " + shots.length : "");
+      /* Seit dem 11.08.2026 tragen die Kacheln keine Beschriftung mehr (keine
+         sichtbaren Fotocredits). Dann steht hier nur die Zaehlung — ohne den
+         Trenner, der sonst vor der ersten Zahl haengen wuerde. */
+      var zaehler = shots.length > 1 ? idx + 1 + " / " + shots.length : "";
+      lbCap.textContent = [s.cap, zaehler].filter(Boolean).join("  ·  ");
     }
     function open(i, from) {
       opener = from || null;
@@ -776,20 +796,154 @@
     }
   }
 
-  /* ------------------------------------------------------- cookie-hinweis */
+  /* ------------------------------------------------------------- release */
+  /* Der Countdown vor dem Start. Der Zielzeitpunkt steht als Zahl in der Seite
+     (Millisekunden seit 1970, aus Datum/Uhrzeit/Zeitzone der Verwaltung
+     ausgerechnet) — damit ist er ueberall derselbe Moment, egal in welcher
+     Zeitzone der Besucher sitzt.
+
+     Bei null nimmt diese Stelle die Klasse "vor-release" weg. Damit ist die
+     Website da: kein Neuladen, kein neuer Deploy, kein Cache-Griff. Eine Seite,
+     die ueber den Zeitpunkt hinaus offen liegt, schaltet von selbst um.
+
+     Der Takt haengt an der Uhr, nicht am Zaehlen: jede Sekunde wird die
+     verbleibende Zeit neu ausgerechnet. Schlaeft das Geraet zwischendurch (ein
+     zugeklapptes Notebook, ein Handy in der Tasche), stimmt die Anzeige beim
+     Aufwachen trotzdem. */
+  var vorhang = document.getElementById("release");
+  if (vorhang) try {
+    var ziel = Number(vorhang.getAttribute("data-ziel")) || 0;
+    var felder = {
+      t: document.getElementById("rl-t"),
+      h: document.getElementById("rl-h"),
+      m: document.getElementById("rl-m"),
+      s: document.getElementById("rl-s"),
+    };
+    var zwei = function (n) { return (n < 10 ? "0" : "") + n; };
+    var oeffnen = function () {
+      document.documentElement.classList.remove("vor-release");
+      vorhang.hidden = true;
+    };
+    var takt = null;
+    var tick = function () {
+      var rest = ziel - Date.now();
+      if (rest <= 0) {
+        if (takt) clearInterval(takt);
+        if (felder.t) { felder.t.textContent = "0"; felder.h.textContent = "00"; felder.m.textContent = "00"; felder.s.textContent = "00"; }
+        oeffnen();
+        return;
+      }
+      var sek = Math.floor(rest / 1000);
+      if (felder.t) felder.t.textContent = String(Math.floor(sek / 86400));
+      if (felder.h) felder.h.textContent = zwei(Math.floor(sek / 3600) % 24);
+      if (felder.m) felder.m.textContent = zwei(Math.floor(sek / 60) % 60);
+      if (felder.s) felder.s.textContent = zwei(sek % 60);
+    };
+    if (!ziel || Date.now() >= ziel) {
+      oeffnen();
+    } else {
+      tick();
+      takt = setInterval(tick, 1000);
+      // Nach dem Aufwachen sofort nachrechnen, statt bis zum naechsten Takt zu
+      // warten — sonst stuende die Seite noch eine Sekunde lang falsch da.
+      document.addEventListener("visibilitychange", function () {
+        if (!document.hidden) tick();
+      });
+      window.addEventListener("focus", tick);
+    }
+  } catch (e) {
+    /* Geht hier etwas schief, darf die Website nicht dauerhaft verdeckt
+       bleiben — im Zweifel lieber offen als unerreichbar. */
+    try { document.documentElement.classList.remove("vor-release"); } catch (e2) {}
+  }
+
+  /* --------------------------------------------------------- einwilligung */
+  /* Zwei Entscheidungen, gleichwertig: "Nur notwendige" und "Alle akzeptieren".
+     Keine ist voreingestellt, keine wird vorausgewaehlt, und die Abfrage
+     verschwindet erst, wenn eine davon angetippt ist.
+
+     Gespeichert wird unter "sam-einwilligung" — der alte Schluessel
+     "cookie-ok" zaehlt bewusst NICHT als Entscheidung: dort stand nur, dass
+     jemand einen Hinweis weggeklickt hat, und das ist keine Wahl. Wer damals
+     geklickt hat, wird also einmal neu gefragt.
+
+     Zusatzdienste: alles, was nicht notwendig ist, steht als
+     <script type="text/plain" data-consent="alle"> in der Seite und wird erst
+     nach "Alle akzeptieren" wirklich geladen. Heute ist kein einziger solcher
+     Dienst eingebunden — der Weg ist da, damit spaeter nichts versehentlich
+     vor der Einwilligung laedt. */
+  var SPEICHER = "sam-einwilligung";
+  function wahlLesen() {
+    try {
+      var v = localStorage.getItem(SPEICHER);
+      return v === "alle" || v === "notwendig" ? v : "";
+    } catch (e) {
+      return "";
+    }
+  }
+  function zusatzFreigeben() {
+    var warten = document.querySelectorAll('script[type="text/plain"][data-consent]');
+    for (var i = 0; i < warten.length; i++) {
+      var alt = warten[i];
+      var neu = document.createElement("script");
+      for (var a = 0; a < alt.attributes.length; a++) {
+        var at = alt.attributes[a];
+        if (at.name === "type" || at.name === "data-consent") continue;
+        neu.setAttribute(at.name, at.value);
+      }
+      if (!alt.src) neu.text = alt.textContent;
+      alt.parentNode.replaceChild(neu, alt);
+    }
+  }
   var cookie = document.getElementById("cookie");
-  if (cookie) try {
-    var seen = false;
-    try { seen = localStorage.getItem("cookie-ok") === "1"; } catch (e) {}
-    if (!seen) {
-      cookie.hidden = false;
-      var okBtn = document.getElementById("cookie-ok");
-      okBtn && okBtn.addEventListener("click", function () {
-        try { localStorage.setItem("cookie-ok", "1"); } catch (e) {}
-        cookie.hidden = true;
+  try {
+    // Fuer andere Skripte lesbar, damit niemand raten muss.
+    window.samsparkingEinwilligung = wahlLesen();
+    if (window.samsparkingEinwilligung === "alle") zusatzFreigeben();
+
+    if (cookie) {
+      var zeigen = function (an) {
+        cookie.hidden = !an;
+        if (an) {
+          var erster = cookie.querySelector(".cookie-btn");
+          if (erster && document.activeElement !== erster) erster.focus({ preventScroll: true });
+        }
+      };
+      var merken = function (wahl) {
+        try { localStorage.setItem(SPEICHER, wahl); } catch (e) {}
+        window.samsparkingEinwilligung = wahl;
+        if (wahl === "alle") zusatzFreigeben();
+        zeigen(false);
+        var oeffner = document.getElementById("cookie-open");
+        if (oeffner) oeffner.focus({ preventScroll: true });
+      };
+      var knoepfe = cookie.querySelectorAll(".cookie-btn");
+      for (var k = 0; k < knoepfe.length; k++) {
+        (function (btn) {
+          btn.addEventListener("click", function () {
+            merken(btn.getAttribute("data-wahl") === "alle" ? "alle" : "notwendig");
+          });
+        })(knoepfe[k]);
+      }
+      // Erstbesuch: noch keine Entscheidung getroffen.
+      if (!wahlLesen()) zeigen(true);
+      /* Und jederzeit wieder aufmachen, um sie zu aendern. Der Name ist
+         bewusst nicht `oeffnen`: weiter oben im Release-Block heisst so schon
+         eine Funktion, und `var` gilt in der ganzen Datei — die Zuweisung hier
+         wuerde sie ueberschreiben, und der Vorhang ginge bei null nicht mehr
+         auf. Genau das ist am 11.08.2026 passiert. */
+      var oeffnenKnopf = document.getElementById("cookie-open");
+      if (oeffnenKnopf)
+        oeffnenKnopf.addEventListener("click", function () {
+          zeigen(true);
+        });
+      // Mit Escape schliessen, ohne etwas zu entscheiden — nur wenn schon
+      // einmal entschieden wurde, sonst bliebe die Frage unbeantwortet offen.
+      document.addEventListener("keydown", function (e) {
+        if (e.key === "Escape" && !cookie.hidden && wahlLesen()) zeigen(false);
       });
     }
-  } catch (e) { /* Hinweis ist Beiwerk — nie die Seite gefaehrden */ }
+  } catch (e) { /* Die Abfrage darf die Seite nie lahmlegen. */ }
 
   /* -------------------------------------------- Datumswahl im Formular */
   // Kleiner Monatskalender direkt beim Booking-Formular: Tag antippen setzt
@@ -1024,96 +1178,57 @@
     });
   }
 
-  /* ----------------------------------------------------------- bestellform */
-  // Versand braucht vollstaendige Angaben — deshalb ist hier jedes Feld
-  // Pflicht. Die Bestellung geht in denselben Eingang wie die Booking-
-  // Anfragen, aber mit kind:"order" gekennzeichnet.
-  var oform = document.getElementById("order-form");
-  if (oform) {
-    var oEndpoint = oform.getAttribute("data-endpoint");
-    var oSending = oform.getAttribute("data-sending") || "…";
-    var oInvalid = oform.getAttribute("data-invalid") || "";
-    var oPaying = oform.getAttribute("data-paying") || oSending;
-    var oMsg = oform.querySelector(".bform-msg");
-    var oOpened = Date.now();
-    var FIELDS = ["product", "quantity", "name", "email", "street", "zip", "city", "country"];
+  /* Hier stand bis zum 12.08.2026 das Bestellformular des Shops: acht Pflicht-
+     felder, Versand an den Bestell-Endpunkt und danach Weiterleitung auf die
+     Stripe-Bezahlseite. Der Block ist weg, weil das Formular weg ist (Kundenwunsch).
+     Gekauft wird ueber den Zahlungslink des Artikels; Adresse und Zahlung
+     nimmt Stripe in einem Schritt auf. Der Endpunkt selbst bleibt unberuehrt. */
 
-    var setOMsg = function (text, cls) {
-      if (!oMsg) return;
-      oMsg.textContent = text;
-      oMsg.className = "bform-msg" + (cls ? " " + cls : "");
-    };
+  /* --------------------------------------------------------------- zaehler */
+  /* Seitenaufrufe zaehlen — ausschliesslich als Summe.
+     Mitgeschickt werden vier Angaben: welche Seite, welche Sprache, Handy oder
+     Rechner, und ob dies der erste Aufruf in diesem Besuch ist. Keine Kennung,
+     kein Cookie, keine Adresse — der Server legt nur Zaehler an (siehe
+     netlify/functions/zaehler.mjs).
 
-    oform.addEventListener("submit", function (e) {
-      e.preventDefault();
-      if (oform.classList.contains("busy")) return;
-
-      var data = {};
-      FIELDS.forEach(function (k) {
-        var f = oform.elements[k];
-        data[k] = f ? String(f.value || "").trim() : "";
-      });
-      var bad = null;
-      FIELDS.forEach(function (k) {
-        var f = oform.elements[k];
-        if (!f) return;
-        var ok = data[k].length >= (k === "zip" ? 3 : 2);
-        if (k === "email") ok = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(data.email);
-        if (k === "quantity") ok = Number(data.quantity) >= 1 && Number(data.quantity) <= 20;
-        f.setAttribute("aria-invalid", ok ? "false" : "true");
-        if (!ok && !bad) bad = f;
-      });
-      if (bad) {
-        setOMsg(oInvalid, "err");
-        bad.focus();
-        return;
+     Wer im Browser "Do Not Track" gesetzt hat, wird nicht gezaehlt. Und wenn der
+     Aufruf scheitert, merkt niemand etwas: der Zaehler darf die Seite nicht
+     aufhalten. */
+  try {
+    var dnt = navigator.doNotTrack === "1" || window.doNotTrack === "1" || navigator.msDoNotTrack === "1";
+    if (!dnt) {
+      var neuerBesuch = false;
+      try {
+        // Nur ein Haekchen, keine Kennung — und nur fuer diesen Tab-Besuch.
+        if (!sessionStorage.getItem("sam-besuch")) {
+          sessionStorage.setItem("sam-besuch", "1");
+          neuerBesuch = true;
+        }
+      } catch (e) {
+        /* Speicher gesperrt: dann zaehlt der Aufruf, nicht der Besuch. */
       }
-
-      // Wie beim Booking: Honeypot und Ausfuellzeit entscheidet der Server.
-      var hp = oform.elements.website;
-      data.website = hp ? String(hp.value || "") : "";
-      data.elapsedMs = Date.now() - oOpened;
-      data.source = location.hostname || "website";
-
-      if (oform.getAttribute("data-demo") === "true") {
-        oform.classList.add("sent");
-        setOMsg(oMsg ? oMsg.getAttribute("data-success") : "", "ok");
-        return;
+      var zaehlDaten = JSON.stringify({
+        pfad: location.pathname,
+        sprache: (document.documentElement.lang || "").slice(0, 2).toLowerCase(),
+        geraet: Math.min(window.innerWidth, window.innerHeight) <= 640 ? "handy" : "rechner",
+        neu: neuerBesuch,
+      });
+      /* sendBeacon geht auch noch raus, wenn die Seite gerade verlassen wird —
+         und blockiert nichts. Ohne sendBeacon ein normaler Aufruf, dem der
+         Fehlerfall bewusst gleichgueltig ist. */
+      if (navigator.sendBeacon) {
+        navigator.sendBeacon("/api/zaehler", new Blob([zaehlDaten], { type: "application/json" }));
+      } else {
+        fetch("/api/zaehler", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: zaehlDaten,
+          keepalive: true,
+        }).catch(function () {});
       }
-
-      oform.classList.add("busy");
-      setOMsg(oSending, "");
-
-      fetch(oEndpoint, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      })
-        .then(function (res) {
-          if (!res.ok) throw new Error("HTTP " + res.status);
-          return res.json().catch(function () {
-            return {};
-          });
-        })
-        .then(function (out) {
-          oform.classList.remove("busy");
-          oform.classList.add("sent");
-          // Die Bestellung ist aufgenommen und gemeldet. Gibt es eine
-          // Bezahlseite, geht es dort weiter — die Bestellnummer faehrt als
-          // client_reference_id mit, damit der Webhook beides zusammenbringt.
-          if (out && out.paymentUrl) {
-            setOMsg(oPaying, "ok");
-            location.assign(out.paymentUrl);
-            return;
-          }
-          oform.reset();
-          setOMsg(oMsg.getAttribute("data-success"), "ok");
-        })
-        .catch(function () {
-          oform.classList.remove("busy");
-          setOMsg(oMsg.getAttribute("data-error"), "err");
-        });
-    });
+    }
+  } catch (e) {
+    /* Nichts. Ein Zaehler ist nie ein Grund, dass eine Seite nicht laeuft. */
   }
 
   /* ------------------------------------------------------------------ jahr */

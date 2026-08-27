@@ -12,132 +12,24 @@
     "ist (siehe nachziehen() in scripts/build.mjs). Wer dort etwas aendert,",
     "behaelt das letzte Wort."
   ],
-  "alteReferenzen": [
-    [
-      "Kugl",
-      "Sektor 11",
-      "The Q",
-      "IVY",
-      "BBC",
-      "B9",
-      "Ultrawild Festival"
-    ],
-    [
-      "Sektor 11",
-      "Jugendopenair",
-      "Kugl",
-      "B9 eventlocation",
-      "IVY",
-      "Ultrawild Festival",
-      "Monoevents",
-      "Amadeusbar",
-      "Dorffest Herisau",
-      "Turnunterhaltung Sirnach",
-      "Xploration Events",
-      "Winterzauber Bazenheid",
-      "Firehouse Party Wittenbach",
-      "BBC",
-      "The Q"
-    ],
-    [
-      "Kugl",
-      "Sektor 11",
-      "Ultrawild Festival",
-      "BBC",
-      "Jugendopenair",
-      "Amadeusbar",
-      "B9 eventlocation",
-      "Club Eden",
-      "Dorffest Herisau",
-      "Firehouse Party Wittenbach",
-      "Jugendopenair",
-      "Monoevents",
-      "Picante",
-      "Turnunterhaltung Sirnach",
-      "Winterzauber Bazenheid",
-      "Aftersun Festival",
-      "Xploration Events",
-      "The Q"
-    ]
+  "_nurWasFehlt": [
+    "ERGAENZEN, NIE ERSETZEN — Stand 11.08.2026.",
+    "",
+    "Die Regeln in diesem Abschnitt fuellen ausschliesslich Luecken im Stand aus",
+    "der Datenbank. Sie ueberschreiben nichts, sortieren nichts um und loeschen",
+    "nichts. Ohne sie muesste jemand die Verwaltung oeffnen und einmal speichern,",
+    "damit die Website vollstaendig ist — genau das soll nicht noetig sein.",
+    "",
+    "Der Unterschied zu den Regeln, die im August entfernt wurden: jene ERSETZTEN",
+    "(die Referenzliste wurde ausgetauscht, geloeschte Ware kam zurueck, geleerte",
+    "Texte wurden neu geschrieben). Hier wird nur eingesetzt, wo nichts steht.",
+    "",
+    "Und sie halten sich selbst an: sobald die Verwaltung den Stand einmal",
+    "gespeichert hat, traegt der Inhalt unter 'migrationen' eine Marke. Ist sie",
+    "gesetzt, laeuft die zugehoerige Regel nie wieder — ab dann laesst sich alles",
+    "loeschen und bleibt geloescht. Die Verwaltung setzt die Marken von selbst,",
+    "ohne Zutun (verwaltung/public/js/nachtragen.js)."
   ],
-  "referenzen": [
-    {
-      "name": "Kugl",
-      "city": "St. Gallen",
-      "highlight": true
-    },
-    {
-      "name": "Sektor 11",
-      "city": "Zürich",
-      "highlight": true
-    },
-    {
-      "name": "Ultrawild Festival",
-      "city": "St. Gallen",
-      "highlight": true
-    },
-    {
-      "name": "BBC",
-      "city": "Gossau",
-      "highlight": true
-    },
-    {
-      "name": "Aftersun Festival",
-      "city": "Luzern"
-    },
-    {
-      "name": "Amadeusbar",
-      "city": "Herisau"
-    },
-    {
-      "name": "B9 eventlocation",
-      "city": "St. Gallen"
-    },
-    {
-      "name": "Dorffest Herisau",
-      "city": "Herisau"
-    },
-    {
-      "name": "Firehouse Party Wittenbach",
-      "city": "Wittenbach"
-    },
-    {
-      "name": "IVY",
-      "city": "St. Gallen"
-    },
-    {
-      "name": "Jugendopenair",
-      "city": "Wattwil"
-    },
-    {
-      "name": "Monoevents",
-      "city": "St. Gallen"
-    },
-    {
-      "name": "Picante",
-      "city": "St. Gallen"
-    },
-    {
-      "name": "The Q",
-      "city": "Schaan, FL"
-    },
-    {
-      "name": "Turnunterhaltung Sirnach",
-      "city": "Sirnach"
-    },
-    {
-      "name": "Winterzauber Bazenheid",
-      "city": "Bazenheid"
-    },
-    {
-      "name": "Xploration Events",
-      "city": "Glarus"
-    }
-  ],
-  "instagram": {
-    "label": "Instagram",
-    "url": "https://www.instagram.com/sam_sparking/"
-  },
   "heroStats": [
     {
       "value": "2021",
@@ -154,64 +46,10 @@
   ],
   "bookingBild": {
     "src": "https://firebasestorage.googleapis.com/v0/b/jupidu-36804.firebasestorage.app/o/samsparking%2Fmedia%2F-OyU22YYzpKFXkDykqQP%2Fdsc01430.jpg?alt=media&token=a2b80100-cb77-4120-878b-cc9ac62aff65",
-    "alt": "Sam Sparking on stage",
-    "credit": "Sarto Photography"
+    "alt": "Sam Sparking on stage"
   },
   "i18n": {
     "de": {
-      "referenzen": {
-        "0": {
-          "city": "St. Gallen"
-        },
-        "1": {
-          "city": "Zürich"
-        },
-        "2": {
-          "city": "St. Gallen"
-        },
-        "3": {
-          "city": "Gossau"
-        },
-        "4": {
-          "city": "Luzern"
-        },
-        "5": {
-          "city": "Herisau"
-        },
-        "6": {
-          "city": "St. Gallen"
-        },
-        "7": {
-          "city": "Herisau"
-        },
-        "8": {
-          "city": "Wittenbach"
-        },
-        "9": {
-          "city": "St. Gallen"
-        },
-        "10": {
-          "city": "Wattwil"
-        },
-        "11": {
-          "city": "St. Gallen"
-        },
-        "12": {
-          "city": "St. Gallen"
-        },
-        "13": {
-          "city": "Schaan, FL"
-        },
-        "14": {
-          "city": "Sirnach"
-        },
-        "15": {
-          "city": "Bazenheid"
-        },
-        "16": {
-          "city": "Glarus"
-        }
-      },
       "heroStats": {
         "0": {
           "label": "Erstes Set"
@@ -236,59 +74,6 @@
       }
     },
     "fr": {
-      "referenzen": {
-        "0": {
-          "city": "Saint-Gall"
-        },
-        "1": {
-          "city": "Zurich"
-        },
-        "2": {
-          "city": "Saint-Gall"
-        },
-        "3": {
-          "city": "Gossau"
-        },
-        "4": {
-          "city": "Lucerne"
-        },
-        "5": {
-          "city": "Herisau"
-        },
-        "6": {
-          "city": "Saint-Gall"
-        },
-        "7": {
-          "city": "Herisau"
-        },
-        "8": {
-          "city": "Wittenbach"
-        },
-        "9": {
-          "city": "Saint-Gall"
-        },
-        "10": {
-          "city": "Wattwil"
-        },
-        "11": {
-          "city": "Saint-Gall"
-        },
-        "12": {
-          "city": "Saint-Gall"
-        },
-        "13": {
-          "city": "Schaan, FL"
-        },
-        "14": {
-          "city": "Sirnach"
-        },
-        "15": {
-          "city": "Bazenheid"
-        },
-        "16": {
-          "city": "Glaris"
-        }
-      },
       "heroStats": {
         "0": {
           "label": "Premier set"
@@ -310,7 +95,13 @@
         "2": {
           "navLabel": "Boutique"
         }
-      }
+      },
+      "kontaktNavLabel": "Contact",
+      "_kontaktWarum": [
+        "Im Menue stand auf /fr/ 'Kontakt' — deutsch. Die franzoesische",
+        "Uebersetzung des Abschnitts hatte den deutschen Wert geerbt.",
+        "Gesetzt wird nur, solange dort genau 'Kontakt' steht."
+      ]
     }
   },
   "alteHeroStats": [
@@ -329,17 +120,6 @@
       "country": "CH"
     }
   ],
-  "kanaele": {
-    "ausDemKopf": [
-      "Instagram"
-    ],
-    "erwartet": [
-      "Instagram",
-      "TikTok",
-      "Spotify",
-      "Mixcloud"
-    ]
-  },
   "seiten": [
     {
       "slug": "",
@@ -354,6 +134,7 @@
         "shows",
         "references",
         "gallery",
+        "shop",
         "contact"
       ]
     },
@@ -383,31 +164,6 @@
       ]
     }
   ],
-  "shop": {
-    "alteWaehrung": "CHF 5",
-    "waehrung": "CHF",
-    "platzhalter": {
-      "_hinweis": "Tippreste aus dem ersten Einrichten. Sie werden nur geraeumt, solange exakt diese Werte dastehen — sobald jemand echte Ware eintraegt, bleibt sie unangetastet.",
-      "name": "Beispiel",
-      "felder": {
-        "note": "as",
-        "alt": "as",
-        "linkUrl": "asd"
-      }
-    },
-    "sichtbar": true,
-    "_sichtbarWarum": [
-      "Ausdrueckliche Vorgabe vom 10.08.2026: /shop/ muss oeffentlich mit 200",
-      "antworten, waehrend die Startseite noch 'Coming soon' zeigt. Ohne",
-      "eingeschalteten Abschnitt gaebe es die Seite gar nicht — pagesOf() laesst",
-      "eine Unterseite ohne Abschnitt weg, und /shop/ wuerde 404 liefern.",
-      "",
-      "ACHTUNG, das ist die einzige Regel, die einen Schalter der Verwaltung",
-      "ueberstimmt. Soll der Shop wieder verschwinden: hier \"sichtbar\" auf false",
-      "setzen (oder die Zeile loeschen) — der Schalter in der Verwaltung allein",
-      "reicht dafuer nicht."
-    ]
-  },
   "heroShows": {
     "_warum": [
       "Vorgabe: die Kennzahl im Hero nennt die Gesamtzahl der Shows, und die",
@@ -431,20 +187,385 @@
       "Clubs & Festivals"
     ]
   },
-  "_alteReferenzenWarum": [
-    "Der Massstab, gegen den die Ersetzung prueft — MEHRERE bekannte Altstaende.",
+  "aboutFakten": {
+    "_warum": [
+      "Kundenwunsch vom 10.08.2026: die beiden Fakten unten im About-Bereich",
+      "('7+ Clubs & Festivals', '150 BPM Home Base') sollen ganz weg. Der Bereich",
+      "soll danach geschlossen wirken — der Generator laesst die Liste bei leeren",
+      "Fakten komplett aus (kein leeres <dl>, keine Trennlinie, kein Platzhalter).",
+      "",
+      "NICHT zu verwechseln mit den Kennzahlen im Hero: die bleiben, samt der",
+      "wiederhergestellten '2021 / First set'.",
+      "",
+      "Warum hier und nicht im Schnappschuss: content/site.json wird bei jedem",
+      "Build aus der Datenbank ueberschrieben — dort geloescht waeren die Fakten",
+      "beim naechsten Build zurueck.",
+      "",
+      "ACHTUNG: Diese Regel greift IMMER und ueberstimmt die Verwaltung. Sollen",
+      "Fakten zurueck, gehoert dieser Block geloescht."
+    ],
+    "leeren": true
+  },
+  "galerie": {
+    "_warum": [
+      "Kundenwunsch vom 10.08.2026: die Bilderwand startet mit genau 6 Fotos —",
+      "zwei Spalten, drei Reihen. In der Verwaltung stand 4, was im",
+      "Zwei-Spalten-Raster zwei Reihen ergab.",
+      "",
+      "'Mehr anzeigen' zeigt danach ALLE restlichen Fotos auf einmal (nicht Reihe",
+      "um Reihe) und wechselt auf 'Weniger anzeigen', das wieder auf die ersten",
+      "sechs zurueckklappt. Das steckt in assets/site.js und assets/site.css.",
+      "",
+      "ACHTUNG: Diese Regel greift IMMER und ueberstimmt die Verwaltung."
+    ],
+    "startAnzahl": 6
+  },
+  "impressum": {
+    "_warum": [
+      "Die Angaben des Impressums, vom Kunden am 11.08.2026 genannt. Sie",
+      "stehen hier, weil content/site.json bei jedem Build aus der",
+      "Datenbank neu geschrieben wird: waeren sie nur dort, waeren sie",
+      "beim naechsten Build der Verwaltung weg.",
+      "",
+      "Gesetzt wird nur, was fehlt. Sobald der Kunde in der Verwaltung",
+      "unter 'Impressum' etwas eintraegt, gewinnt sein Wert.",
+      "",
+      "Bewusst knapp: keine Strassenadresse, keine Handelsregister- oder",
+      "Mehrwertsteuernummer, keine Telefonnummer. Was nicht bekannt ist,",
+      "steht nicht da."
+    ],
+    "email": "info@samsparking.ch",
+    "location": "Herisau, Schweiz"
+  },
+  "release": {
+    "_warum": [
+      "Der Start der Website: 12.08.2026, 18:00 Uhr Europe/Zurich.",
+      "",
+      "Steht hier, weil content/site.json bei jedem Build aus der Datenbank",
+      "neu geschrieben wird. Gesetzt wird nur, was fehlt — sobald der Kunde",
+      "in der Verwaltung unter 'Website-Release' etwas eintraegt, gewinnt",
+      "sein Wert, auch das Ausschalten.",
+      "",
+      "Umgeschaltet wird im Browser: der Zeitpunkt steht als Zahl in der",
+      "Seite, assets/site.js zaehlt herunter und nimmt den Vorhang bei null",
+      "weg. Kein neuer Deploy noetig.",
+      "",
+      "'alterText': in der Datenbank steht noch der Satz mit 'Die neue",
+      "Website'. Genau dieser eine bekannte Wortlaut wird durch 'Meine neue",
+      "Website' ersetzt — Kundenwunsch. Schreibt der Kunde in der Verwaltung",
+      "etwas anderes, passt die Regel nicht mehr und laesst den Text stehen."
+    ],
+    "enabled": true,
+    "date": "2026-08-12",
+    "time": "18:00",
+    "zone": "Europe/Zurich",
+    "kicker": "Release",
+    "headline": "Sam Sparking",
+    "text": "Meine neue Website geht am 12. August 2026 um 18:00 Uhr online. Diese Seite öffnet sich von selbst — sie muss nur offen bleiben.",
+    "alterText": "Die neue Website geht am 12. August 2026 um 18:00 Uhr online. Diese Seite öffnet sich von selbst — sie muss nur offen bleiben."
+  },
+  "_wasHierNichtMehrSteht": [
+    "Entfernt am 11.08.2026, weil die Verwaltung entscheidet:",
     "",
-    "Warum mehrere: In der Datenbank steht die 7er-Liste (Kugl, Sektor 11, The Q,",
-    "IVY, BBC, B9, Ultrawild Festival). Stand hier nur EIN Massstab und der war",
-    "ein anderer, traf der Abgleich nie zu und die Ersetzung lief still ins",
-    "Leere — die Website zeigte weiter die alte Liste. Genau das ist am",
-    "10.08.2026 passiert.",
+    "  referenzen / alteReferenzen   tauschten die Referenzliste der Verwaltung",
+    "                                gegen eine im Repo gepflegte Fassung. Genau",
+    "                                daher fehlte 'IVY — St. Gallen' auf der",
+    "                                Website: die Ersatzliste kannte stattdessen",
+    "                                'Club Eden — St. Gallen'.",
+    "  i18n.de/fr.referenzen         uebersetzten die Orte ueber den PLATZ in der",
+    "                                Liste. Beim Umsortieren in der Verwaltung",
+    "                                wanderte damit der Ort zum falschen Club.",
+    "                                Orte stehen jetzt in jeder Sprache so da,",
+    "                                wie sie in der Verwaltung stehen.",
+    "  kanaele.erwartet              legte fehlende Kanaele ohne Adresse an",
+    "  kanaele.adressen              trug Adressen fuer TikTok und Spotify ein",
+    "  kanaele.ausDemKopf            setzte inHeader:false fuer Instagram",
+    "  instagram                     legte Instagram an, wenn keines dastand",
     "",
-    "Verglichen wird ohne Ruecksicht auf die Reihenfolge: die Verwaltung",
-    "sortiert die Liste beim Speichern um, eine Reihenfolge-treue Pruefung",
-    "waere schon dadurch hinfaellig.",
+    "Die vier Kanal-Regeln waren der Grund, warum die Verwaltung links nur",
+    "Mixcloud zeigte, Vorschau und Website aber vier Kanaele. Nachgetragen wird",
+    "jetzt in der Verwaltung selbst (kanaele-nachtragen.js) — dort sind die",
+    "Kanaele bearbeitbar und werden mitgespeichert.",
     "",
-    "Die Schutzwirkung bleibt: Eine Liste, die zu KEINEM dieser Staende passt,",
-    "hat jemand selbst gepflegt und wird nicht angefasst."
-  ]
+    "Ebenfalls entfernt am 11.08.2026 — der ganze shop-Block:",
+    "",
+    "  shop.verloreneWare   holte den Artikel 'Beispiel' zurueck, sobald die",
+    "                       Warenliste leer war. Damit liess sich der letzte",
+    "                       Artikel nie loeschen: nach dem Publizieren stand er",
+    "                       wieder da.",
+    "  shop.texte           schrieb note, emptyText und buyLabel, sobald das Feld",
+    "                       leer war oder den bekannten deutschen Text trug. Wer",
+    "                       den Text loeschte, hatte ihn nach dem Publizieren",
+    "                       wieder — genau die Meldung 'im Shop werden nicht alle",
+    "                       Aenderungen aktualisiert'.",
+    "  shop.alteWaehrung    ersetzte die Waehrung 'CHF 5'.",
+    "",
+    "Der Shop haengt jetzt ausschliesslich an der Verwaltung. Der Artikel steht",
+    "als echte Ware in der Datenbank; die Verwaltung traegt ihn beim Laden",
+    "einmalig nach, wenn er fehlt (ware-nachtragen.js), und merkt sich das.",
+    "",
+    "Ebenfalls entfernt am 12.08.2026:",
+    "",
+    "  telefon.leeren   leerte die eine bekannte Telefonnummer. Das war halb: das",
+    "                   Feld stand weiter in der Verwaltung und der Schluessel",
+    "                   weiter in den Daten. Jetzt wird sections.contact.phone",
+    "                   ganz geloescht — direkt im Generator, ohne Marke, wie beim",
+    "                   Fotografen. Das Telefonfeld IM Booking-Formular bleibt:",
+    "                   dort traegt der Besucher seine eigene Nummer ein."
+  ],
+  "referenzenNachtragen": {
+    "_warum": [
+      "Die verbindliche Liste des Kunden (25). In der Datenbank stehen davon",
+      "sieben. Ergaenzt wird, was fehlt — erkannt an Name UND Ort, unabhaengig von",
+      "Gross/Klein und Bindestrichen. Bestehende Eintraege bleiben, wie sie sind:",
+      "Schreibweise, Reihenfolge und 'Gross zeigen' werden nie angefasst.",
+      "Nachgetragene Eintraege sind nie gross.",
+      "",
+      "Angehaengt wird hinten, in der Reihenfolge dieser Liste.",
+      "Marke: migrationen.referenzen",
+      "",
+      "Schreibweise 'B9': so steht der Eintrag in der Datenbank. Mit 'B9",
+      "eventlocation' daneben staende er zweimal da."
+    ],
+    "eintraege": [
+      {
+        "name": "Kugl",
+        "city": "St. Gallen"
+      },
+      {
+        "name": "Sektor 11",
+        "city": "Zürich"
+      },
+      {
+        "name": "BBC",
+        "city": "Gossau"
+      },
+      {
+        "name": "Ultrawild Festival",
+        "city": "St. Gallen"
+      },
+      {
+        "name": "The Q",
+        "city": "Schaan, FL"
+      },
+      {
+        "name": "IVY",
+        "city": "St. Gallen"
+      },
+      {
+        "name": "B9",
+        "city": "St. Gallen"
+      },
+      {
+        "name": "Maiaiaiparty",
+        "city": "Appenzell Ausserrhoden"
+      },
+      {
+        "name": "Amadeusbar",
+        "city": "Herisau"
+      },
+      {
+        "name": "Fasnacht Oberegg",
+        "city": "Appenzell Innerrhoden"
+      },
+      {
+        "name": "Party Weekend Sirnach",
+        "city": "St. Gallen"
+      },
+      {
+        "name": "Kantonales Musik fest",
+        "city": "Appenzell Ausserrhoden"
+      },
+      {
+        "name": "Jugendopenair",
+        "city": "St. Gallen"
+      },
+      {
+        "name": "Monoevents",
+        "city": "St. Gallen"
+      },
+      {
+        "name": "Jublasurium",
+        "city": "Aargau"
+      },
+      {
+        "name": "Dorffest Herisau",
+        "city": "Herisau"
+      },
+      {
+        "name": "Turnunterhaltung Sirnach",
+        "city": "Sirnach"
+      },
+      {
+        "name": "Xploration Events",
+        "city": "Glarus"
+      },
+      {
+        "name": "Winterzauber Bazenheid",
+        "city": "Bazenheid"
+      },
+      {
+        "name": "Firehouse Party Wittenbach",
+        "city": "Wittenbach"
+      },
+      {
+        "name": "Cyberspace party",
+        "city": "St. Gallen"
+      },
+      {
+        "name": "Talhof",
+        "city": "St. Gallen"
+      },
+      {
+        "name": "Volleyballturnier Malters",
+        "city": "Luzern"
+      },
+      {
+        "name": "Metzertor",
+        "city": "St. Gallen"
+      },
+      {
+        "name": "Abschlussball Wittenbach",
+        "city": "St. Gallen"
+      }
+    ],
+    "zuerst": [
+      {
+        "name": "Kugl",
+        "city": "St. Gallen"
+      },
+      {
+        "name": "Sektor 11",
+        "city": "Zürich"
+      },
+      {
+        "name": "BBC",
+        "city": "Gossau"
+      },
+      {
+        "name": "Ultrawild Festival",
+        "city": "St. Gallen"
+      }
+    ],
+    "_warumZuerst": [
+      "Diese vier standen bis zum 11.08.2026 gross ueber den anderen und waren",
+      "damit die ersten vier, die man sah. Seit alle Referenzen gleich aussehen,",
+      "entscheidet allein die Reihenfolge — deshalb ruecken sie EINMALIG nach vorne,",
+      "damit sich am Bild nichts aendert. Verschoben wird nur ihre Position;",
+      "Schreibweise, Ort und alles andere bleiben unangetastet, und die Reihenfolge",
+      "der uebrigen Eintraege untereinander bleibt ebenfalls.",
+      "",
+      "Laeuft nur, solange migrationen.referenzen nicht gesetzt ist. Danach",
+      "entscheidet die Verwaltung allein — auch ueber diese vier."
+    ]
+  },
+  "kanaeleNachtragen": {
+    "_warum": [
+      "Die vier Kanaele des Kuenstlers mit ihren echten Adressen. In der Datenbank",
+      "steht nur Mixcloud. Ergaenzt wird, was fehlt — erkannt am Namen ODER am",
+      "Hostnamen der Adresse, damit 'Insta' und 'Instagram' nicht doppelt",
+      "erscheinen. Eine vorhandene Adresse wird nie ueberschrieben.",
+      "Eingefuegt wird an der Stelle dieser Liste, damit die Reihenfolge auf der",
+      "Website stimmt.",
+      "Marke: migrationen.kanaele"
+    ],
+    "eintraege": [
+      {
+        "label": "Instagram",
+        "url": "https://www.instagram.com/sam_sparking/",
+        "inHeader": false
+      },
+      {
+        "label": "Mixcloud",
+        "url": "https://www.mixcloud.com/samsparking/"
+      },
+      {
+        "label": "TikTok",
+        "url": "https://www.tiktok.com/@sam_sparking",
+        "inHeader": false
+      },
+      {
+        "label": "Spotify",
+        "url": "https://open.spotify.com/artist/318V87QIgd2VmokY52zP6S",
+        "inHeader": false
+      }
+    ]
+  },
+  "shopEinladung": {
+    "_warum": [
+      "Die helle Flaeche oben im Shop und der Informationsstreifen darunter. In der",
+      "Datenbank gibt es die Felder noch nicht. Gesetzt wird nur, was leer ist —",
+      "was der Kunde eintraegt, gewinnt sofort.",
+      "",
+      "Die Warenliste wird hier NICHT angefasst. Der echte Artikel aus der",
+      "Verwaltung bleibt unberuehrt, samt Preis, Bild und Bezahl-Link.",
+      "",
+      "Die Starttexte versprechen nichts: kein Stripe, kein TWINT, keine",
+      "Lieferfrist, kein 'gratis Versand'.",
+      "Marke: migrationen.shopInfo"
+    ],
+    "felder": {
+      "kicker": "MERCH",
+      "headline": "Sam Sparking Shop",
+      "intro": "Small runs, made to be worn at the show. What you see here is what exists — when a piece is gone, it is gone.",
+      "ctaLabel": "Browse the drop"
+    },
+    "info": [
+      {
+        "icon": "zahlung",
+        "title": "Payment",
+        "text": "How to pay is shown on the item itself. If no payment link is set, the order comes in through the form and is confirmed personally."
+      },
+      {
+        "icon": "versand",
+        "title": "Shipping",
+        "text": "Shipping is agreed personally after the order. Nothing is sent before that is settled."
+      },
+      {
+        "icon": "fragen",
+        "title": "Questions",
+        "text": "Size, colour, availability — write to info@samsparking.ch."
+      }
+    ],
+    "i18n": {
+      "de": {
+        "headline": "Sam Sparking Shop",
+        "intro": "Kleine Auflagen, gemacht fürs Konzert. Was hier steht, gibt es — ist ein Stück weg, ist es weg.",
+        "ctaLabel": "Zum Katalog",
+        "info": [
+          {
+            "title": "Zahlung",
+            "text": "Wie bezahlt wird, steht am Artikel. Ist kein Zahlungslink hinterlegt, kommt die Bestellung über das Formular und wird persönlich bestätigt."
+          },
+          {
+            "title": "Versand",
+            "text": "Der Versand wird nach der Bestellung persönlich abgesprochen. Vorher geht nichts raus."
+          },
+          {
+            "title": "Fragen",
+            "text": "Grösse, Farbe, Verfügbarkeit — schreib an info@samsparking.ch."
+          }
+        ]
+      },
+      "fr": {
+        "headline": "Sam Sparking Shop",
+        "intro": "Petites séries, faites pour la scène. Ce qui est ici existe — une pièce partie ne revient pas.",
+        "ctaLabel": "Voir le catalogue",
+        "info": [
+          {
+            "title": "Paiement",
+            "text": "Le mode de paiement est indiqué sur l'article. Sans lien de paiement, la commande passe par le formulaire et est confirmée personnellement."
+          },
+          {
+            "title": "Expédition",
+            "text": "L'expédition est convenue personnellement après la commande. Rien ne part avant."
+          },
+          {
+            "title": "Questions",
+            "text": "Taille, couleur, disponibilité — écris à info@samsparking.ch."
+          }
+        ]
+      }
+    }
+  }
 }

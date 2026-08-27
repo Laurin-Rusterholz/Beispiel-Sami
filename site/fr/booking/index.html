@@ -65,10 +65,11 @@
         "name": "Saint-Gall, Suisse"
       },
       "email": "mailto:info@samsparking.ch",
-      "telephone": "+41775091171",
       "sameAs": [
         "https://www.instagram.com/sam_sparking/",
-        "https://www.mixcloud.com/samsparking/"
+        "https://www.mixcloud.com/samsparking/",
+        "https://www.tiktok.com/@sam_sparking",
+        "https://open.spotify.com/artist/318V87QIgd2VmokY52zP6S"
       ],
       "address": {
         "@type": "PostalAddress",
@@ -79,7 +80,6 @@
         "@type": "ContactPoint",
         "contactType": "booking",
         "email": "info@samsparking.ch",
-        "telephone": "+41775091171",
         "availableLanguage": [
           "Français",
           "Deutsch"
@@ -164,6 +164,7 @@
   <style>:root{--ink:#05070e;--spark:#2e6bff;}</style>
 </head>
 <body data-page="booking">
+
   <div class="page-bg" aria-hidden="true" style="background-image:url('https://firebasestorage.googleapis.com/v0/b/jupidu-36804.firebasestorage.app/o/samsparking%2Fmedia%2F-OzW4e3Y6YTa6zJklnO4%2Fdsc00389-verbessert-rr.jpg?alt=media&amp;token=24cc6380-f841-4b19-a437-358805f25892')"></div>
   <a class="skip" href="#booking">Aller au contenu</a>
 
@@ -174,9 +175,13 @@
       <button class="nav-close" type="button" aria-label="Fermer">✕</button>
       <ul>
           <li><a href="/site/fr/">Accueil</a></li>
+          <li class="nav-cta"><a href="/site/fr/booking/" aria-current="page">Booking</a></li>
           <li class="nav-hot"><a href="/site/fr/shop/">Boutique</a></li>
-          <li class="nav-cta"><a href="#booking">Booking</a></li>
-          <li><a href="#contact">Kontakt</a></li>
+          <li><a href="/site/fr/#about">À propos</a></li>
+          <li><a href="/site/fr/#shows">Dates</a></li>
+          <li><a href="/site/fr/#references">Références</a></li>
+          <li><a href="/site/fr/#gallery">Galerie</a></li>
+          <li><a href="/site/fr/#contact">Contact</a></li>
       </ul>
       <div class="nav-langs"><a href="/site/booking/" lang="en">EN</a><a href="/site/de/booking/" lang="de">DE</a><a href="/site/fr/booking/" lang="fr" aria-current="true">FR</a></div>
     </nav>
@@ -188,13 +193,14 @@
   <section class="hero hero-compact" id="top">
     <div class="wrap">
       <p class="mono">DJ &amp; producteur — Saint-Gall, Suisse</p>
-      <h1>Booking</h1>
+      
+      <h1 class="hero-zwei"><span class="hero-artist">Sam Sparking</span><span class="hero-seite">Booking</span></h1>
       <div class="sparks" aria-hidden="true"><span style="--x:2%;--s:2px;--t:7.0s;--d:0.00s;--dx:-5vw"></span><span style="--x:63%;--s:3px;--t:12.0s;--d:-5.95s;--dx:2vw"></span><span style="--x:27%;--s:4px;--t:9.0s;--d:-4.90s;--dx:-2vw"></span><span style="--x:88%;--s:2px;--t:14.0s;--d:-3.85s;--dx:5vw"></span><span style="--x:52%;--s:3px;--t:11.0s;--d:-2.80s;--dx:1vw"></span><span style="--x:16%;--s:4px;--t:8.0s;--d:-1.75s;--dx:-3vw"></span><span style="--x:77%;--s:2px;--t:13.0s;--d:-0.70s;--dx:4vw"></span><span style="--x:41%;--s:3px;--t:10.0s;--d:-6.65s;--dx:0vw"></span></div>
     </div>
   </section>
-    <nav class="subnav" aria-label="Auf dieser Seite">
+    <nav class="subnav" aria-label="Sur cette page">
       <div class="wrap subnav-inner">
-        <a href="#booking">Booking</a><a href="#contact">Kontakt</a>
+        <a href="#booking">Booking</a><a href="#contact">Contact</a>
       </div>
     </nav>
 
@@ -214,8 +220,8 @@
           <li><span class="mono">D</span>Suisse &amp; Europe</li>
         </ul>
         <figure class="booking-photo rv">
-          <img src="https://firebasestorage.googleapis.com/v0/b/jupidu-36804.firebasestorage.app/o/samsparking%2Fmedia%2F-OzW52YSBbEFCtz4nl36%2Fimage00001.jpeg?alt=media&amp;token=4e105099-e206-4e5d-929a-8c9af42691ac" alt="Sam Sparking on stage" width="4672" height="7008" loading="lazy" decoding="async" sizes="(max-width:900px) 92vw, 42vw">
-          <figcaption class="mono">Sarto Photography</figcaption>
+          <img src="https://firebasestorage.googleapis.com/v0/b/jupidu-36804.firebasestorage.app/o/samsparking%2Fmedia%2F-OzpsxxW-_M-F5RGxWUW%2Fdscf8788.jpg?alt=media&amp;token=95caa516-76a8-401d-9dc1-9bc127c2ffbb" alt="Sam Sparking on stage" width="1600" height="2000" loading="lazy" decoding="async" sizes="(max-width:900px) 92vw, 42vw">
+          
         </figure>
         <div class="btn-row">
           <a class="btn" href="/site/presskit/sam-sparking-presskit-2026.pdf" download>Presskit (PDF)</a>
@@ -224,7 +230,7 @@
       </div>
       
       <form class="bform rv" id="booking-form" data-endpoint="/api/booking" data-sending="Envoi …" data-invalid="Merci de vérifier les champs signalés."
-            data-captcha="Le calcul n&#39;est pas encore juste." data-demo="true" novalidate>
+            data-captcha="Le calcul n&#39;est pas encore juste." novalidate>
         <div class="bform-head">
           <span class="mono">Demande de booking</span>
           <h3>Parle-moi de ton événement</h3>
@@ -278,7 +284,7 @@
              data-success="Merci — ta demande est bien arrivée. Tu auras de mes nouvelles sous 48 heures."
              data-error="Quelque chose n&#39;a pas fonctionné. Écris-moi directement à info@samsparking.ch."></p>
           <p class="bform-fine mono">* Champs obligatoires · Tes données servent uniquement au traitement de ta demande.</p>
-          <p class="bform-demo mono">Vorführ-Fassung: dieses Formular sendet nichts.</p>
+          
         </div>
       </form>
       </div>
@@ -303,24 +309,42 @@
           </div>
           
         <div class="contact-meta">
-          <div><span class="mono">Téléphone</span><a href="tel:+41775091171">+41 77 509 11 71</a></div>
+          
           <div><span class="mono">Basé à</span><span>Saint-Gall, Suisse</span></div>
         </div>
         </div>
         <div class="contact-side">
           <span class="mono side-label">Réseaux</span>
           <div class="social-cards">
-          <a class="scard" href="https://www.instagram.com/sam_sparking/" target="_blank" rel="noopener me">
+          <a class="scard" href="https://www.instagram.com/sam_sparking/" target="_blank" rel="noopener noreferrer me">
             <span class="scard-ico" aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="3.5" width="17" height="17" rx="4.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="12" r="4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><circle cx="17" cy="7" r="1.2" fill="currentColor"/></svg></span>
             <span class="scard-arrow" aria-hidden="true">↗</span>
             <span class="scard-name">Instagram</span>
             <span class="mono">@sam_sparking</span>
           </a>
-          <a class="scard" href="https://www.mixcloud.com/samsparking/" target="_blank" rel="noopener me">
+          <a class="scard" href="https://www.mixcloud.com/samsparking/" target="_blank" rel="noopener noreferrer me">
             <span class="scard-ico" aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 15v-3M6.5 15v-5M9 15V8M11.5 15V6.5M14 15V9" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M14 15h3.5a2.5 2.5 0 0 0 .4-4.97A4 4 0 0 0 14 9" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
             <span class="scard-arrow" aria-hidden="true">↗</span>
             <span class="scard-name">Mixcloud</span>
             <span class="mono">@samsparking</span>
+          </a>
+          <a class="scard" href="https://www.tiktok.com/@sam_sparking" target="_blank" rel="noopener noreferrer me">
+            <span class="scard-ico" aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4v9.6a3.6 3.6 0 1 1-3-3.55" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M14 5.4c.7 1.9 2.3 3.2 4.4 3.4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+            <span class="scard-arrow" aria-hidden="true">↗</span>
+            <span class="scard-name">TikTok</span>
+            <span class="mono">@sam_sparking</span>
+          </a>
+          <a class="scard" href="https://open.spotify.com/artist/318V87QIgd2VmokY52zP6S" target="_blank" rel="noopener noreferrer me">
+            <span class="scard-ico" aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M8.5 10.2c2.6-.8 5-.6 7 .5M9 12.8c2-.6 3.9-.4 5.5.5M9.5 15.2c1.5-.4 2.9-.3 4 .3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+            <span class="scard-arrow" aria-hidden="true">↗</span>
+            <span class="scard-name">Spotify</span>
+            <span class="mono">@318V87QIgd2VmokY52zP6S</span>
+          </a>
+          <a class="scard scard-file" href="/site/presskit/sam-sparking-presskit-2026.pdf" download>
+            <span class="scard-ico" aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3.5h7.5L18 8v12.5H6z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M13.5 3.5V8H18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M12 11v5.5M9.6 14.4 12 16.8l2.4-2.4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+            <span class="scard-arrow" aria-hidden="true">↓</span>
+            <span class="scard-name">Presskit (PDF)</span>
+            <span class="mono">PDF</span>
           </a>
           </div>
         </div>
@@ -342,17 +366,33 @@
   </div>
 
 
-  <aside class="cookie" id="cookie" hidden aria-label="Cookies">
-    <p>Ce site n&#39;utilise ni traçage ni cookies publicitaires. Lors de l&#39;envoi d&#39;une demande ou d&#39;une commande, seules les informations du formulaire sont enregistrées.</p>
-    <button class="btn sm solid" id="cookie-ok" type="button">Compris</button>
+  
+  <aside class="cookie" id="cookie" hidden role="region" aria-labelledby="cookie-h">
+    <div class="cookie-in">
+      <div class="cookie-say">
+        <span class="mono" id="cookie-h">Cookies</span>
+        <p>Ce site n&#39;utilise ni traçage ni cookies publicitaires. Lors de l&#39;envoi d&#39;une demande ou d&#39;une commande, seules les informations du formulaire sont enregistrées.</p>
+        <p class="cookie-ways">
+          <a href="/site/fr/impressum/">Impressum</a>
+          <a href="/site/fr/mentions-legales/">Protection des données</a>
+        </p>
+      </div>
+      <div class="cookie-acts">
+        <button class="btn sm cookie-btn" id="cookie-min" type="button" data-wahl="notwendig">Nécessaires uniquement</button>
+        <button class="btn sm cookie-btn" id="cookie-all" type="button" data-wahl="alle">Tout accepter</button>
+      </div>
+    </div>
   </aside>
 
   <footer>
     <div class="wrap foot-social">
       <span class="mono">Réseaux</span>
       <ul>
-        <li><a href="https://www.instagram.com/sam_sparking/" target="_blank" rel="noopener me" title="Instagram"><span aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="3.5" width="17" height="17" rx="4.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="12" r="4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><circle cx="17" cy="7" r="1.2" fill="currentColor"/></svg></span><span>Instagram</span></a></li>
-        <li><a href="https://www.mixcloud.com/samsparking/" target="_blank" rel="noopener me" title="Mixcloud"><span aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 15v-3M6.5 15v-5M9 15V8M11.5 15V6.5M14 15V9" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M14 15h3.5a2.5 2.5 0 0 0 .4-4.97A4 4 0 0 0 14 9" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span>Mixcloud</span></a></li>
+        <li><a href="https://www.instagram.com/sam_sparking/" target="_blank" rel="noopener noreferrer me" title="Instagram"><span aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="3.5" width="17" height="17" rx="4.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="12" r="4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><circle cx="17" cy="7" r="1.2" fill="currentColor"/></svg></span><span>Instagram</span></a></li>
+        <li><a href="https://www.mixcloud.com/samsparking/" target="_blank" rel="noopener noreferrer me" title="Mixcloud"><span aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 15v-3M6.5 15v-5M9 15V8M11.5 15V6.5M14 15V9" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M14 15h3.5a2.5 2.5 0 0 0 .4-4.97A4 4 0 0 0 14 9" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span>Mixcloud</span></a></li>
+        <li><a href="https://www.tiktok.com/@sam_sparking" target="_blank" rel="noopener noreferrer me" title="TikTok"><span aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4v9.6a3.6 3.6 0 1 1-3-3.55" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M14 5.4c.7 1.9 2.3 3.2 4.4 3.4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span>TikTok</span></a></li>
+        <li><a href="https://open.spotify.com/artist/318V87QIgd2VmokY52zP6S" target="_blank" rel="noopener noreferrer me" title="Spotify"><span aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M8.5 10.2c2.6-.8 5-.6 7 .5M9 12.8c2-.6 3.9-.4 5.5.5M9.5 15.2c1.5-.4 2.9-.3 4 .3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span>Spotify</span></a></li>
+        <li><a href="/site/presskit/sam-sparking-presskit-2026.pdf" download title="Presskit (PDF)"><span aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3.5h7.5L18 8v12.5H6z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M13.5 3.5V8H18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M12 11v5.5M9.6 14.4 12 16.8l2.4-2.4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span>Presskit (PDF)</span></a></li>
       </ul>
     </div>
     <div class="wrap foot">
@@ -361,9 +401,12 @@
         <a href="/site/booking/" lang="en">English</a><a href="/site/de/booking/" lang="de">Deutsch</a><a href="/site/fr/booking/" lang="fr" aria-current="true">Français</a>
       </nav>
       <span class="mono">© <span id="yr">2026</span> Sam Sparking — Tous droits réservés</span>
-      <a class="mono" href="/site/fr/mentions-legales/">Mentions légales</a>
+      <a class="mono" href="/site/fr/impressum/">Impressum</a>
+      <a class="mono" href="/site/fr/mentions-legales/">Protection des données</a>
+      
+      <button class="mono foot-link" id="cookie-open" type="button">Réglages des cookies</button>
       <span class="claim">L&#39;énergie devient euphorie</span>
-      <span class="mono">Photographie — Sarto Photography</span>
+      
     </div>
   </footer>
 
