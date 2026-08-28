@@ -35,10 +35,12 @@ import {
   renderContact,
   renderLayout,
   renderImpressum,
+  renderRelease,
   renderPages,
 } from "./content.js";
 import { renderMedia, mediaList, usageCount, notifyMediaChanged, notifyUploadsChanged } from "./media.js";
 import { renderInbox, openCount, inquiryList } from "./inbox.js";
+import { renderStatistik } from "./statistik.js";
 import { renderI18n, translationSummary, LANG_LABEL } from "./i18n.js";
 import { renderPreview } from "./wish.js";
 import { checkKey } from "./ai.js";
@@ -76,6 +78,7 @@ const ICON = {
   media: svg('<rect x="7" y="3" width="14" height="14" rx="2"/><path d="M17 17v2a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h2"/>'),
   inbox: svg('<path d="M4.5 5h15l1.5 8v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4z"/><path d="M3 13h5l1.5 3h5L16 13h5"/>'),
   upload: svg('<path d="M12 16V5"/><path d="m7.5 9.5 4.5-4.5 4.5 4.5"/><path d="M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/>'),
+  chart: svg('<path d="M4 20V4"/><path d="M4 20h16"/><rect x="7" y="12" width="3" height="5"/><rect x="12" y="8" width="3" height="9"/><rect x="17" y="5" width="3" height="12"/>'),
   gear: svg('<circle cx="12" cy="12" r="3.1"/><path d="M12 2.5v3M12 18.5v3M4.6 4.6l2.1 2.1M17.3 17.3l2.1 2.1M2.5 12h3M18.5 12h3M4.6 19.4l2.1-2.1M17.3 6.7l2.1-2.1"/>'),
 };
 
@@ -95,6 +98,7 @@ const NAV = [
       { id: "pages", label: "Seiten", icon: ICON.page, render: renderPages },
       { id: "layout", label: "Abschnitte", icon: ICON.layout, render: renderLayout },
       { id: "impressum", label: "Impressum — /impressum/", icon: ICON.page, render: renderImpressum },
+      { id: "release", label: "Website-Release", icon: ICON.bolt, render: renderRelease },
       {
         id: "i18n",
         label: "Sprachen",
@@ -141,6 +145,10 @@ const NAV = [
     items: [
       { id: "media", label: "Medien", icon: ICON.media, render: renderMedia },
       { id: "inbox", label: "Anfragen", icon: ICON.inbox, render: renderInbox, badge: () => openCount() },
+      /* Zahlen zur oeffentlichen Website. Sie kommen nicht aus dem Inhalt,
+         sondern aus dem Zaehl-Knoten der Datenbank — darum steht die Ansicht
+         hier unter "Verwaltung" und nicht bei den Abschnitten. */
+      { id: "statistik", label: "Statistik", icon: ICON.chart, render: renderStatistik },
       { id: "publish", label: "Publizieren", icon: ICON.upload, render: renderPublish },
       { id: "settings", label: "Einstellungen", icon: ICON.gear, render: renderSettings },
     ],
@@ -171,8 +179,13 @@ function checklist() {
     "Meta-Description hat eine gute Länge",
     "seo"
   );
+  /* Genau die Rechnung der Website: ein Termin zaehlt nur mit Namen (ohne
+     "Event / Club" zeigt die Seite ihn nicht an), und der Tageswechsel gilt in
+     Europe/Zurich. Sonst haette die Checkliste einen Haken gesetzt fuer etwas,
+     das auf der Website gar nicht steht. */
+  const heuteCH = new Intl.DateTimeFormat("sv-SE", { timeZone: "Europe/Zurich" }).format(new Date());
   const shows = (c.sections.shows?.items || []).filter(
-    (i) => !i.date || i.date >= new Date().toISOString().slice(0, 10)
+    (i) => String(i?.name || "").trim() && (!i.date || i.date >= heuteCH)
   );
   add(shows.length > 0, "Mindestens ein kommender Termin eingetragen", "shows");
   const gal = c.sections.gallery?.items || [];
@@ -219,9 +232,9 @@ function checklist() {
 
 function renderDashboard() {
   const c = S.content;
-  const today = new Date().toISOString().slice(0, 10);
+  const today = new Intl.DateTimeFormat("sv-SE", { timeZone: "Europe/Zurich" }).format(new Date());
   const shows = (c.sections.shows?.items || [])
-    .filter((i) => i.date && i.date >= today)
+    .filter((i) => String(i?.name || "").trim() && i.date && i.date >= today)
     .sort((a, b) => a.date.localeCompare(b.date));
   const next = shows[0];
   const open = openCount();
@@ -399,7 +412,7 @@ function renderPublish() {
         : el(
             "p",
             { class: "warn-box" },
-            "Kein Build-Hook hinterlegt: Publizieren speichert nur. Unter Einstellungen die Netlify-Build-Hook-URL eintragen."
+            "Kein Build-Hook hinterlegt: Publizieren speichert nur — die Website zieht den Stand dann von selbst nach, in der Regel innerhalb von fünf bis zehn Minuten. Sofort wird es mit der Netlify-Build-Hook-URL unter Einstellungen."
           ),
     ]),
     el("div", { class: "group" }, [el("h3", { class: "group-title" }, "Verlauf"), versionHost]),
@@ -463,11 +476,58 @@ function renderSettings() {
       el("div", { class: "field" }, [
         el("label", { class: "field-label" }, "Build-Hook der Website"),
         hookInput,
-        el(
-          "p",
-          { class: "field-hint" },
-          "Netlify → Site configuration → Build & deploy → Build hooks → Add build hook. URL hier einsetzen; sie wird beim Publizieren aufgerufen."
-        ),
+        /* Das ist der Unterschied zwischen „sofort“ und „irgendwann“.
+           Ohne Hook wartet die Website auf den Zeitplan im Website-Repo, und der
+           läuft bei GitHub unregelmässig (am 12.08.2026 lagen zwei Läufe
+           1,5 Stunden auseinander). Mit Hook startet der Build in derselben
+           Sekunde, in der du publizierst. Darum steht hier die Anleitung Schritt
+           für Schritt und ein Knopf, der es gleich ausprobiert. */
+        el("ol", { class: "field-hint" }, [
+          el("li", {}, "Netlify öffnen → deine Website → Site configuration"),
+          el("li", {}, "Build & deploy → Build hooks → „Add build hook“"),
+          el("li", {}, "Name z. B. „Verwaltung“, Branch main → speichern"),
+          el("li", {}, "Die Adresse (https://api.netlify.com/build_hooks/…) hier einsetzen und speichern"),
+        ]),
+        el("p", { class: "field-hint" }, [
+          el("strong", {}, "Ohne Hook: "),
+          "Publizieren schreibt den Stand, die Website zieht ihn erst beim nächsten Lauf ",
+          "des Zeitplans nach — das kann über eine Stunde dauern. ",
+          el("strong", {}, "Mit Hook: "),
+          "der Build startet sofort und die Änderung ist in rund einer Minute zu sehen.",
+        ]),
+        el("div", { class: "quick" }, [
+          el(
+            "button",
+            {
+              class: "btn ghost",
+              onclick: async (e) => {
+                const adresse = hookInput.value.trim();
+                if (!/^https:\/\/api\.netlify\.com\/build_hooks\//.test(adresse)) {
+                  toast("Das sieht nicht wie ein Netlify-Build-Hook aus.", "err");
+                  return;
+                }
+                const knopf = e.currentTarget;
+                knopf.disabled = true;
+                const alt = knopf.textContent;
+                knopf.textContent = "starte …";
+                try {
+                  /* no-cors: Netlify antwortet ohne CORS-Kopf, die Antwort ist
+                     für uns also nicht lesbar. Der Aufruf geht trotzdem raus —
+                     mehr als „abgeschickt“ lässt sich hier ehrlich nicht sagen,
+                     nachsehen muss man in Netlify unter Deploys. */
+                  await fetch(adresse, { method: "POST", mode: "no-cors" });
+                  toast("Build angestossen — in Netlify unter „Deploys“ sichtbar.");
+                } catch (err) {
+                  toast("Aufruf fehlgeschlagen: " + err.message, "err");
+                } finally {
+                  knopf.disabled = false;
+                  knopf.textContent = alt;
+                }
+              },
+            },
+            "Build jetzt testen"
+          ),
+        ]),
       ]),
       el("div", { class: "field" }, [
         el("label", { class: "field-label" }, "Adresse der Website"),
@@ -618,11 +678,22 @@ async function doPublish() {
   }
   try {
     const res = await publish();
-    if (res.built) toast("Publiziert — Netlify baut die Website neu (1–2 Minuten)");
+    /* Zeitangaben so, wie es wirklich laeuft. Der Build-Hook startet den
+       Netlify-Build sofort; fertig ist er nach rund einer Minute. Ohne Hook
+       greift der Zeitplan im Website-Repo — seit 12.08.2026 alle fuenf Minuten
+       statt stuendlich. Eine Website aus fertigen Dateien wird nie schneller
+       als ihr Build; alles Kuerzere waere hier eine Behauptung. */
+    if (res.built) toast("Publiziert — die Website baut neu und ist in rund einer Minute aktuell");
     else if (/Build-Hook/.test(res.reason || ""))
+      /* Kein Versprechen mehr auf eine Stunde: ohne Build-Hook haengt die
+         Website am Zeitplan im Repo, und GitHub laesst geplante Laeufe unter
+         Last aus — zwischen zwei Laeufen lagen schon elf Stunden. Gespeichert
+         ist der Stand sofort, live wird er dann eben spaeter. */
       toast(
-        "Publiziert — die Website übernimmt den Stand automatisch (spätestens in einer Stunde). " +
-          "Soll es sofort sein: Build-Hook unter Einstellungen hinterlegen."
+        "Gespeichert — aber die Website baut noch nicht: es ist kein Build-Hook hinterlegt. " +
+          "Sie zieht den Stand erst beim nächsten geplanten Lauf nach, und der kann Stunden auf sich " +
+          "warten lassen. Sofort live: Build-Hook unter Einstellungen eintragen.",
+        "err"
       );
     else toast("Gespeichert, aber kein Build ausgelöst: " + res.reason, "err");
   } catch (e) {
