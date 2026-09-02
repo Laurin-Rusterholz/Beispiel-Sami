@@ -1099,7 +1099,8 @@
     "shopInfo": true,
     "shopSeiteUndEinladung": true,
     "telefon": true,
-    "ware": true
+    "ware": true,
+    "texteAusVorlage": true
   },
   "pages": [
     {
@@ -1583,6 +1584,10 @@
         {
           "name": "Nox club",
           "city": "Chur"
+        },
+        {
+          "name": "Aftersun",
+          "city": "Luzern"
         }
       ],
       "moreLabel": "Also played at",

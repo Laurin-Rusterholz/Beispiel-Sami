@@ -32,6 +32,9 @@ export const S = {
   nachgetragen: [],
   /* Ob das Nachgetragene von selbst gespeichert werden konnte. */
   nachgetragenGespeichert: false,
+  /* Darf die WEBSITE den Inhalt lesen?  null = noch nicht geprüft,
+     {ok:true} = ja, {ok:false, status:401} = nein. Siehe websiteZugriff(). */
+  websiteLesbar: null,
 };
 
 let db = null;
@@ -222,6 +225,9 @@ export async function loadAll() {
     emit("inquiries");
   });
 
+  // Nebenher: darf die Website den Inhalt überhaupt lesen? (siehe websiteZugriff)
+  websiteZugriff();
+
   emit("loaded");
 }
 
@@ -292,7 +298,7 @@ function detachListeners() {
  * Objekt ({"0":…,"2":…}) und lässt leere Arrays ganz weg. Beim Laden bauen wir
  * daraus wieder echte Arrays.
  */
-function normalize(c) {
+export function normalize(c) {
   const arrays = [
     "site.keywords",
     "hero.stats",
@@ -370,6 +376,40 @@ function normalize(c) {
   return c;
 }
 
+/* ------------------------------------------------- kann die Website lesen? */
+
+/**
+ * Der Website-Build liest den Inhalt OHNE Anmeldung über die REST-Adresse der
+ * Realtime Database. Genau dieser Weg war vom 13.08. bis zum 01.09.2026 zu:
+ * die Regeln in der Firebase Console erlaubten "samsparking/content" nicht
+ * mehr öffentlich zu lesen, der Build bekam HTTP 401 und baute jedes Mal aus
+ * seinem letzten Schnappschuss weiter.
+ *
+ * In der Verwaltung war davon nichts zu sehen — sie liest angemeldet und
+ * schreibt auch weiterhin brav in die Datenbank. Speichern und Publizieren
+ * meldeten Erfolg, die Website blieb drei Wochen auf dem Stand vom 13. August.
+ *
+ * Darum prüft die Verwaltung denselben Weg, den die Website geht: einmal ohne
+ * Anmeldung, mit `shallow=true` (die Antwort ist dann nur eine Liste der
+ * obersten Schlüssel, nicht der ganze Inhalt).
+ *
+ * Gemeldet wird nur ein EINDEUTIGES Nein — eine Antwort des Servers, die nicht
+ * "ok" ist. Ein abgebrochener Aufruf (kein Netz, Browser-Erweiterung) heisst
+ * "unbekannt" und wird verschwiegen: ein falscher Alarm wäre schlimmer als
+ * keiner.
+ */
+export async function websiteZugriff() {
+  try {
+    const url = `${RTDB_URL}/${PATHS.content}.json?shallow=true`;
+    const res = await fetch(url, { cache: "no-store" });
+    S.websiteLesbar = res.ok ? { ok: true } : { ok: false, status: res.status };
+  } catch (e) {
+    S.websiteLesbar = null; // unbekannt — nicht als Fehler zeigen
+  }
+  emit("websiteLesbar");
+  return S.websiteLesbar;
+}
+
 /* --------------------------------------------------------------- speichern */
 
 export async function saveContent() {
@@ -410,6 +450,18 @@ export async function saveConfig(patch) {
  * CORS-Header, die Antwort ist also nicht lesbar. Kommt der Aufruf durch, hat
  * Netlify den Build angenommen; sichtbar wird das im Netlify-Deploy-Log.
  */
+/**
+ * Sieht das nach einem Netlify-Build-Hook aus?
+ *
+ * Eigene Funktion, weil sie die einzige Stelle ist, an der sich vor dem
+ * Abschicken noch etwas pruefen laesst: der Aufruf selbst geht per no-cors
+ * hinaus, seine Antwort ist nicht lesbar. Eine vertippte oder fremde Adresse
+ * faellt sonst nirgends auf — "Publiziert" stuende da, und gebaut wuerde nie.
+ */
+export function istBuildHook(url) {
+  return /^https:\/\/api\.netlify\.com\/build_hooks\/[A-Za-z0-9_-]+/.test(String(url || "").trim());
+}
+
 export async function publish() {
   if (DEMO) {
     demoBlock("Publizieren");
@@ -434,7 +486,7 @@ export async function publish() {
     await saveConfig({ lastPublish: updatedAt, lastPublishHook: false });
     return { built: false, reason: "kein Build-Hook hinterlegt" };
   }
-  if (!/^https:\/\/api\.netlify\.com\/build_hooks\//.test(hook)) {
+  if (!istBuildHook(hook)) {
     await saveConfig({ lastPublish: updatedAt, lastPublishHook: false });
     return { built: false, reason: "Build-Hook sieht nicht wie eine Netlify-URL aus" };
   }
@@ -498,11 +550,15 @@ export async function deleteInquiry(id) {
 
 /* -------------------------------------------------------- warnung beim weg */
 
-window.addEventListener("beforeunload", (e) => {
-  if (S.dirty && !DEMO) {
-    e.preventDefault();
-    e.returnValue = "";
-  }
-});
+/* Nur im Browser: die Datei wird auch von den Tests geladen (node --test),
+   dort gibt es kein window. */
+if (typeof window !== "undefined") {
+  window.addEventListener("beforeunload", (e) => {
+    if (S.dirty && !DEMO) {
+      e.preventDefault();
+      e.returnValue = "";
+    }
+  });
+}
 
 export { toast };
