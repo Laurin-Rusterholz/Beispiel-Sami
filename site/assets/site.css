@@ -795,6 +795,11 @@ blockquote.lede footer{
 .show-name{font-size:clamp(1.15rem,2.6vw,1.8rem);text-transform:uppercase;font-variation-settings:'wdth' 116,'wght' 700;line-height:1.05;}
 .show-where{font-size:.66rem;}
 .show.soldout{opacity:.55;}
+/* Abgesagt: die Zeile bleibt lesbar, aber nichts daran laedt zum Kauf ein —
+   der Ticket-Knopf steht dort gar nicht mehr (siehe showRow in build.mjs). */
+.show.cancelled{opacity:.5;}
+.show.cancelled .show-name{text-decoration:line-through;text-decoration-thickness:1px;}
+.show.cancelled .show-cta .mono{color:var(--bone-dim);}
 .show.booked{border-color:rgba(46,107,255,.55);}
 .show.booked .show-cta .mono{color:var(--spark);}
 .cal-day.booked{background:rgba(46,107,255,.16);}
@@ -836,6 +841,10 @@ blockquote.lede footer{
    Klein heisst wirklich klein: so passen auch fuenfundzwanzig Adressen ins Bild,
    ohne die Seite zu einer Namensliste zu machen. Das Raster fuellt sich selbst,
    je Breite kommen mehr Spalten dazu. */
+/* Die Referenzliste steht auch leer im HTML — assets/site.js traegt dort
+   zwischen zwei Builds vergangene Auftritte nach. Leer ist sie `hidden`; ohne
+   diese Regel gewinnt das `display` der Liste gegen das Attribut. */
+.venue-list[hidden]{display:none;}
 .venue-list{
   list-style:none;display:grid;gap:8px;
   grid-template-columns:repeat(auto-fill,minmax(min(230px,100%),1fr));

@@ -2036,13 +2036,36 @@ function showRow(sh) {
   /* Seit dem 15.09.2026 kommt hier nur noch Kommendes an (renderShows filtert
      Vergangenes heraus) — einen Sonderfall "vorbei" mit abgeschaltetem
      Ticket-Knopf braucht diese Zeile darum nicht mehr. */
-  const kasse = safeUrl(sh.ticketUrl) && !soldOut;
+  /* ABGESAGT ist kein Verkaufsgrund — weder hier noch im Kalender.
+
+     Befund 17.09.2026, beim Nachgehen der Kundenmeldung vom 12.08.: "gebucht"
+     war laengst geklaert (siehe oben), "abgesagt" aber nie angesehen. Der
+     Status gibt es in der Verwaltung, in den strukturierten Daten steht dafuer
+     brav `EventCancelled` — die sichtbare Zeile bot trotzdem einen
+     Ticket-Knopf an. Wer darauf klickt, kauft fuer einen Abend, den es nicht
+     gibt.
+
+     Der Link bleibt im Inhalt stehen; gezeigt wird er nicht. Erfunden wird
+     auch nichts: die Aufschrift kommt aus der Oberflaeche, nicht aus dem
+     Ticket-Feld. */
+  const abgesagt = sh.status === "cancelled";
+  const kasse = safeUrl(sh.ticketUrl) && !soldOut && !abgesagt;
   const freierHinweis = !safeUrl(sh.ticketUrl) ? str(sh.ticketUrl).trim() : "";
   const label = soldOut ? UI.soldOut : str(sh.ticketLabel, UI.tickets);
-  const hinweis = soldOut ? UI.soldOut : freierHinweis || (booked ? UI.booked : "");
-  return `<li class="show${soldOut ? " soldout" : ""}${
+  const hinweis = abgesagt
+    ? UI.cancelled
+    : soldOut
+    ? UI.soldOut
+    : freierHinweis || (booked ? UI.booked : "");
+  return `<li class="show${soldOut ? " soldout" : ""}${abgesagt ? " cancelled" : ""}${
     booked ? " booked" : ""
-  }"${date ? ` data-date="${esc(date)}"` : ""}>
+  }"${date ? ` data-date="${esc(date)}"` : ""} data-name="${esc(str(sh.name).trim())}" data-city="${esc(
+    str(sh.city).trim()
+  )}"${
+    /* Auch der Nachtrag im Browser (assets/site.js) darf einen abgesagten
+       Abend nicht als Referenz uebernehmen — er sieht nur diese Zeile. */
+    sh.nichtAlsReferenz === true || abgesagt ? ' data-ref="nein"' : ""
+  }>
           <span class="show-date"><b>${esc(day)}</b><span class="mono">${esc(month)} ${esc(
     year
   )}</span></span>
@@ -2147,7 +2170,62 @@ function renderShows(n, s) {
  * verloren), hat auf die Darstellung aber keine Wirkung mehr. Auch `group`
  * buendelt nichts mehr — eine Liste bleibt eine Liste.
  */
-function renderReferences(n, s, bookingTarget) {
+/**
+ * Vergangene Auftritte, die noch nicht in der Referenzliste stehen.
+ *
+ * WUNSCH AUS DEM VIDEO (25.08.2026, Sek. 29–50): Saemi moechte, dass
+ * vergangene Auftritte automatisch bei den Referenzen landen — er ging davon
+ * aus, dass es schon so sei.
+ *
+ * Das stimmte einmal: `showsNachReferenzen` tat genau das. Am 07.09.2026 wurde
+ * es entfernt, WEIL es unter "Shows" einen Rueckblick gab und derselbe Abend
+ * sonst zweimal auf derselben Seite stand. Am 15.09.2026 ist der Rueckblick auf
+ * ausdruecklichen Wunsch verschwunden — und damit war die Begruendung weg,
+ * aber der Schritt nicht nachgezogen. Seither faellt ein Termin, dessen Datum
+ * verstreicht, ersatzlos von der Seite.
+ *
+ * Die Regeln, unter denen das zurueckkommt:
+ *
+ *   ANGEHAENGT, NIE EINSORTIERT. Die gepflegte Liste bleibt Zeichen fuer
+ *   Zeichen, wie sie ist — die ersten vier (auf dem Handy die einzigen
+ *   sichtbaren) ruehrt niemand an. Automatisches kommt hinten dran, das
+ *   Juengste zuerst.
+ *
+ *   NUR ANZEIGE. In die Verwaltung wird nichts geschrieben. Wer die Liste dort
+ *   oeffnet, sieht genau das, was er selbst gepflegt hat.
+ *
+ *   KEINE DUBLETTEN. Verglichen wird ueber Name UND Ort (refSchluessel) —
+ *   gegen die gepflegte Liste und untereinander.
+ *
+ *   ABWAEHLBAR. Ein Termin mit `nichtAlsReferenz: true` bleibt draussen. Das
+ *   ist der Ersatz fuer "loeschen": ein automatischer Eintrag steht in keiner
+ *   Liste, man kann ihn also nicht entfernen — abwaehlen schon. Die Verwaltung
+ *   setzt das Haekchen auch dann, wenn jemand die passende Referenz von Hand
+ *   loescht; sonst kaeme sie beim naechsten Bau als automatische zurueck.
+ */
+export function vergangeneAlsReferenz(shows, schonDa, heute) {
+  const gesehen = new Set(schonDa);
+  return list(shows?.items)
+    .filter((i) => str(i?.name).trim())
+    .filter((i) => i?.nichtAlsReferenz !== true)
+    /* ABGESAGT hat NICHT STATTGEFUNDEN — auch wenn das Datum vorbei ist.
+       `showVorbei` sieht nur aufs Datum; eine Referenz behauptet aber, Sam habe
+       dort gespielt. Das Abwaehlen von Hand reicht dafuer nicht: niemand denkt
+       daran, an einem abgesagten Abend noch ein Haekchen zu setzen.
+       (Review-Befund 17.09.2026.) */
+    .filter((i) => i?.status !== "cancelled")
+    .filter((i) => showVorbei(i, heute))
+    .sort((a, b) => String(isoDate(b.date) || "").localeCompare(String(isoDate(a.date) || "")))
+    .filter((i) => {
+      const key = refSchluessel(i.name, i.city);
+      if (gesehen.has(key)) return false;
+      gesehen.add(key);
+      return true;
+    })
+    .map((i) => ({ name: str(i.name).trim(), city: str(i.city).trim(), ausShow: isoDate(i.date) || "" }));
+}
+
+function renderReferences(n, s, bookingTarget, shows) {
   /* Hier wird NICHTS gegen die Termine gefiltert (Kundenentscheid 15.09.2026):
      der Shows-Abschnitt zeigt nur Kommendes, die Referenzen sind die gepflegte
      Auswahl des Gewesenen. Ein erneuter Auftritt im selben Club nimmt die
@@ -2173,6 +2251,12 @@ function renderReferences(n, s, bookingTarget) {
       return true;
     });
 
+  /* Und hinten dran, was Saemi gespielt hat und noch nicht in der Liste steht
+     (siehe vergangeneAlsReferenz). Die gepflegte Reihenfolge davor bleibt
+     unberuehrt — auch die ersten vier, die auf dem Handy allein zu sehen sind. */
+  const nachgetragen = vergangeneAlsReferenz(shows, gesehen, today());
+  const alle = [...items, ...nachgetragen];
+
   const linkOf = (v) => {
     const url = safeUrl(v.url) || anchor("#booking");
     const ext = /^https?:/i.test(url) ? ' target="_blank" rel="noopener noreferrer"' : "";
@@ -2189,14 +2273,32 @@ function renderReferences(n, s, bookingTarget) {
      ausschliesslich per CSS und nur in der schmalen Breite — wer kein
      JavaScript hat, sieht die vollstaendige Liste (`html.js` fehlt dann). */
   const MOBIL_SICHTBAR = 4;
-  const versteckt = Math.max(0, items.length - MOBIL_SICHTBAR);
-  const liste = items.length
-    ? `<ul class="venue-list rv" id="venue-list">
-        ${items
+  const versteckt = Math.max(0, alle.length - MOBIL_SICHTBAR);
+  /* Das Ziel fuer einen Eintrag OHNE eigene Adresse — dasselbe, das linkOf als
+     Rueckfall nimmt. Es steht am Behaelter, damit assets/site.js es beim
+     Nachtragen zwischen zwei Builds nehmen kann.
+
+     REVIEW-BEFUND 17.09.2026: Vorher hat das Nachtragen die Adresse des ERSTEN
+     vorhandenen Eintrags abgeschrieben. Das kann die eigene Website eines
+     fremden Clubs sein — ein neu nachgetragener Auftritt haette dann dorthin
+     verlinkt. Eine falsche Adresse ist schlimmer als gar keine. */
+  const refRueckfall = anchor("#booking");
+  /* Die Liste steht auch dann im HTML, wenn sie LEER ist (dann `hidden`).
+     Grund: verstreicht ein Datum zwischen zwei Builds, traegt der Browser den
+     Auftritt hier nach — ohne Behaelter gaebe es dafuer keine Stelle, und der
+     erste Auftritt ueberhaupt bliebe bis zum naechsten Bau unsichtbar. */
+  const liste = list(s.items).length || alle.length || s?.enabled !== false
+    ? `<ul class="venue-list rv" id="venue-list" data-mobil="${MOBIL_SICHTBAR}" data-booking="${esc(
+        refRueckfall
+      )}"${alle.length ? "" : " hidden"}>
+        ${alle
           .map((v, i) => {
             const { url, ext } = linkOf(v);
             const extra = i >= MOBIL_SICHTBAR ? ' data-extra="true"' : "";
-            return `<li${extra}><a href="${esc(url)}"${ext}><span class="venue-name">${esc(
+            /* Woher der Eintrag kommt, steht am Element: assets/site.js traegt
+               zwischen zwei Builds weitere nach und darf dabei nichts doppeln. */
+            const her = v.ausShow ? ` data-aus-show="${esc(v.ausShow)}"` : "";
+            return `<li${extra}${her}><a href="${esc(url)}"${ext}><span class="venue-name">${esc(
               v.name
             )}</span><span class="venue-city">${esc(str(v.city))}</span></a></li>`;
           })
@@ -3072,7 +3174,9 @@ function structuredData(c, sections, page, pages) {
          Ticket-Adresse: sie ist maschinenlesbar und führt in einen echten
          Verkauf. Stattdessen zeigt sie auf den Abschnitt der Seite selbst. */
       url: (!VORFUEHRUNG && safeUrl(sh.ticketUrl)) || `${base}${page ? pagePath(page.slug) : "/"}#shows`,
-      ...(!VORFUEHRUNG && safeUrl(sh.ticketUrl)
+      /* Ein `Offer` zu einem abgesagten Abend widerspricht dem `EventCancelled`
+         direkt darueber — und Suchmaschinen zeigen daraus einen Kauf an. */
+      ...(!VORFUEHRUNG && safeUrl(sh.ticketUrl) && sh.status !== "cancelled"
         ? {
             offers: {
               "@type": "Offer",
@@ -3109,6 +3213,10 @@ const UI_DEFAULTS = {
   tickets: "Tickets",
   soldOut: "Ausverkauft",
   booked: "Gebucht",
+  /* Steht NICHT im Inhalt (content.ui) — und das mit Absicht: was dort steht,
+     gilt in allen Sprachen unuebersetzt. So greift je Seite die Tabelle
+     unten. */
+  cancelled: "Abgesagt",
   calShow: "Termin",
   language: "Sprache",
   buy: "Kaufen",
@@ -3202,6 +3310,7 @@ const UI_SPRACHE = {
     showLessVenues: "Show less",
     orderSubject: "Order",
     soldOut: "Sold out",
+    cancelled: "Cancelled",
     onThisPage: "On this page",
     shopKicker: "MERCH",
     shopCta: "Browse the drop",
@@ -3231,6 +3340,7 @@ const UI_SPRACHE = {
     showLessVenues: "Afficher moins",
     orderSubject: "Commande",
     soldOut: "Épuisé",
+    cancelled: "Annulé",
     onThisPage: "Sur cette page",
     shopKicker: "MERCH",
     shopCta: "Voir le catalogue",
@@ -3713,7 +3823,7 @@ function renderPage(c, page, pages, lang, langs) {
     sound: renderSound,
     experience: renderExperience,
     shows: renderShows,
-    references: (n, s) => renderReferences(n, s, bookingTarget),
+    references: (n, s) => renderReferences(n, s, bookingTarget, sections.shows),
     gallery: renderGallery,
     /* Traegt mehr als eine Seite den Shop, zeigt die erste die Einladung und die
        letzte den Katalog. Traegt ihn nur eine, steht dort beides. So gibt es
@@ -3995,8 +4105,17 @@ function renderPage(c, page, pages, lang, langs) {
         city: str(i.city),
         /* In der VORFÜHRUNG steht hier keine Ticket-Adresse: der Kalender
            macht daraus einen anklickbaren Tag, und am anderen Ende steht ein
-           echter Verkauf. */
-        url: VORFUEHRUNG ? "" : safeUrl(i.ticketUrl),
+           echter Verkauf.
+
+           Aus demselben Grund steht hier nichts bei ABGESAGT und AUSVERKAUFT:
+           der Kalender macht aus `url` einen Link in den Verkauf, ganz ohne
+           Ruecksicht auf den Status — die Zeile darueber zeigt bei beiden
+           laengst keinen Knopf mehr. Ohne Adresse bleibt der Tag ein
+           gewoehnlicher Tag; der Termin selbst steht weiterhin da. */
+        url:
+          VORFUEHRUNG || i.status === "cancelled" || i.status === "soldout"
+            ? ""
+            : safeUrl(i.ticketUrl),
         status: str(i.status, "confirmed"),
       }))
   )}</script>`

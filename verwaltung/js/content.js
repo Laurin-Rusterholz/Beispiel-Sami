@@ -517,11 +517,49 @@ export function renderShows() {
             ["soldout", "ausverkauft"],
             ["cancelled", "abgesagt"],
           ], {
-            hint: "„gebucht“ färbt den Tag im Website-Kalender und blendet den Ticket-Knopf aus.",
+            /* Der Hinweis stimmte nicht mehr. „gebucht“ blendete den
+               Ticket-Knopf einmal aus — das war eine Fehldeutung des Status
+               und ist seit dem 12.08.2026 behoben: der Knopf haengt an der
+               Adresse, nicht am Status. Hier stand es trotzdem weiter so,
+               und wer es las, liess den Ticket-Link lieber weg. */
+            hint:
+              "„gebucht“ heisst: Sam hat den Termin — ein gültiger Ticket-Link wird trotzdem gezeigt " +
+              "und färbt den Tag im Website-Kalender. Nur „ausverkauft“ und „abgesagt“ zeigen keinen " +
+              "Kauf; „abgesagt“ erscheint ausserdem nie automatisch bei den Referenzen.",
             onChange: () => cal._redraw(),
           }),
           textField(`${base}.ticketUrl`, "Ticket-Link", { mono: true }),
           textField(`${base}.ticketLabel`, "Button-Text", { placeholder: "Tickets" }),
+          /* Sämis Wunsch aus dem Video (25.08.2026): vergangene Auftritte
+             sollen automatisch bei den Referenzen landen. Genau das tut die
+             Website seit dem 17.09.2026 — angehängt, hinter den gepflegten.
+
+             Hier steht der Ausschalter dazu. Nötig ist er, weil ein
+             automatischer Eintrag in keiner Liste steht: man kann ihn nicht
+             entfernen, nur abwählen. Wer eine passende Referenz von Hand
+             löscht, bekommt das Häkchen automatisch gesetzt (siehe
+             `onRemove` bei den Referenzen) — sonst käme sie beim nächsten
+             Bau als automatische zurück. */
+          /* `flagField`, NICHT `checkboxField` — aus zwei Gruenden, und beide
+             haben am 17.09.2026 die ganze Shows-Maske gekostet:
+
+             1. `checkboxField(pfad, aufschrift, hinweis)` nimmt den Hinweis als
+                ZEICHENKETTE. Hier stand ein Objekt `{ hint: … }`. Das ging
+                ungeprueft durch `el()` bis in `appendChild` — und der Browser
+                bricht ab: "Failed to execute 'appendChild' on 'Node':
+                parameter 1 is not of type 'Node'." Die Ansicht blieb leer.
+             2. `checkboxField` ist absichtlich umgekehrt herum: nichts
+                gespeichert heisst AN. Fuer dieses Haekchen waere das falsch —
+                ein Termin ohne die Angabe soll ganz normal bei den Referenzen
+                erscheinen. `flagField` ist von Haus aus AUS und liest
+                `=== true`. */
+          flagField(
+            `${base}.nichtAlsReferenz`,
+            "Nicht automatisch als Referenz zeigen",
+            "Normal aus: Ist der Abend vorbei, erscheint der Auftritt hinten bei den Referenzen — "
+              + "sofern er dort nicht schon steht. Angehakt bleibt er draussen. Der Termin selbst bleibt "
+              + "in jedem Fall hier stehen."
+          ),
         ],
       }),
     ], {
@@ -542,6 +580,26 @@ export function renderShows() {
       "Abschnitt und Menüpunkt stehen und zeigen den Hinweis aus „Text, wenn keine " +
       "Termine anstehen“."),
   ]);
+}
+
+/**
+ * Welche Termine denselben Auftritt meinen wie diese Referenz?
+ *
+ * Verglichen wird über Name UND Ort — unabhängig von Gross/Klein und
+ * mehrfachen Leerzeichen, wie überall sonst auch (refSchluessel im Generator,
+ * `schluessel` in sprachstand.js). Gleicher Name an einem anderen Ort ist ein
+ * anderer Auftritt und zählt nicht.
+ */
+function terminePassendZu(referenz) {
+  const schluessel = (name, ort) =>
+    (String(name ?? "").trim().toLowerCase() + "|" + String(ort ?? "").trim().toLowerCase())
+      .replace(/[\s–—-]+/g, " ")
+      .replace(/\s+/g, " ");
+  const gesucht = schluessel(referenz?.name, referenz?.city);
+  if (!gesucht.replace("|", "").trim()) return [];
+  const termine = S.content?.sections?.shows?.items;
+  return (Array.isArray(termine) ? termine : Object.values(termine || {}))
+    .filter((t) => t && schluessel(t.name, t.city) === gesucht);
 }
 
 /* -------------------------------------------------- Abschnitt: Referenzen */
@@ -588,6 +646,28 @@ export function renderReferences() {
       objectList("sections.references.items", null, {
         addLabel: "Referenz hinzufügen",
         newItem: { name: "", city: "", url: "" },
+        /* ENTFERNEN MUSS ENTFERNEN BLEIBEN.
+           Seit dem 17.09.2026 hängt die Website vergangene Auftritte hinten an
+           die Referenzen an. Wer hier einen Eintrag löscht, der zugleich ein
+           vergangener Termin ist, hätte ihn beim nächsten Bau wieder dastehen —
+           als automatischen. Deshalb wird beim Löschen das Häkchen „Nicht
+           automatisch als Referenz zeigen" an den passenden Terminen gesetzt.
+           Verglichen wird über Name UND Ort, unabhängig von Gross/Klein.
+           Der Termin selbst bleibt unangetastet: kein Datum, keine Reihenfolge,
+           nichts gelöscht. */
+        onRemove: (entfernt) => {
+          const treffer = terminePassendZu(entfernt);
+          if (!treffer.length) return;
+          treffer.forEach((t) => { t.nichtAlsReferenz = true; });
+          toast(
+            treffer.length === 1
+              ? `„${String(entfernt?.name || "").trim()}" ist auch als Termin erfasst — der Auftritt wird jetzt nicht mehr `
+                + "automatisch als Referenz gezeigt. Der Termin selbst bleibt stehen."
+              : `${treffer.length} passende Termine werden jetzt nicht mehr automatisch als Referenz gezeigt. `
+                + "Die Termine selbst bleiben stehen.",
+            "ok"
+          );
+        },
         titleOf: (i) => [i.name, i.city].filter(Boolean).join(" — ") || "(leer)",
         fields: (base) => [
           textField(`${base}.name`, "Club / Festival"),
