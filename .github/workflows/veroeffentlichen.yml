@@ -46,6 +46,9 @@ jobs:
         env:
           SITE_BASE: /${{ github.event.repository.name }}/site
           CONTENT_API_URL: https://jupidu-36804-default-rtdb.europe-west1.firebasedatabase.app/samsparking/content.json
+          # Vorführung: keine echte Kasse, kein echter Ticketverkauf, kein
+          # sendendes Formular. Begründung steht in netlify.toml.
+          VORFUEHRUNG: "1"
         run: node site/scripts/build.mjs
 
       # Der Bau greift auf eine fremde Datenbank zu und kann still auf den
@@ -63,6 +66,21 @@ jobs:
           grep -q "href=\"$BASIS/assets/site.css\"" site/index.html \
             || { echo "Website-Adressen zeigen nicht auf $BASIS"; exit 1; }
           echo "Sieht gut aus."
+
+      # Die eigenen Prüfungen dieser Fassung (scripts/vorfuehrung.test.mjs):
+      # keine echte Kasse, keine sendenden Formulare, alle Wege unter /site/,
+      # alle Seiten in de/en/fr, Verwaltung im Vorführ-Modus. Sie bauen sich
+      # ihren eigenen Stand in einer Kopie; der Bau oben bleibt unberührt.
+      #
+      # Ausdrücklich NICHT die Prüfungen des Originals: die messen dessen
+      # Adressen (/… statt /site/…), dessen netlify.toml und ECHTE Kaufwege.
+      # Hierher kopiert fielen sie 3 von 22 (Abnahme 17.09.2026) — und rissen
+      # 621 Folgefehler mit, ohne dass irgendetwas kaputt war.
+      #
+      # Lieber hier abbrechen als eine Vorführung online stellen, in der
+      # jemand wirklich bezahlen kann.
+      - name: Eigene Prüfungen der Vorführung
+        run: npm test
 
       - uses: actions/upload-pages-artifact@v3
         with:

@@ -39,34 +39,81 @@ import { fileURLToPath } from "node:url";
 const HIER = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const NUR_PRUEFEN = process.argv.includes("--pruefen");
 
+/* Wo die beiden Quell-Repos liegen.
+ *
+ * Von Hand liegen sie neben diesem Repo (../s-mi, ../verwaltung-djsamsparkling)
+ * — dabei bleibt es. In GitHub Actions dürfen sie das nicht: `actions/checkout`
+ * legt jedes Repo INNERHALB des Arbeitsverzeichnisses ab, ein `..` davor wäre
+ * ausserhalb. Deshalb lassen sich beide Wege über die Umgebung setzen, ohne
+ * dass sich am Aufruf von Hand irgendetwas ändert.
+ *
+ * Absichtlich zwei getrennte Werte statt eines Elternverzeichnisses: die
+ * Verwaltung liegt im Original unter `public/`, die Website an der Wurzel. */
+const QUELLE_WEBSITE = process.env.QUELLE_WEBSITE
+  ? resolve(process.env.QUELLE_WEBSITE)
+  : resolve(HIER, "../s-mi");
+const QUELLE_VERWALTUNG = process.env.QUELLE_VERWALTUNG
+  ? resolve(process.env.QUELLE_VERWALTUNG)
+  : resolve(HIER, "../verwaltung-djsamsparkling");
+
 const QUELLEN = [
   {
     name: "Website",
-    von: resolve(HIER, "../s-mi"),
+    von: QUELLE_WEBSITE,
     nach: resolve(HIER, "site"),
     auslassen: [
       ".git", ".github", "netlify.toml", "README-ANLEITUNG.md", ".gitignore", "node_modules",
       // Vom Generator erzeugt — kommt hier aus `node site/scripts/build.mjs`
       // mit SITE_BASE=/site und sieht deshalb zwangsläufig anders aus.
       "index.html", "404.html", "sitemap.xml", "robots.txt", "de", "fr", "legal",
+      // stand.json schreibt der Generator bei JEDEM Lauf neu (Bauzeitpunkt).
+      // Mitkopiert stuende hier der Zeitpunkt des Originals — und der Abgleich
+      // meldete bei jedem Nachziehen eine Abweichung, die keine ist.
+      "stand.json",
       // In der Demo auf /site/ umgestellt (start_url, scope, Icons)
       "manifest.webmanifest",
-      /* Diese beiden Pruefungen messen die Auslieferung des Originals gegen
-         dessen netlify.toml — welche Adresse 503 gibt, welche 200, welche
-         gesperrt ist. Die Vorführung laeuft aber nicht auf Netlify, sondern
-         auf GitHub Pages, und netlify.toml wird (eine Zeile weiter oben) gar
-         nicht erst mitkopiert. Ohne sie brechen beide Pruefungen ab; mit einer
-         mitkopierten netlify.toml wuerden sie eine Wegleitung behaupten, die
-         hier niemand ausliefert. Sie bleiben deshalb im Original. */
+      /* DIE PRUEFUNGEN DES ORIGINALS BLEIBEN IM ORIGINAL.
+         
+         Befund der Abnahme (17.09.2026): `node --test site/scripts/*.test.mjs`
+         fiel hier 3 von 22 — und riss 621 Folgefehler mit. Nicht, weil etwas
+         kaputt war, sondern weil diese Pruefungen etwas anderes messen als das,
+         was hier steht:
+         
+           · kette.test.mjs braucht site/netlify.toml — die gibt es hier nicht,
+             die Wegleitung dieser Fassung steht an der Wurzel;
+           · links.test.mjs erwartet die Adressen des Originals (/, nicht
+             /site/) und ECHTE Kaufwege — in der Vorfuehrung fuehrt aber
+             absichtlich kein Weg in eine Kasse;
+           · routen.test.mjs und api.test.mjs messen die Auslieferung gegen die
+             netlify.toml des Originals.
+         
+         Ein Test, der das Falsche misst, ist schlimmer als keiner: er ist
+         entweder immer rot (dann sieht niemand mehr hin) oder er wird
+         "passend" gemacht (dann prueft er nichts mehr).
+         
+         Diese Fassung hat deshalb EIGENE Pruefungen: scripts/vorfuehrung.test.mjs
+         an der Wurzel, gegen den wirklich gebauten Stand dieser Fassung —
+         `npm test`. Die Pruefungen des Originals laufen im Original.
+         
+         Ausgelassen werden nur die TESTDATEIEN — scripts/build.mjs ist der
+         Generator und muss selbstverstaendlich mitwandern. */
       "scripts/routen.test.mjs",
       "scripts/api.test.mjs",
+      "scripts/build.test.mjs",
+      "scripts/kette.test.mjs",
+      "scripts/links.test.mjs",
+      "scripts/vorfuehrung.test.mjs",
     ],
     eigen: [],
-    entfernen: ["scripts/routen.test.mjs", "scripts/api.test.mjs"],
+    entfernen: [
+      "scripts/routen.test.mjs", "scripts/api.test.mjs",
+      "scripts/build.test.mjs", "scripts/kette.test.mjs",
+      "scripts/links.test.mjs", "scripts/vorfuehrung.test.mjs",
+    ],
   },
   {
     name: "Verwaltung",
-    von: resolve(HIER, "../verwaltung-djsamsparkling/public"),
+    von: resolve(QUELLE_VERWALTUNG, "public"),
     nach: resolve(HIER, "verwaltung"),
     // passwort.html erzeugt den Hash des gemeinsamen Passworts — im
     // Vorführ-Modus gibt es keine Anmeldung, also gehört das Werkzeug hier

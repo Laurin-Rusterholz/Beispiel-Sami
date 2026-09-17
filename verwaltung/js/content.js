@@ -9,7 +9,11 @@ import {
   abschnittsModell,
   aufMehrseitigStellen,
   zielSeiteFuer,
+  fehlendeStartseitenAuftritte,
+  aufStartseiteHolen,
+  nichtBaubarAufSeiten,
 } from "./abschnitte.js";
+import { handyVorschau, bilderOhneDatei } from "./sprachstand.js";
 import {
   textField,
   textArea,
@@ -453,7 +457,7 @@ export function renderShows() {
         upcoming === 1 ? "" : "e"
       }${vorbei ? `, ${vorbei} vorbei` : ""}${
         ohneName ? `, ${ohneName} ohne Namen` : ""
-      } — die Website zeigt kommende Termine oben, vergangene darunter im Rückblick. Beide bleiben sichtbar; der Abschnitt verschwindet erst, wenn gar kein Termin mehr eingetragen ist.`
+      } — die Website zeigt unter „Shows" nur die kommenden Termine. Vergangene bleiben hier gespeichert und stehen dort nicht mehr; wo Sam gespielt hat, gehört zu den Referenzen. Der Abschnitt selbst bleibt, auch wenn gerade nichts ansteht.`
     ),
     sectionBasics("shows"),
     group("Übersicht", [cal], {
@@ -475,14 +479,18 @@ export function renderShows() {
         },
         /* Die Kartenbeschriftung sagt auch, was die Website daraus macht:
            ohne "Event / Club" wird ein Termin dort gar nicht angezeigt, und
-           ein vergangener steht nur noch bei den Referenzen. Beides war
-           vorher unsichtbar — der Termin stand in der Verwaltung, auf der
-           Seite fehlte er. */
+           ein vergangener steht seit dem 15.09.2026 gar nicht mehr unter
+           "Shows" — dort steht nur, was bevorsteht. Beides war vorher
+           unsichtbar: der Termin stand in der Verwaltung, auf der Seite
+           fehlte er.
+
+           Stehen bleibt er hier in jedem Fall — nicht angezeigt heisst nicht
+           geloescht. */
         titleOf: (i) => {
           const name = String(i?.name || "").trim();
           const teile = [i.date, name].filter(Boolean).join("  ·  ") || "(neuer Termin)";
           if (!name) return `${teile}  ·  ohne „Event / Club“ — nicht auf der Website`;
-          if (i.date && i.date < today) return `${teile}  ·  vorbei — steht im Rückblick`;
+          if (i.date && i.date < today) return `${teile}  ·  vorbei — nicht mehr auf der Website`;
           return teile;
         },
         emptyText: "Noch keine Termine — erst dann bleiben der Shows-Abschnitt und sein Menüpunkt auf der Website verborgen.",
@@ -519,31 +527,63 @@ export function renderShows() {
     ], {
       hint:
         "„Event / Club“ ist Pflicht: ohne Namen zeigt die Website den Termin nicht an. " +
-        "Ist der Tag vorbei, rutscht der Termin auf der Website von der oberen Liste in " +
-        "den Rückblick darunter — sichtbar bleibt er.",
+        "Ist der Tag vorbei, verschwindet der Termin auf der Website aus dieser Liste — " +
+        "unter „Shows“ steht nur, was noch bevorsteht. Hier bleibt er stehen, gelöscht " +
+        "wird nichts. Wo Sam gespielt hat, gehört zu den Referenzen.",
     }),
-    group("Rückblick auf der Website", [
-      textField("sections.shows.pastLabel", "Überschrift über den vergangenen Terminen", {
-        placeholder: "Vergangene Shows",
-      }),
-    ], {
-      hint:
-        "Vergangene Termine stehen auf der Website unter den kommenden, mit dieser " +
-        "Überschrift und dem jüngsten zuerst — offen sichtbar, ohne Aufklappen, und ohne " +
-        "Ticket-Knopf. Leer lassen: dann steht dort „Vergangene Shows“ (bzw. „Past shows“, " +
-        "„Concerts passés“). Der Abschnitt bleibt auf der Website, solange überhaupt ein " +
-        "Termin eingetragen ist — auch wenn alle vorbei sind.",
-    }),
+    /* Das Feld „Überschrift über den vergangenen Terminen" (sections.shows.pastLabel)
+       stand bis zum 15.09.2026 hier. Die Website zeigt keinen Rückblick mehr —
+       das Feld hätte nichts mehr bewirkt und nur den Eindruck erweckt, es gäbe
+       ihn noch. Der gespeicherte Wert bleibt unangetastet im Inhalt stehen. */
+    el("p", { class: "group-hint", style: "margin:0" },
+      "Vergangene Termine erscheinen nicht mehr unter „Shows“. Gespeichert bleiben sie " +
+      "hier — auf der Website steht unter „Shows“ nur, was noch kommt, und wo Sam schon " +
+      "gespielt hat, steht bei den Referenzen. Ist gerade nichts angekündigt, bleiben " +
+      "Abschnitt und Menüpunkt stehen und zeigen den Hinweis aus „Text, wenn keine " +
+      "Termine anstehen“."),
   ]);
 }
 
 /* -------------------------------------------------- Abschnitt: Referenzen */
+
+/**
+ * Welche vier Referenzen auf dem HANDY zuerst stehen.
+ *
+ * Rückmeldung von Sämi (15.09.2026): „Die wichtige Referenz muss unter den
+ * ersten vier stehen." Auf dem Handy zeigt die Website genau vier, der Rest
+ * kommt über einen Knopf — nachgemessen an der gebauten Seite bei 390 px.
+ * Wer hier ordnet, soll sehen, welche vier das sind; sonst ordnet man blind.
+ *
+ * Die Vorschau zeigt die Liste so, wie sie dasteht: gegen die Termine wird
+ * nicht gefiltert. Genannt wird nur, was die Website wirklich weglässt —
+ * derselbe Eintrag ein zweites Mal in dieser Liste.
+ */
+function handyVorschauHinweis() {
+  const h = handyVorschau(S.content);
+  if (!h.vorschau.length) return el("div", {});
+  const namen = h.vorschau.map((r) => [r.name, r.city].filter(Boolean).join(" — ")).join(" · ");
+  const teile = [
+    el("strong", {}, "Auf dem Handy stehen zuerst: "),
+    el("span", {}, namen),
+    el("span", { class: "muted" }, ` — die übrigen ${h.rest.length} kommen dort über „${h.rest.length} weitere anzeigen“. Am Rechner stehen alle da.`),
+  ];
+  if (h.dubletten.length) {
+    teile.push(
+      el("p", { class: "muted", style: "margin:6px 0 0" },
+        `Nicht mitgezählt: ${h.dubletten.map((r) => [r.name, r.city].filter(Boolean).join(" — ")).join(", ")} — ` +
+        `dieser Eintrag steht in dieser Liste schon weiter oben und erscheint auf der Website einmal. ` +
+        `Gelöscht wird hier nichts.`)
+    );
+  }
+  return el("p", { class: "warn-box" }, teile);
+}
 
 export function renderReferences() {
   return view([
     head("Referenzen", "Wo Sam schon gespielt hat."),
     sectionBasics("references"),
     nachtragHinweis(),
+    handyVorschauHinweis(),
     group("Liste", [
       objectList("sections.references.items", null, {
         addLabel: "Referenz hinzufügen",
@@ -559,9 +599,10 @@ export function renderReferences() {
       hint:
         "Alle Referenzen erscheinen auf der Website im selben Stil, fortlaufend in " +
         "genau dieser Reihenfolge — mit ↑ ↓ verschiebst du einen Eintrag. Was oben " +
-        "steht, steht auch auf der Website oben. Steht ein Auftritt auf derselben " +
-        "Seite schon als Termin im Rückblick, lässt die Website ihn hier weg — " +
-        "damit er nicht zweimal dasteht. Der Eintrag bleibt hier erhalten.",
+        "steht, steht auch auf der Website oben. Die Termine ändern daran nichts: " +
+        "auch ein erneuter kommender Auftritt im selben Club nimmt die Referenz " +
+        "nicht weg. Nur derselbe Eintrag ein zweites Mal in dieser Liste erscheint " +
+        "auf der Website einmal — gelöscht wird hier nie etwas.",
     }),
     /* Das Häkchen „Gross zeigen" ist am 11.08.2026 weggefallen. Es hat eine
        zweite Rangfolge neben dieser Liste aufgemacht: wer hier etwas nach oben
@@ -587,6 +628,25 @@ export function renderReferences() {
 }
 
 /* ----------------------------------------------------- Abschnitt: Galerie */
+
+/**
+ * Einträge ohne Bilddatei.
+ *
+ * Rückmeldung von Sämi (15.09.2026): „Fotos erscheinen nicht zuverlässig."
+ * Nachgemessen am veröffentlichten Stand: 5 von 42 Galerie-Einträgen hatten
+ * keine Bilddatei. Die Website überspringt sie — hier stand der Eintrag
+ * trotzdem, und niemand erfuhr, warum das Foto fehlt. Gelöscht wird nichts:
+ * ein leerer Eintrag kann ein halb angelegter sein.
+ */
+function bilderLueckenHinweis() {
+  const luecken = bilderOhneDatei(S.content).filter((l) => l.wo === "gallery");
+  if (!luecken.length) return el("div", {});
+  return el("p", { class: "warn-box" }, [
+    el("strong", {}, `${luecken.length} Eintrag/Einträge ohne Bilddatei: `),
+    el("span", {}, luecken.map((l) => "#" + l.nummer + (l.alt ? ` („${l.alt.slice(0, 30)}…“)` : "")).join(", ")),
+    el("span", { class: "muted" }, " — diese erscheinen auf der Website NICHT. Bild zuweisen oder Eintrag löschen."),
+  ]);
+}
 
 export function renderGallery() {
   return view([
@@ -618,6 +678,7 @@ export function renderGallery() {
     ], {
       hint: "Eine kurze 2-Spalten-Auswahl hält den AIDA-Weg kompakt. Weitere Bilder öffnet der Besucher bewusst über einen Knopf.",
     }),
+    bilderLueckenHinweis(),
     group("Bilder", [
       objectList("sections.gallery.items", null, {
         // Der übliche Weg ist „Bilder aussuchen“ — der leere Platz ist die
@@ -1350,6 +1411,59 @@ export function renderLayout() {
             "Auf das Mehrseiten-Modell umstellen"
           ),
         ])
+      );
+    }
+
+    /* Die Startseite ohne Auftritte — Kundenbefund vom 13.09.2026. Gemeldet
+       wird hier, korrigiert auch: ein Klick trägt Shows und Referenzen auf der
+       Startseite nach. Geschrieben wird erst beim Speichern, und der Generator
+       erzwingt nichts — sonst wäre die Zuordnung hier eine Attrappe. */
+    const fehlendeAuftritte = fehlendeStartseitenAuftritte(S.content);
+    if (fehlendeAuftritte.length) {
+      const namen = fehlendeAuftritte
+        .map((k) => (S.content.sections[k] && S.content.sections[k].navLabel) || k)
+        .join(" und ");
+      hinweis.appendChild(
+        el("div", { class: "warn-box" }, [
+          el("strong", {}, "Die Startseite zeigt " + namen + " nicht. "),
+          el("span", {}, [
+            "Die Einträge sind vollständig da — sie stehen nur auf einer anderen Seite. ",
+            "Auf der Startseite geht es dadurch direkt weiter zum nächsten Abschnitt.",
+          ]),
+          el(
+            "button",
+            {
+              class: "btn sm",
+              onclick: () => {
+                const geholt = aufStartseiteHolen(S.content);
+                if (!geholt.length) {
+                  toast("Es gab nichts nachzutragen.", "err");
+                  return;
+                }
+                markDirty();
+                toast("Auf der Startseite nachgetragen — noch nicht gespeichert.");
+                render();
+              },
+            },
+            "Auf die Startseite holen"
+          ),
+        ])
+      );
+    }
+
+    /* Ein Abschnitt auf einer Seite, den der Generator nicht baut: in der
+       Liste sieht die Seite voller aus, als sie gebaut wird. Genau das
+       verdeckte den Befund — auf der Startseite stand „sound". */
+    const tot = nichtBaubarAufSeiten(S.content);
+    if (tot.length) {
+      hinweis.appendChild(
+        el(
+          "p",
+          { class: "warn-box" },
+          "Auf einer Seite eingeplant, aber nicht mehr Teil der Website: " +
+            tot.map((t) => t.key + " (" + t.seite + ")").join(", ") +
+            " — diese Abschnitte werden nicht gebaut und zählen auf der Seite nicht mit."
+        )
       );
     }
 

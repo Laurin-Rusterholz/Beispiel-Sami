@@ -81,6 +81,24 @@ baut bei jedem Push und stellt online unter
 ausliefert, setzt der Workflow `SITE_BASE` auf `/<repo>/site`; alles andere
 läuft mit relativen Adressen und braucht nichts.
 
+> **Zwei Wege, ein Repo.** Dieses Repo trägt BEIDES: einen Pages-Workflow und
+> eine `netlify.toml`. Sie unterscheiden sich nur in `SITE_BASE` (`/<repo>/site`
+> bzw. `/site`). Wer ändert, muss an beide denken — und wissen, welcher der
+> beiden gerade die Adresse bedient, die herumgezeigt wird.
+>
+> **Der Standardzweig entscheidet, ob sich hier etwas von selbst tut.**
+> Stand 17.09.2026 ist er `claude/saemi-presentation-website-admin-f75sqz`,
+> nicht `main`. Netlify stört das nicht — dort ist `main` als Produktionszweig
+> eingestellt, der letzte Deploy (`d8e23f7`) ist die Spitze von `main`.
+>
+> **GitHub Actions stört es sehr:** Ein `schedule` läuft IMMER aus der Fassung
+> im Standardzweig. Solange der nicht `main` ist, feuert das stündliche
+> Nachziehen **gar nicht** — ohne Fehler, ohne Meldung. Das ist keine
+> Kleinigkeit am Rand, sondern der Unterschied zwischen „zieht sich nach" und
+> „zieht sich nie nach". Zu richten unter **Settings → Branches → Default
+> branch = `main`**; danach läuft es ohne weiteres Zutun. Bis dahin bleibt der
+> Weg von Hand: Actions → *Vorführung nachziehen* → **Run workflow**.
+
 **Netlify** — `netlify.toml` liegt bereit (`SITE_BASE = "/site"`). Eine neue
 Site auf dieses Repo zeigen lassen, sonst nichts.
 
@@ -131,13 +149,82 @@ Bewusst anders sind zwei Dateien:
 Alles andere ist Zeichen für Zeichen identisch — der Vorführ-Modus steckt
 vollständig in diesen Schaltern, nicht in abgewandeltem Code.
 
-Nachziehen, wenn sich in den Originalen etwas getan hat:
+### Nachgezogen wird von selbst
+
+`.github/workflows/nachziehen.yml` holt **stündlich** beide Originale (und auf
+Zuruf über *Run workflow*), baut zur Probe, lässt `npm test` darüberlaufen und
+pusht nur, wenn sich wirklich etwas geändert hat.
+
+Zwei Regeln von GitHub Actions gehören dazu, sonst erwartet man das Falsche:
+
+1. **`schedule` läuft nur aus dem Standardzweig** — siehe den Kasten oben.
+   Steht der nicht auf `main`, passiert stündlich nichts.
+2. **Ein Push mit `GITHUB_TOKEN` löst keinen weiteren Actions-Workflow aus.**
+   GitHub unterbindet das absichtlich. Folge: **Netlify baut trotzdem** (es
+   hängt am Push-Webhook, nicht an Actions), **der Pages-Workflow nicht**. Wer
+   die Pages-Fassung braucht, startet *Präsentation veröffentlichen* von Hand.
+   Automatisch ginge das nur mit `actions: write` am Token — mehr Rechte, als
+   dieser Lauf sonst hat, und deshalb bewusst nicht.
+
+Der Anlass (17.09.2026): Der **Inhalt** war immer aktuell, weil der Bau die
+Datenbank liest. Der **Code** nicht — nachgezogen wurde nur von Hand, und am
+17.09. fehlten 13 Dateien aus zwei längst veröffentlichten Änderungen. Wer die
+Vorführung herzeigte, zeigte etwas anderes als die öffentliche Website.
+
+Von Hand geht es weiterhin:
 
 ```bash
 node scripts/quellen-holen.mjs --pruefen   # nur melden, was auseinanderläuft
 node scripts/quellen-holen.mjs             # übernehmen
-SITE_BASE=/site node site/scripts/build.mjs
+SITE_BASE=/site VORFUEHRUNG=1 node site/scripts/build.mjs
 ```
+
+Liegen die Originale woanders als nebenan, sagen das `QUELLE_WEBSITE` und
+`QUELLE_VERWALTUNG` (genau so macht es der Workflow).
+
+## Hier wird nicht wirklich bezahlt
+
+`VORFUEHRUNG = "1"` steht in `netlify.toml` und im Pages-Workflow. Der
+Generator (s-mi) macht daraus:
+
+| | echte Website | hier |
+| --- | --- | --- |
+| Kauf-Knopf im Shop | `buy.stripe.com/…` | Vermerk, kein Link |
+| ohne Zahlungslink | „per E-Mail bestellen" | Vermerk, kein `mailto:` |
+| Ticket-Knopf unter „Shows" | Ticket-Adresse | Vermerk, kein Link |
+| strukturierte Daten / Terminblatt | Ticket-Adresse | Anker auf die Seite |
+| Booking-Formular | sendet an `/api/booking` | sendet nichts, sagt es |
+
+Bis zum 17.09.2026 war das nicht so: Der Kauf-Knopf zeigte hier auf **dieselbe**
+Stripe-Kasse wie die echte Website. Wer in der Vorführung klickte, hätte echt
+bezahlen können. Wird der Schalter entfernt, ist das sofort wieder der Fall —
+der Pages-Workflow bricht deshalb ab, wenn in einer gebauten Seite noch
+`buy.stripe.com` steht.
+
+Preise, Zustand und Abzeichen bleiben stehen: die Vorführung soll zeigen, wie
+der Shop wirklich aussieht.
+
+## Prüfen
+
+```bash
+npm test          # die eigenen Prüfungen dieser Fassung
+npm run bauen     # SITE_BASE=/site VORFUEHRUNG=1 node site/scripts/build.mjs
+npm run pruefen   # nur melden, was gegenüber den Originalen ausei­nanderläuft
+```
+
+`scripts/vorfuehrung.test.mjs` misst den wirklich gebauten Stand: hier wird
+nicht wirklich bezahlt, die Formulare senden nichts und sagen es, alle Wege
+führen unter `/site/` und nirgends ins Leere, jede Seite gibt es in de/en/fr,
+unter „Shows" steht kein Rückblick, die Verwaltung ist im Vorführ-Modus, und
+die Wegleitung sperrt `/site/scripts/*` und `/site/content/*`. Dazu eine
+Gegenprobe, die OHNE den Schalter baut — käme der Zahlungslink dann nicht
+zurück, prüfte die erste Zusage nichts.
+
+**Die Prüfungen des Originals laufen im Original.** Sie werden seit dem
+17.09.2026 nicht mehr hierher kopiert: `kette.test.mjs` braucht eine
+`site/netlify.toml`, die es hier nicht gibt, und `links.test.mjs` erwartet die
+Adressen des Originals und echte Kaufwege. Hierher kopiert fielen sie 3 von 22
+und rissen 621 Folgefehler mit, ohne dass irgendetwas kaputt war.
 
 ## Nicht für Suchmaschinen
 

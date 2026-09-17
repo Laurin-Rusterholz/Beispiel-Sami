@@ -1,0 +1,13 @@
+{
+  "name": "beispiel-sami",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Praesentations-Fassung Sam Sparking — Rahmen, Website (/site), Verwaltung im Vorfuehr-Modus",
+  "scripts": {
+    "bauen": "SITE_BASE=/site VORFUEHRUNG=1 node site/scripts/build.mjs",
+    "nachziehen": "node scripts/quellen-holen.mjs",
+    "pruefen": "node scripts/quellen-holen.mjs --pruefen",
+    "test": "node --test scripts/*.test.mjs"
+  }
+}
