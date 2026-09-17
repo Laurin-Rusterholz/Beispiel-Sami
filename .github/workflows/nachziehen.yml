@@ -1,0 +1,123 @@
+# Die Vorführung dem Original nachziehen — von selbst.
+#
+# BEFUND (17.09.2026): Diese Fassung war veraltet. `site/` und `verwaltung/`
+# sind Kopien zweier anderer Repos, und nachgezogen wurden sie bisher nur, wenn
+# jemand von Hand `node scripts/quellen-holen.mjs` aufrief. Der INHALT war
+# trotzdem aktuell (der Bau liest die Datenbank), der CODE aber nicht: am
+# 17.09. fehlten 13 Dateien aus zwei bereits veröffentlichten Änderungen —
+# unter anderem die Prüfung „was nicht ankommt, wird gesagt" und die
+# Handy-Vorschau der Referenzen. Wer die Vorführung herzeigte, zeigte etwas
+# anderes als die öffentliche Website.
+#
+# Deshalb läuft das Nachziehen jetzt selbst: stündlich, und auf Zuruf.
+#
+# Kein Geheimnis nötig: beide Quell-Repos sind öffentlich, und geschrieben wird
+# nur in dieses hier — dafür genügt das eingebaute GITHUB_TOKEN.
+#
+# Was NICHT mitkopiert wird, steht in scripts/quellen-holen.mjs: die
+# Vorführ-Schalter (verwaltung/js/config.js mit DEMO = true), die
+# Demo-Speicherung in verwaltung/index.html und die Schrift-Adressen in
+# verwaltung/admin.css. Sie überleben jedes Nachziehen.
+#
+# Ein Push auf main stösst beides an, was danach kommt: den Netlify-Build und
+# den Pages-Workflow. Ändert sich nichts, wird auch nichts gepusht — dann
+# entsteht kein Deploy.
+name: Vorführung nachziehen
+
+on:
+  schedule:
+    # Stündlich zur Minute 20 — nicht zur vollen Stunde, damit dieser Lauf
+    # nicht mit allem anderen zusammenfällt, was auf GitHub um :00 startet.
+    - cron: "20 * * * *"
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+concurrency:
+  group: nachziehen
+  cancel-in-progress: false
+
+jobs:
+  nachziehen:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Vorführung auschecken
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      # Beide Quellen INNERHALB des Arbeitsverzeichnisses — actions/checkout
+      # legt nichts daneben ab. quellen-holen.mjs nimmt die Wege aus der
+      # Umgebung (QUELLE_WEBSITE / QUELLE_VERWALTUNG); von Hand aufgerufen
+      # sucht es weiterhin ../s-mi und ../verwaltung-djsamsparkling.
+      - name: Website-Original auschecken
+        uses: actions/checkout@v4
+        with:
+          repository: Laurin-Rusterholz/s-mi
+          ref: main
+          path: _quellen/s-mi
+
+      - name: Verwaltungs-Original auschecken
+        uses: actions/checkout@v4
+        with:
+          repository: Laurin-Rusterholz/verwaltung-djsamsparkling
+          ref: main
+          path: _quellen/verwaltung-djsamsparkling
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Nachziehen
+        env:
+          QUELLE_WEBSITE: ${{ github.workspace }}/_quellen/s-mi
+          QUELLE_VERWALTUNG: ${{ github.workspace }}/_quellen/verwaltung-djsamsparkling
+        run: node scripts/quellen-holen.mjs
+
+      # Woher der Stand kommt — für die Commit-Meldung, bevor die Quellen weg sind.
+      - name: Stand der Originale merken
+        id: stand
+        run: |
+          echo "site=$(git -C _quellen/s-mi rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
+          echo "verwaltung=$(git -C _quellen/verwaltung-djsamsparkling rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
+
+      # Die Quellen sind nur zum Abschreiben da und gehören nicht ins Repo.
+      - name: Quellen wieder wegräumen
+        run: rm -rf _quellen
+
+      # Bevor etwas gepusht wird: baut die Vorführung mit dem neuen Stand
+      # überhaupt? Ein Nachziehen, das den Bau kaputtmacht, soll hier auffallen
+      # und nicht erst im Deploy. Und: die Vorführung darf danach immer noch
+      # kein Geld einnehmen.
+      - name: Probebau
+        env:
+          SITE_BASE: /site
+          VORFUEHRUNG: "1"
+        run: |
+          node site/scripts/build.mjs
+          test -f site/index.html || { echo "Der Bau hat keine Startseite erzeugt"; exit 1; }
+          if grep -rl "buy\.stripe\.com" --include='*.html' site/ ; then
+            echo "Der nachgezogene Stand führt in eine echte Stripe-Kasse — VORFUEHRUNG wirkt nicht."
+            exit 1
+          fi
+
+      # stand.json trägt den Bauzeitpunkt und wäre sonst der einzige
+      # Unterschied — der Zeitplan schriebe stündlich einen Commit ohne Inhalt.
+      - name: Bauzeitpunkt nicht mitzählen
+        run: git checkout -- site/stand.json 2>/dev/null || true
+
+      - name: Festhalten und pushen, falls sich etwas geändert hat
+        run: |
+          if [ -z "$(git status --porcelain)" ]; then
+            echo "Nichts zu tun — die Vorführung steht auf demselben Stand wie die Originale."
+            exit 0
+          fi
+          git status --short
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Vorfuehrung nachgezogen (automatisch)" \
+                     -m "Stand der Originale: s-mi ${{ steps.stand.outputs.site }}, Verwaltung ${{ steps.stand.outputs.verwaltung }}." \
+                     -m "Gezogen vom Zeitplan dieses Repos. Die Vorfuehr-Schalter (DEMO, Demo-Speicherung, Schriftpfade) bleiben unangetastet — siehe scripts/quellen-holen.mjs."
+          git push

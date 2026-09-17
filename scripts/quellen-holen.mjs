@@ -39,16 +39,37 @@ import { fileURLToPath } from "node:url";
 const HIER = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const NUR_PRUEFEN = process.argv.includes("--pruefen");
 
+/* Wo die beiden Quell-Repos liegen.
+ *
+ * Von Hand liegen sie neben diesem Repo (../s-mi, ../verwaltung-djsamsparkling)
+ * — dabei bleibt es. In GitHub Actions dürfen sie das nicht: `actions/checkout`
+ * legt jedes Repo INNERHALB des Arbeitsverzeichnisses ab, ein `..` davor wäre
+ * ausserhalb. Deshalb lassen sich beide Wege über die Umgebung setzen, ohne
+ * dass sich am Aufruf von Hand irgendetwas ändert.
+ *
+ * Absichtlich zwei getrennte Werte statt eines Elternverzeichnisses: die
+ * Verwaltung liegt im Original unter `public/`, die Website an der Wurzel. */
+const QUELLE_WEBSITE = process.env.QUELLE_WEBSITE
+  ? resolve(process.env.QUELLE_WEBSITE)
+  : resolve(HIER, "../s-mi");
+const QUELLE_VERWALTUNG = process.env.QUELLE_VERWALTUNG
+  ? resolve(process.env.QUELLE_VERWALTUNG)
+  : resolve(HIER, "../verwaltung-djsamsparkling");
+
 const QUELLEN = [
   {
     name: "Website",
-    von: resolve(HIER, "../s-mi"),
+    von: QUELLE_WEBSITE,
     nach: resolve(HIER, "site"),
     auslassen: [
       ".git", ".github", "netlify.toml", "README-ANLEITUNG.md", ".gitignore", "node_modules",
       // Vom Generator erzeugt — kommt hier aus `node site/scripts/build.mjs`
       // mit SITE_BASE=/site und sieht deshalb zwangsläufig anders aus.
       "index.html", "404.html", "sitemap.xml", "robots.txt", "de", "fr", "legal",
+      // stand.json schreibt der Generator bei JEDEM Lauf neu (Bauzeitpunkt).
+      // Mitkopiert stuende hier der Zeitpunkt des Originals — und der Abgleich
+      // meldete bei jedem Nachziehen eine Abweichung, die keine ist.
+      "stand.json",
       // In der Demo auf /site/ umgestellt (start_url, scope, Icons)
       "manifest.webmanifest",
       /* Diese beiden Pruefungen messen die Auslieferung des Originals gegen
@@ -66,7 +87,7 @@ const QUELLEN = [
   },
   {
     name: "Verwaltung",
-    von: resolve(HIER, "../verwaltung-djsamsparkling/public"),
+    von: resolve(QUELLE_VERWALTUNG, "public"),
     nach: resolve(HIER, "verwaltung"),
     // passwort.html erzeugt den Hash des gemeinsamen Passworts — im
     // Vorführ-Modus gibt es keine Anmeldung, also gehört das Werkzeug hier

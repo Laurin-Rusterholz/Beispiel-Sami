@@ -182,6 +182,7 @@
           <li class="nav-cta"><a href="/site/en/booking/" aria-current="page">Booking</a></li>
           <li class="nav-hot"><a href="/site/en/shop/">Shop</a></li>
           <li><a href="/site/en/#about">About</a></li>
+          <li><a href="/site/en/#references">References</a></li>
       </ul>
       <div class="nav-langs"><a href="/site/booking/" lang="de">DE</a><a href="/site/en/booking/" lang="en" aria-current="true">EN</a><a href="/site/fr/booking/" lang="fr">FR</a></div>
     </nav>
@@ -229,7 +230,7 @@
       </div>
       
       <form class="bform rv" id="booking-form" data-endpoint="/api/booking" data-sending="Sending …" data-invalid="Please check the highlighted fields."
-            data-captcha="That sum is not right yet." novalidate>
+            data-captcha="That sum is not right yet." data-demo="true" novalidate>
         <div class="bform-head">
           <span class="mono">Booking request</span>
           <h3>Tell me about your event</h3>
@@ -283,7 +284,7 @@
              data-success="Thanks — your request arrived. You&#39;ll hear from me within 48 hours."
              data-error="Something went wrong. Please write to me directly at info@samsparking.ch."></p>
           <p class="bform-fine mono">* Required · Your details are used only to handle your enquiry.</p>
-          
+          <p class="bform-demo mono">Demo version: this form does not send anything.</p>
         </div>
       </form>
       </div>

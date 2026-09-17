@@ -18,7 +18,7 @@ import { readdir, readFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { resolve, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { istStripeAdresse, releaseZeitpunkt } from "./build.mjs";
+import { istStripeAdresse, releaseZeitpunkt, showVorbei } from "./build.mjs";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -244,23 +244,28 @@ for (const [datei, h] of html) {
     const istRef = [...refBlock.matchAll(
       /<li[^>]*><a[^>]*><span class="venue-name">([^<]*)<\/span><span class="venue-city">([^<]*)</g
     )].map((m) => `${m[1]} — ${m[2]}`.trim().replace(/ —$/, ""));
-    /* Steht auf derselben Seite der Rueckblick der Shows, kommt ein Auftritt
-       dort nur einmal vor: die Referenz zu einem Termin, der oben schon steht,
-       wird beim Rendern uebersprungen (siehe renderReferences). Geloescht ist
-       sie nicht — sie steht weiter in der Verwaltung und in INHALT. */
+    /* Die Referenzliste wird NICHT gegen die Termine gefiltert (Kundenentscheid
+       15.09.2026) — weder gegen vergangene noch gegen kommende. Sie ist eine
+       gepflegte Auswahl: "Nox Club" steht in der Verwaltung an dritter Stelle
+       und verschwand auf der Seite, weil derselbe Club als Termin gefuehrt war.
+       Auch ein erneuter kommender Auftritt darf die Referenz nicht entfernen.
+
+       Doppelt steht dadurch nichts: unter "Shows" ist nur Kommendes, bei den
+       Referenzen nur Gewesenes. Eine echte Dublette INNERHALB der Liste
+       erscheint einmal; der erste Platz gilt. Geloescht ist nie etwas — alles
+       steht weiter in der Verwaltung und in INHALT. */
     const schluessel = (name, city) =>
       `${String(name ?? "").trim().toLowerCase()}|${String(city ?? "").trim().toLowerCase()}`
         .replace(/[\s–—-]+/g, " ")
         .replace(/\s+/g, " ");
-    const showsHier = new Set(
-      (refHtml || "").includes('id="shows"')
-        ? (INHALT.sections?.shows?.items || [])
-            .filter((i) => String(i?.name || "").trim())
-            .map((i) => schluessel(i.name, i.city))
-        : []
-    );
+    const schonGesehen = new Set();
     const sollRef = refImInhalt
-      .filter((r) => !showsHier.has(schluessel(r.name, r.city)))
+      .filter((r) => {
+        const key = schluessel(r.name, r.city);
+        if (schonGesehen.has(key)) return false;
+        schonGesehen.add(key);
+        return true;
+      })
       .map((r) => `${r.name} — ${r.city || ""}`.trim().replace(/ —$/, ""));
     if (istRef.join(" | ") !== sollRef.join(" | "))
       meckern(
@@ -394,17 +399,39 @@ for (const [datei, h] of html) {
     }
   }
 
-  // 2) Shows stehen nur da, wenn ein Termin aussteht — sonst gar nicht.
-  //    Eine Seite mit "keine Termine" ist schlechter als keine Section.
+  /* 2) Unter "Shows" steht nur, was kommt — und der Abschnitt bleibt stehen.
+
+        Drei Runden an derselben Stelle: bis 07.09.2026 verschwand der Abschnitt
+        ohne kommenden Termin ganz (und mit ihm alles je Veroeffentlichte). Dann
+        kam ein "PLAYED BEFORE"-Rueckblick. Seit dem 15.09.2026 gilt: der
+        Abschnitt bleibt, zeigt aber ausschliesslich Kommendes; ohne Termin
+        steht dort der Hinweis "gerade nichts angekuendigt", und was war, steht
+        bei den Referenzen.
+
+        Geprueft wird beides — kein Rueckblick, und kein Menuepunkt ins Leere. */
   for (const rel of startseiten) {
     const h = await seite(rel);
     if (!h) continue;
     const hatSection = h.includes('id="shows"');
-    const hatLeermeldung = h.includes("empty-state");
-    if (hatSection && hatLeermeldung)
-      meckern(`${rel}: Shows-Section steht leer da — ohne Termin gehoert sie ganz weg`);
+    if (/past-show|past-title|PLAYED BEFORE/i.test(h))
+      meckern(`${rel}: unter "Shows" steht wieder ein Rueckblick auf vergangene Termine`);
     if (!hatSection && /href="#shows"/.test(h))
       meckern(`${rel}: Menuepunkt Shows fuehrt ins Leere`);
+  }
+
+  /* 2a) Keine vergangenen Termine unter "Shows" — an der gebauten Seite
+         nachgemessen, nicht am Generator. Gerechnet wird mit showVorbei(),
+         derselben Regel, die auch der Generator benutzt: die Tagesgrenze liegt
+         am Ende des Tages in Europe/Zurich, ein Termin von HEUTE zaehlt also
+         noch als kommend und faellt hier nicht durch. */
+  {
+    const heute = (process.env.BUILD_DATE || new Date().toISOString().slice(0, 10)).slice(0, 10);
+    for (const [rel, h] of html) {
+      for (const m of h.matchAll(/<li class="show[^"]*"[^>]*data-date="([^"]*)"/g)) {
+        if (showVorbei({ date: m[1] }, heute))
+          meckern(`${rel}: der vergangene Termin vom ${m[1]} steht unter "Shows"`);
+      }
+    }
   }
 
   // 2b) Der Satz unter den Referenzen ("Dein Club oder Festival als
@@ -1022,6 +1049,10 @@ console.log(
   for (const rel of START) {
     const h = html.get(rel);
     if (!h) continue;
+    /* Es gibt nur noch eine Liste, und darin steht nur Kommendes — ein
+       vergangener Termin hat keine Zeile mehr, also auch keinen toten
+       Ticket-Link. Frueher lief diese Pruefung ueber beide Listen und
+       verlangte fuer jeden vergangenen Termin mit Adresse einen Knopf. */
     const zeilen = [...h.matchAll(/<li class="show[^"]*"[\s\S]*?<\/li>/g)].map((m) => m[0]);
     for (const sh of shows) {
       const zeile = zeilen.find((z) => z.includes(`>${sh.name}<`));

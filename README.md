@@ -81,6 +81,20 @@ baut bei jedem Push und stellt online unter
 ausliefert, setzt der Workflow `SITE_BASE` auf `/<repo>/site`; alles andere
 läuft mit relativen Adressen und braucht nichts.
 
+> **Zwei Wege, ein Repo.** Dieses Repo trägt BEIDES: einen Pages-Workflow und
+> eine `netlify.toml`. Sie unterscheiden sich nur in `SITE_BASE` (`/<repo>/site`
+> bzw. `/site`). Wer ändert, muss an beide denken — und wissen, welcher der
+> beiden gerade die Adresse bedient, die herumgezeigt wird.
+>
+> **Achtung Zweig (Stand 17.09.2026):** Der Standardzweig dieses Repos auf
+> GitHub ist `claude/saemi-presentation-website-admin-f75sqz`, nicht `main` —
+> und der liegt 13 Commits zurück. Netlify baut, sofern nicht ausdrücklich
+> anders eingestellt, den Standardzweig. Solange das so ist, zeigt die
+> Vorführung einen alten Stand, egal wie fleissig `main` nachgezogen wird.
+> Zu richten in den Netlify-Einstellungen (Build & deploy → Branches →
+> Production branch = `main`) und/oder auf GitHub (Settings → Branches →
+> Default branch = `main`).
+
 **Netlify** — `netlify.toml` liegt bereit (`SITE_BASE = "/site"`). Eine neue
 Site auf dieses Repo zeigen lassen, sonst nichts.
 
@@ -131,13 +145,50 @@ Bewusst anders sind zwei Dateien:
 Alles andere ist Zeichen für Zeichen identisch — der Vorführ-Modus steckt
 vollständig in diesen Schaltern, nicht in abgewandeltem Code.
 
-Nachziehen, wenn sich in den Originalen etwas getan hat:
+### Nachgezogen wird von selbst
+
+`.github/workflows/nachziehen.yml` holt **stündlich** beide Originale (und auf
+Zuruf über *Run workflow*), baut zur Probe und pusht nur, wenn sich wirklich
+etwas geändert hat. Ein Push stösst Netlify und Pages an — ohne Änderung
+entsteht kein Deploy.
+
+Der Anlass (17.09.2026): Der **Inhalt** war immer aktuell, weil der Bau die
+Datenbank liest. Der **Code** nicht — nachgezogen wurde nur von Hand, und am
+17.09. fehlten 13 Dateien aus zwei längst veröffentlichten Änderungen. Wer die
+Vorführung herzeigte, zeigte etwas anderes als die öffentliche Website.
+
+Von Hand geht es weiterhin:
 
 ```bash
 node scripts/quellen-holen.mjs --pruefen   # nur melden, was auseinanderläuft
 node scripts/quellen-holen.mjs             # übernehmen
-SITE_BASE=/site node site/scripts/build.mjs
+SITE_BASE=/site VORFUEHRUNG=1 node site/scripts/build.mjs
 ```
+
+Liegen die Originale woanders als nebenan, sagen das `QUELLE_WEBSITE` und
+`QUELLE_VERWALTUNG` (genau so macht es der Workflow).
+
+## Hier wird nicht wirklich bezahlt
+
+`VORFUEHRUNG = "1"` steht in `netlify.toml` und im Pages-Workflow. Der
+Generator (s-mi) macht daraus:
+
+| | echte Website | hier |
+| --- | --- | --- |
+| Kauf-Knopf im Shop | `buy.stripe.com/…` | Vermerk, kein Link |
+| ohne Zahlungslink | „per E-Mail bestellen" | Vermerk, kein `mailto:` |
+| Ticket-Knopf unter „Shows" | Ticket-Adresse | Vermerk, kein Link |
+| strukturierte Daten / Terminblatt | Ticket-Adresse | Anker auf die Seite |
+| Booking-Formular | sendet an `/api/booking` | sendet nichts, sagt es |
+
+Bis zum 17.09.2026 war das nicht so: Der Kauf-Knopf zeigte hier auf **dieselbe**
+Stripe-Kasse wie die echte Website. Wer in der Vorführung klickte, hätte echt
+bezahlen können. Wird der Schalter entfernt, ist das sofort wieder der Fall —
+der Pages-Workflow bricht deshalb ab, wenn in einer gebauten Seite noch
+`buy.stripe.com` steht.
+
+Preise, Zustand und Abzeichen bleiben stehen: die Vorführung soll zeigen, wie
+der Shop wirklich aussieht.
 
 ## Nicht für Suchmaschinen
 

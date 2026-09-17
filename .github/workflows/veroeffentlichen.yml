@@ -46,6 +46,9 @@ jobs:
         env:
           SITE_BASE: /${{ github.event.repository.name }}/site
           CONTENT_API_URL: https://jupidu-36804-default-rtdb.europe-west1.firebasedatabase.app/samsparking/content.json
+          # Vorführung: keine echte Kasse, kein echter Ticketverkauf, kein
+          # sendendes Formular. Begründung steht in netlify.toml.
+          VORFUEHRUNG: "1"
         run: node site/scripts/build.mjs
 
       # Der Bau greift auf eine fremde Datenbank zu und kann still auf den
@@ -62,6 +65,17 @@ jobs:
           grep -o 'href="[^"]*assets/site.css"' site/index.html
           grep -q "href=\"$BASIS/assets/site.css\"" site/index.html \
             || { echo "Website-Adressen zeigen nicht auf $BASIS"; exit 1; }
+          # Keine echte Kasse in der Vorführung. Lieber hier abbrechen als eine
+          # Vorführung online stellen, in der jemand wirklich bezahlen kann.
+          # Geprüft werden die AUSGELIEFERTEN SEITEN. In site/content/site.json
+          # steht der Zahlungslink weiterhin — das ist der Inhalt, nicht ein
+          # anklickbarer Knopf, und /site/content/* ist gesperrt (netlify.toml).
+          if grep -rl "buy\.stripe\.com" --include='*.html' site/ ; then
+            echo "Die Vorführung führt in eine echte Stripe-Kasse — VORFUEHRUNG=1 wirkt nicht."
+            exit 1
+          fi
+          grep -q 'data-demo="true"' site/booking/index.html \
+            || { echo "Das Booking-Formular ist nicht als Vorführung gekennzeichnet"; exit 1; }
           echo "Sieht gut aus."
 
       - uses: actions/upload-pages-artifact@v3

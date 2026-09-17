@@ -14,7 +14,7 @@
  */
 
 import { readFile, writeFile, mkdir, readdir, rm } from "node:fs/promises";
-import { existsSync } from "node:fs";
+import { existsSync, realpathSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -279,10 +279,9 @@ const refSchluessel = (name, city) =>
  * Wie viele Auftritte kennt die Website?
  *
  * Gezaehlt wird, was der Kunde in der Verwaltung pflegt — die Termine unter
- * "Shows" UND die Referenzen —, ohne Dubletten. Beides sind Auftritte: ein
- * Termin, der vorbei ist, steht im Rueckblick; aeltere stehen (wenn ueberhaupt)
- * nur noch als Referenz. "Nox Club — Chur" in beiden Listen ist derselbe
- * Auftritt und zaehlt einmal.
+ * "Shows" UND die Referenzen —, ohne Dubletten. Beides sind Auftritte: unter
+ * "Shows" steht, was bevorsteht, bei den Referenzen, wo Sam gespielt hat.
+ * "Nox Club — Chur" in beiden Listen ist derselbe Auftritt und zaehlt einmal.
  *
  * Unterschieden wird ueber Name UND Ort, nicht ueber den Namen allein:
  * "Jugendopenair" gibt es in St. Gallen und in Wattwil, das sind zwei
@@ -334,7 +333,8 @@ export const showVorbei = (show, heute) => {
    bei jedem Build neu. Wer ein vergangenes Event ZUSAETZLICH als Referenz will,
    traegt es in der Verwaltung ein.
 
-   showVorbei() bleibt: es entscheidet, was in den Rueckblick gehoert. */
+   showVorbei() bleibt die eine Stelle, an der "vorbei" definiert ist: seit
+   dem 15.09.2026 entscheidet es, was unter "Shows" NICHT mehr steht. */
 
 /**
  * Fehlendes aus der Vorlage ergänzen — der Stand aus der Verwaltung gewinnt,
@@ -1459,6 +1459,7 @@ async function loadContent() {
         console.warn("[build] Vorlage content/site.json nicht lesbar:", e.message);
       }
       console.log(`[build] Inhalt von der Verwaltung geladen: ${apiUrl}`);
+      AUS_DER_DATENBANK = true;
       // Snapshot mitschreiben, damit der Build ohne API reproduzierbar bleibt.
       await writeFile(LOCAL_CONTENT, JSON.stringify(content, null, 2) + "\n");
       return content;
@@ -1560,6 +1561,11 @@ function cdnUrl(src, w) {
  * sich wie bisher.
  */
 let BILDMASSE = new Map();
+
+/* Kam der Inhalt dieses Laufes aus der Verwaltung oder aus dem eingecheckten
+   Schnappschuss? Steht in stand.json, damit von aussen nachvollziehbar ist,
+   WAS die Seite gerade zeigt. */
+let AUS_DER_DATENBANK = false;
 
 /** Masse eines Bildes: erst am Inhalt, sonst aus der Medienbibliothek. */
 function masseVon(media, raw) {
@@ -1911,7 +1917,7 @@ function renderExperience(n, s) {
   </section>`;
 }
 
-function showRow(sh, idx, vorbei = false) {
+function showRow(sh) {
   const date = isoDate(sh.date);
   const booked = sh.status === "booked";
   const d = date ? new Date(date + "T12:00:00Z") : null;
@@ -1937,15 +1943,15 @@ function showRow(sh, idx, vorbei = false) {
      dort, was zutrifft: "Ausverkauft", ein freier Hinweis aus dem Ticket-Feld
      ("DM for friendlist") oder — wenn es nichts zu sagen gibt — nichts. Eine
      leere Beschriftung stand vorher als leeres Feld in der Zeile. */
-  /* Vorbei heisst: nichts mehr zu holen. Ein "Tickets"-Knopf an einem Termin
-     von letzter Woche fuehrt ins Leere und macht den Rueckblick unglaubwuerdig
-     — dort steht darum nur, was war. */
-  const kasse = !vorbei && safeUrl(sh.ticketUrl) && !soldOut;
+  /* Seit dem 15.09.2026 kommt hier nur noch Kommendes an (renderShows filtert
+     Vergangenes heraus) — einen Sonderfall "vorbei" mit abgeschaltetem
+     Ticket-Knopf braucht diese Zeile darum nicht mehr. */
+  const kasse = safeUrl(sh.ticketUrl) && !soldOut;
   const freierHinweis = !safeUrl(sh.ticketUrl) ? str(sh.ticketUrl).trim() : "";
   const label = soldOut ? UI.soldOut : str(sh.ticketLabel, UI.tickets);
-  const hinweis = vorbei ? "" : soldOut ? UI.soldOut : freierHinweis || (booked ? UI.booked : "");
-  return `<li class="show${vorbei ? " vorbei" : ""}${soldOut && !vorbei ? " soldout" : ""}${
-    booked && !vorbei ? " booked" : ""
+  const hinweis = soldOut ? UI.soldOut : freierHinweis || (booked ? UI.booked : "");
+  return `<li class="show${soldOut ? " soldout" : ""}${
+    booked ? " booked" : ""
   }"${date ? ` data-date="${esc(date)}"` : ""}>
           <span class="show-date"><b>${esc(day)}</b><span class="mono">${esc(month)} ${esc(
     year
@@ -1958,7 +1964,12 @@ function showRow(sh, idx, vorbei = false) {
               .join(" · ")}</span>
           </span>
           ${
-            kasse
+            /* In der VORFÜHRUNG führt auch der Ticket-Knopf nicht hinaus: am
+               anderen Ende steht ein echter Ticketverkauf. Gezeigt wird, dass
+               dort ein Knopf steht — angeklickt werden kann er nicht. */
+            kasse && VORFUEHRUNG
+              ? `<span class="show-cta"><span class="mono shop-demo">${esc(UI.shopDemo)}</span></span>`
+              : kasse
               ? `<span class="show-cta"><a class="btn btn-sm" href="${href(
                   sh.ticketUrl
                 )}" target="_blank" rel="noopener noreferrer">${esc(label)}</a></span>`
@@ -1991,39 +2002,27 @@ function renderShows(n, s) {
     if (da !== db) return da < db ? -1 : 1;
     return zeit(a) - zeit(b);
   };
-  const upcoming = items
-    .filter((i) => !isoDate(i.date) || isoDate(i.date) >= t)
-    .sort(chronologisch);
-  /* Vergangene Termine stehen wieder da — und zwar hier, unter "Shows".
+  const upcoming = items.filter((i) => !showVorbei(i, t)).sort(chronologisch);
+  /* NUR ZUKUENFTIGES. Unter "Shows" steht, was kommt — und sonst nichts.
 
-     Kurze Geschichte, damit das nicht ein drittes Mal hin und her geht:
-     bis zum 27.08.2026 hing unter der Liste ein AUFKLAPPBARER Rueckblick. Der
-     war zugeklappt und zeigte dieselben Termine, die ueber showsNachReferenzen
-     auch bei den Referenzen stehen — er wurde darum entfernt. Am 07.09.2026
-     fiel bei der Abnahme auf, was das wirklich bedeutet: sobald der letzte
-     Termin vorbei ist, verschwindet der ganze Abschnitt samt Menuepunkt, und
-     eine in der Verwaltung publizierte Show ist im Frontend nirgends mehr zu
-     sehen. Das ist die Anforderung, die zaehlt: was publiziert wurde, bleibt
-     sichtbar.
+     Kurze Geschichte, damit das nicht ein viertes Mal hin und her geht:
+     bis 27.08.2026 hing unter der Liste ein aufklappbarer Rueckblick; er wurde
+     entfernt, weil er dieselben Auftritte zeigte wie die Referenzen. Am
+     07.09.2026 kam er offen zurueck, weil ohne ihn der ganze Abschnitt samt
+     Menuepunkt verschwand, sobald der letzte Termin vorbei war. Am 15.09.2026
+     hat der Kunde entschieden: Shows sind Termine, die noch bevorstehen —
+     "PLAYED BEFORE" gehoert dort nicht hin. Wo Sam schon gespielt hat, steht
+     bei den Referenzen, und die pflegt er selbst.
 
-     Also: zwei getrennte Listen, beide chronologisch. Oben, was kommt
-     (aufsteigend — der naechste Termin zuerst). Darunter, offen sichtbar und
-     mit eigener Ueberschrift, was war (absteigend — das Juengste zuerst).
-     Nicht mehr zugeklappt: ein Rueckblick, den man erst aufklappen muss, ist
-     fuer den Besucher dasselbe wie keiner. */
-  const past = items
-    .filter((i) => isoDate(i.date) && isoDate(i.date) < t)
-    .sort((a, b) => -chronologisch(a, b));
+     Verloren geht dabei nichts: die vergangenen Termine bleiben in der
+     Verwaltung stehen (hier wird nur nicht gezeigt), und ohne kommenden Termin
+     bleibt der Abschnitt mit seinem Hinweis stehen — er verschwindet nicht
+     mehr samt Menuepunkt.
 
-  /* Die Aufschrift kommt aus der Verwaltung (uebersetzbar), sonst aus den
-     Oberflaechentexten der jeweiligen Sprache. */
-  const pastTitel = str(s.pastLabel, UI.pastShows);
+     Die Tagesgrenze ist die der Website (Europe/Zurich, siehe today()): ein
+     Termin von HEUTE gilt den ganzen Tag als kommend und faellt nicht um
+     Mitternacht UTC aus der Liste. */
 
-  /* Der Rueckblick-Kasten steht IMMER im HTML, auch leer (dann `hidden`).
-     Grund: die Seite ist statisch gebaut. Verstreicht ein Termin zwischen zwei
-     Builds, schiebt assets/site.js ihn im Browser aus der oberen Liste hierher
-     — dafuer muss es hier etwas zum Hineinschieben geben. Frueher wurde er
-     schlicht ausgeblendet und war bis zum naechsten Build weg. */
   return `
   <section class="pad shows-sec" id="shows" aria-labelledby="shows-h">
     <div class="wrap">${sectionHead(n, s, "shows")}
@@ -2037,12 +2036,6 @@ function renderShows(n, s) {
       <div class="empty-state rv" id="show-empty"${upcoming.length ? " hidden" : ""}><span class="mono">${esc(
         UI.calShow
       )}</span><p>${inline(str(s.emptyText, "No dates announced right now."))}</p></div>
-      <div class="past-shows rv" id="past-shows"${past.length ? "" : " hidden"}>
-        <h3 class="past-title mono" id="past-shows-h">${esc(pastTitel)}</h3>
-        <ul class="show-list past" id="past-show-list">
-        ${past.map((sh) => showRow(sh, 0, true)).join("\n        ")}
-        </ul>
-      </div>
     </div>
   </section>`;
 }
@@ -2065,22 +2058,30 @@ function renderShows(n, s) {
  * buendelt nichts mehr — eine Liste bleibt eine Liste.
  */
 function renderReferences(n, s, bookingTarget) {
-  /* Was schon im Rueckblick der Shows auf DERSELBEN Seite steht, kommt hier
-     nicht ein zweites Mal.
+  /* Hier wird NICHTS gegen die Termine gefiltert (Kundenentscheid 15.09.2026):
+     der Shows-Abschnitt zeigt nur Kommendes, die Referenzen sind die gepflegte
+     Auswahl des Gewesenen. Ein erneuter Auftritt im selben Club nimmt die
+     Referenz nicht weg.
 
-     Anlass (07.09.2026): "Nox Club" stand als Termin im Rueckblick und zwei
-     Bloecke tiefer noch einmal bei den Referenzen — der Kunde pflegt beides,
-     und beides ist richtig. Geloescht wird darum NICHTS: der Eintrag bleibt in
-     der Verwaltung und taucht wieder auf, sobald die Shows nicht mehr auf
-     derselben Seite stehen. Nur die Doppelnennung auf einer Seite faellt weg.
+     Anlass (Kundenbefund 15.09.2026): "Nox Club" stand in der Verwaltung an
+     dritter Stelle der Referenzen und fiel auf der Seite trotzdem weg, weil
+     derselbe Club als Termin gefuehrt war. Auf dem Handy, wo zuerst nur die
+     obersten vier stehen, rutschte damit ein anderer Club an seinen Platz.
+     Die Reihenfolge der Verwaltung gilt jetzt eins zu eins.
 
-     Verglichen wird ueber Name UND Ort (refSchluessel, unabhaengig von
-     Gross/Klein und Leerzeichen — die Referenz heisst "Nox Club " mit
-     Leerzeichen am Ende). Gleicher Name an einem anderen Ort ist ein anderer
-     Auftritt und bleibt stehen. */
+     Geloescht wird ohnehin nichts — weder hier noch in der Verwaltung. */
+  const gesehen = new Set();
   const items = list(s.items)
     .filter((i) => str(i?.name))
-    .filter((i) => !SHOWS_AUF_SEITE.has(refSchluessel(i.name, i.city)));
+    /* Steht derselbe Auftritt zweimal in DIESER Liste, erscheint er einmal —
+       der erste Platz gilt, die Reihenfolge bleibt. Angefasst wird dabei
+       nichts: in der Verwaltung stehen weiterhin beide Eintraege. */
+    .filter((i) => {
+      const key = refSchluessel(i.name, i.city);
+      if (gesehen.has(key)) return false;
+      gesehen.add(key);
+      return true;
+    });
 
   const linkOf = (v) => {
     const url = safeUrl(v.url) || anchor("#booking");
@@ -2435,8 +2436,17 @@ function renderShop(n, s, site, kontaktMail = "", modus = "alles", katalogZiel =
       const perMail = mail
         ? `mailto:${mail}?subject=${encodeURIComponent(`${UI.orderSubject}: ${str(p.name)}`)}`
         : "";
+      /* In der VORFÜHRUNG führt hier kein Weg nach draussen: weder in die
+         echte Stripe-Kasse noch in eine echte Bestellmail. Stattdessen steht
+         da, was hier gälte — sichtbar als Vorführung gekennzeichnet. Preis,
+         Zustand und Abzeichen bleiben, damit die Vorführung zeigt, wie der
+         Shop wirklich aussieht. */
       const cta = sold
         ? `<span class="mono sold-mark">${esc(UI.soldOut)}</span>`
+        : VORFUEHRUNG
+        ? (kasse || perMail
+            ? `<span class="mono shop-demo" data-product="${esc(p.name)}">${esc(UI.shopDemo)}</span>`
+            : "")
         : kasse
         ? `<a class="btn sm solid buy-now" href="${esc(kasse)}" target="_blank" rel="noopener noreferrer"
               data-product="${esc(p.name)}">${esc(buy)}</a>`
@@ -2968,8 +2978,11 @@ function structuredData(c, sections, page, pages) {
         },
       },
       performer: { "@id": `${base}/#artist` },
-      url: safeUrl(sh.ticketUrl) || `${base}${page ? pagePath(page.slug) : "/"}#shows`,
-      ...(safeUrl(sh.ticketUrl)
+      /* In der VORFÜHRUNG steht auch in den strukturierten Daten keine
+         Ticket-Adresse: sie ist maschinenlesbar und führt in einen echten
+         Verkauf. Stattdessen zeigt sie auf den Abschnitt der Seite selbst. */
+      url: (!VORFUEHRUNG && safeUrl(sh.ticketUrl)) || `${base}${page ? pagePath(page.slug) : "/"}#shows`,
+      ...(!VORFUEHRUNG && safeUrl(sh.ticketUrl)
         ? {
             offers: {
               "@type": "Offer",
@@ -3007,7 +3020,6 @@ const UI_DEFAULTS = {
   soldOut: "Ausverkauft",
   booked: "Gebucht",
   calShow: "Termin",
-  pastShows: "Vergangene Shows",
   language: "Sprache",
   buy: "Kaufen",
   bookDay: "Diesen Tag anfragen",
@@ -3047,6 +3059,7 @@ const UI_DEFAULTS = {
   orderByMail: "Per E-Mail bestellen",
   orderSubject: "Bestellung",
   formDemo: "Vorführ-Fassung: dieses Formular sendet nichts.",
+  shopDemo: "Vorführung — hier ginge es zur Kasse",
   follow: "Kanäle",
   notFoundTitle: "Nichts hier.",
   notFoundText: "Diese Seite gibt es nicht (mehr). Zurück zum Start — dort steht alles Aktuelle.",
@@ -3094,7 +3107,6 @@ const UI_DEFAULTS = {
 const UI_SPRACHE = {
   en: {
     buy: "Buy",
-    pastShows: "Past shows",
     orderByMail: "Order by e-mail",
     showMoreVenues: "Show {n} more",
     showLessVenues: "Show less",
@@ -3119,11 +3131,11 @@ const UI_SPRACHE = {
     payStripeNote:
       "Payment happens after you submit, via Stripe — card, Apple Pay, Google Pay or TWINT. Your order ships as soon as the payment is confirmed.",
     formDemo: "Demo version: this form does not send anything.",
+    shopDemo: "Demo — checkout would open here",
     channelSoon: "follows",
   },
   fr: {
     buy: "Acheter",
-    pastShows: "Concerts passés",
     orderByMail: "Commander par e-mail",
     showMoreVenues: "Afficher {n} de plus",
     showLessVenues: "Afficher moins",
@@ -3148,6 +3160,7 @@ const UI_SPRACHE = {
     payStripeNote:
       "Le paiement se fait après l'envoi, via Stripe — carte, Apple Pay, Google Pay ou TWINT. L'expédition part dès que le paiement est confirmé.",
     formDemo: "Version de démonstration : ce formulaire n'envoie rien.",
+    shopDemo: "Démonstration — la caisse s'ouvrirait ici",
     channelSoon: "à venir",
   },
 };
@@ -3246,6 +3259,11 @@ export function collectStrings(node, prefix = "", out = []) {
     out.push([prefix, node]);
   }
   return out;
+}
+
+/** Wert an einem Punkt-Pfad lesen — Gegenstueck zu setDeep. */
+function getDeep(obj, path) {
+  return String(path).split(".").reduce((o, k) => (o == null ? o : o[k]), obj);
 }
 
 function setDeep(obj, path, value) {
@@ -3389,11 +3407,6 @@ const slugify = (v) =>
    anderen Seite liegt, und damit Links in der Sprache bleiben. */
 let CTX = { page: null, pages: [], prefix: "" };
 
-/* Die Auftritte, die auf DER GERADE GEBAUTEN SEITE unter "Shows" stehen —
-   damit die Referenzen darunter sie nicht wiederholen (siehe
-   renderReferences). Wird je Seite in renderPage gesetzt. */
-let SHOWS_AUF_SEITE = new Set();
-
 /** Adresse einer Seite in der aktuellen Sprache: "/", "/shows/", "/en/shows/" */
 const pagePath = (slug) => `${CTX.prefix}${slug ? `/${slug}/` : "/"}`;
 
@@ -3461,12 +3474,30 @@ const BOOKING_ENDPOINT = "/api/booking";
 const ORDER_ENDPOINT = "/api/order";
 
 /**
- * Vorführ-Fassung (Beispiel-Sami): dort liegt nur die gebaute Website, ohne
- * die Funktionen dahinter. Ein Formular, das dann ins Leere sendet, sähe
- * funktionsfähig aus und wäre es nicht — deshalb sagen die Formulare dort
- * offen, dass sie nichts verschicken, und senden gar nicht erst.
+ * VORFÜHR-FASSUNG (Repo Beispiel-Sami).
+ *
+ * Dort liegt dieselbe Website noch einmal, zum Herzeigen — ohne die Funktionen
+ * dahinter. Zwei Dinge dürfen dabei NICHT echt sein:
+ *
+ *   1. FORMULARE. Ein Formular, das ins Leere sendet, sähe funktionsfähig aus
+ *      und wäre es nicht. Und stünden die Funktionen doch bereit, legte eine
+ *      Vorführung echte Booking-Anfragen in der Datenbank an. Die Formulare
+ *      sagen deshalb offen, dass sie nichts verschicken, und senden gar nicht
+ *      erst (assets/site.js liest `data-demo`).
+ *
+ *   2. DIE KASSE. Befund vom 17.09.2026: Der Kauf-Knopf der Vorführung zeigte
+ *      auf DENSELBEN Stripe Payment Link wie die echte Website
+ *      (`buy.stripe.com/…`). Wer in der Vorführung darauf klickte, stand in
+ *      einer ECHTEN Kasse und hätte echt bezahlen können. Eine Vorführung darf
+ *      kein Geld einnehmen. Auch der Ersatzweg „per E-Mail bestellen" ist hier
+ *      falsch: er schriebe an die echte Adresse. Dasselbe gilt für den
+ *      Ticket-Knopf unter „Shows" — am anderen Ende steht ein echter Verkauf.
+ *
+ * Ein Schalter für alles, damit die Vorführung nicht die Hälfte vergisst.
+ * `FORMS_DEMO=1` bleibt als bisheriger Name gültig.
  */
-const FORMS_DEMO = process.env.FORMS_DEMO === "1";
+const VORFUEHRUNG = process.env.VORFUEHRUNG === "1" || process.env.FORMS_DEMO === "1";
+const FORMS_DEMO = VORFUEHRUNG;
 const formDemoAttr = FORMS_DEMO ? ' data-demo="true"' : "";
 const formDemoNote = () =>
   FORMS_DEMO ? `<p class="bform-demo mono">${esc(UI.formDemo)}</p>` : "";
@@ -3481,16 +3512,13 @@ function renderPage(c, page, pages, lang, langs) {
   const base = site.domain.replace(/\/+$/, "");
   const sections = c.sections || {};
   const isHome = !page.slug;
-  // Shows gehoeren nur dann auf die Seite — und damit ins Menue —, wenn noch
-  // ein Termin aussteht. Steht in der Verwaltung nur Vergangenes, fuehrte der
-  // Menuepunkt bisher auf eine Seite, die nichts als "keine Termine" sagt.
-
   const heute = today();
   /* Der Abschnitt steht, sobald ueberhaupt EIN Termin mit Namen da ist — auch
      wenn alle vorbei sind. Bis zum 07.09.2026 verlangte diese Stelle einen
      KOMMENDEN Termin; als der letzte verstrichen war, verschwanden Abschnitt
-     und Menuepunkt, und alles je Publizierte war im Frontend weg. Was vorbei
-     ist, steht jetzt im Rueckblick (siehe renderShows). */
+     und Menuepunkt aus dem Frontend. Jetzt bleibt beides stehen, der Abschnitt
+     sagt "keine Termine" — und gezeigt wird darin nur Kommendes (siehe
+     renderShows). Vergangene Auftritte stehen bei den Referenzen. */
   const hasShows = list(sections.shows?.items).some((item) => str(item?.name));
   /* Welche Abschnitte eine Seite wirklich baut. Als Funktion, weil das Menue
      dieselbe Rechnung fuer die STARTSEITE braucht — nicht nur fuer die Seite,
@@ -3506,17 +3534,17 @@ function renderPage(c, page, pages, lang, langs) {
   const order = baubareAbschnitte(page);
   const effectivePage = { ...page, sections: order };
   CTX = { page: effectivePage, pages, hideHead: null, prefix: navPrefix(lang, master) };
-  /* Stehen Shows und Referenzen auf derselben Seite, gehoert jeder Auftritt nur
-     einmal darauf. Auf einer Seite ohne Shows bleibt die Referenzliste
-     vollstaendig. */
-  SHOWS_AUF_SEITE =
-    order.includes("shows") && order.includes("references")
-      ? new Set(
-          list(sections.shows?.items)
-            .filter((i) => str(i?.name).trim())
-            .map((i) => refSchluessel(i.name, i.city))
-        )
-      : new Set();
+  /* REFERENZEN WERDEN NICHT GEGEN TERMINE GEFILTERT — Kundenentscheid
+     15.09.2026. Bis zum 07.09. nahm der Generator einen Auftritt aus der
+     Referenzliste, wenn er auf derselben Seite schon als Termin stand; seit
+     dem 15.09. galt das nur noch fuer kommende Termine. Jetzt gar nicht mehr:
+     die Referenzliste ist eine gepflegte Auswahl, und ein erneuter Auftritt im
+     selben Club darf die Referenz nicht wegnehmen. Doppelt steht dadurch
+     nichts mehr: der Shows-Abschnitt zeigt nur noch Kommendes, die Referenzen
+     nur Gewesenes.
+
+     Echte Dubletten INNERHALB der Referenzliste faengt renderReferences ab. */
+
   // Das Formular haengt nicht mehr an einer in der Verwaltung hinterlegten
   // Adresse: es sendet immer an den eigenen Endpunkt /api/booking. Abschalten
   // laesst es sich weiterhin in der Verwaltung (form.enabled).
@@ -3826,7 +3854,10 @@ function renderPage(c, page, pages, lang, langs) {
         name: str(i.name),
         venue: str(i.venue),
         city: str(i.city),
-        url: safeUrl(i.ticketUrl),
+        /* In der VORFÜHRUNG steht hier keine Ticket-Adresse: der Kalender
+           macht daraus einen anklickbaren Tag, und am anderen Ende steht ein
+           echter Verkauf. */
+        url: VORFUEHRUNG ? "" : safeUrl(i.ticketUrl),
         status: str(i.status, "confirmed"),
       }))
   )}</script>`
@@ -4444,6 +4475,147 @@ Sitemap: ${base}/sitemap.xml
  * verschwindet er samt Menuepunkt (die vergangenen Termine stehen dann bei den
  * Referenzen).
  */
+/**
+ * Die Startseite ohne Auftritte — laut sagen, nicht stumm bauen.
+ *
+ * BEFUND (Kunde, 13.09.2026): Auf der Startseite ging es von „Ueber mich"
+ * direkt zum Shop. Nichts war geloescht — Shows und Referenzen standen
+ * vollstaendig auf /shows/ und auf der Startseite gar nicht. Bis zum
+ * 02.09.2026 hatte die eingecheckte Vorlage die Seitenaufteilung bei JEDEM
+ * Bauen ueberschrieben und die Startseite damit immer wieder bestueckt; seit
+ * #29 gilt — richtig so — die Aufteilung aus der Verwaltung. Damit wurde
+ * sichtbar, was dort gespeichert war.
+ *
+ * Hier wird deshalb NICHTS erzwungen: waere die Vorlage wieder staerker als
+ * die Verwaltung, waere der Schalter dort erneut eine Attrappe. Korrigiert
+ * wird in der Verwaltung (ein Klick, „Auf die Startseite holen"). Der Build
+ * sagt nur, was ist — damit dieselbe Lage nie wieder unbemerkt bleibt.
+ */
+/**
+ * Bilder, die in der Verwaltung stehen und auf der Website fehlen.
+ *
+ * BEFUND (Kunde, 15.09.2026): „Fotos aus der Verwaltung erscheinen nicht
+ * zuverlaessig." Nachgemessen am veroeffentlichten Stand: in der Galerie
+ * standen 42 Eintraege, 5 davon OHNE Bilddatei (`src` leer). Der Generator
+ * ueberspringt sie stumm — in der Verwaltung ist der Eintrag da, auf der
+ * Website nicht, und niemand erfaehrt warum. Dasselbe gilt fuer die einzelnen
+ * Bildfelder (Ueber mich, Booking, Hero).
+ *
+ * Geloescht wird hier NICHTS: ein leerer Eintrag kann ein halb angelegter
+ * sein, der gleich ein Bild bekommt. Er wird nur benannt.
+ */
+function meldeBilderOhneDatei(content) {
+  const sections = content?.sections || {};
+  const luecken = [];
+  list(sections.gallery?.items).forEach((bild, i) => {
+    if (!str(bild?.src).trim()) luecken.push(`Galerie #${i + 1}${str(bild?.alt) ? ` („${str(bild.alt).slice(0, 40)}")` : ""}`);
+  });
+  for (const [wo, feld] of [
+    ["Ueber mich", sections.about?.photo],
+    ["Booking", sections.booking?.photo],
+    ["Hero", content?.hero?.media],
+  ]) {
+    if (feld && Object.keys(feld).length && !str(feld.src).trim()) luecken.push(`${wo} (Bildfeld ohne Datei)`);
+  }
+  if (!luecken.length) return;
+  console.warn(
+    `[build] ${luecken.length} Bild(er) ohne Datei — sie erscheinen NICHT auf der Website: ` +
+      `${luecken.slice(0, 8).join(", ")}${luecken.length > 8 ? " …" : ""}. ` +
+      `In der Verwaltung unter Medien ein Bild zuweisen oder den Eintrag loeschen.`
+  );
+}
+
+/**
+ * Texte, die auf der Website in der falschen Sprache stehen.
+ *
+ * BEFUND (15.09.2026): Auf der deutschen Startseite stand der Shop-Hinweis
+ * englisch („Payment — How to pay is shown on the item itself …"), obwohl im
+ * Inhalt eine deutsche Fassung liegt: unter i18n.de. Das ist kein Zufall,
+ * sondern die Folge des Sprachwechsels vom 07.09.2026: bis dahin war Englisch
+ * die gepflegte Sprache und Deutsch die Uebersetzung; seitdem ist Deutsch die
+ * gepflegte Sprache — und `localize` setzt fuer sie nichts mehr ein (sie IST
+ * der Grundtext). Was damals nicht ins Deutsche uebertragen wurde, steht bis
+ * heute englisch da, waehrend die deutsche Fassung ungenutzt daneben liegt.
+ *
+ * Hier wird NICHT umgeschrieben: die Uebersetzungstabelle kann veraltet sein,
+ * und der Grundtext gehoert der Verwaltung. Gemeldet wird, wo beides
+ * auseinanderlaeuft — uebernommen wird es dort, mit einem Klick.
+ */
+function meldeTexteInFremderSprache(content) {
+  const master = str(content?.site?.lang) || "de";
+  const eigen = flattenI18n((content?.i18n && content.i18n[master]) || {});
+  if (!Object.keys(eigen).length) return;
+  /* Nur dort, wo der Grundtext noch WOERTLICH die alte Hauptsprache traegt:
+     stimmt er mit der englischen Uebersetzung ueberein, ist er nie ins
+     Deutsche gewechselt. Alles andere ist gepflegter Grundtext und bleibt. */
+  const alt = flattenI18n((content?.i18n && content.i18n.en) || {});
+  const sicher = [];      // Grundtext ist WOERTLICH die alte Hauptsprache
+  const fraglich = [];    // weicht ab, laesst sich aber nicht beweisen
+  for (const [pfad, deutsch] of Object.entries(eigen)) {
+    if (NO_TRANSLATE_PATH.test(pfad)) continue;
+    const jetzt = getDeep(content, pfad);
+    if (typeof jetzt !== "string" || !jetzt.trim()) continue;
+    if (typeof deutsch !== "string" || !deutsch.trim()) continue;
+    if (jetzt.trim() === deutsch.trim()) continue;          // steht schon deutsch da
+    if (str(alt[pfad]).trim() && str(alt[pfad]).trim() === jetzt.trim()) sicher.push(pfad);
+    else fraglich.push(pfad);
+  }
+  if (!sicher.length && !fraglich.length) return;
+  if (sicher.length) {
+    console.warn(
+      `[build] ${sicher.length} Text(e) stehen auf der Website noch in der alten Hauptsprache, ` +
+        `obwohl eine ${master}-Fassung im Inhalt liegt: ${sicher.slice(0, 6).join(", ")}` +
+        `${sicher.length > 6 ? " …" : ""}. In der Verwaltung unter Sprache uebernehmen ` +
+        `("${master === "de" ? "Deutsche" : master} Fassung uebernehmen") — der Generator schreibt hier nichts um.`
+    );
+  }
+  if (fraglich.length) {
+    console.warn(
+      `[build] ${fraglich.length} weitere(r) Text(e) weichen von der ${master}-Fassung im Inhalt ab ` +
+        `(z. B. ${fraglich.slice(0, 3).join(", ")}). Das kann eine veraltete Uebersetzung sein — ` +
+        `pruefen, nicht blind uebernehmen.`
+    );
+  }
+}
+
+function meldeStartseiteOhneAuftritte(content) {
+  const seiten = list(content?.pages);
+  const start = seiten.find((p) => str(p?.slug) === "");
+  if (!start) return;
+  const sections = content?.sections || {};
+  const hatInhalt = (key) => list(sections[key]?.items).some((i) => str(i?.name).trim());
+  const drauf = new Set(list(start.sections));
+  const fehlen = ["shows", "references"].filter(
+    (key) => BAUBAR.has(key) && sections[key] && sections[key].enabled !== false && hatInhalt(key) && !drauf.has(key)
+  );
+  if (fehlen.length) {
+    const wo = fehlen.map((key) => {
+      const seite = seiten.find((p) => list(p?.sections).includes(key));
+      return `${key} → ${seite ? "/" + str(seite.slug) + "/" : "nirgends"}`;
+    });
+    console.warn(
+      `[build] Die Startseite zeigt ${fehlen.join(" und ")} nicht (${wo.join(", ")}). ` +
+        `Die Eintraege sind da, sie stehen nur woanders. In der Verwaltung unter ` +
+        `"Abschnitte" steht der Hinweis samt Knopf "Auf die Startseite holen". ` +
+        `Der Generator traegt das NICHT von selbst nach — sonst waere die Zuordnung ` +
+        `in der Verwaltung wirkungslos.`
+    );
+  }
+  /* Ein Abschnitt, den der Generator nicht baut, macht eine Seite in der
+     Verwaltung voller, als sie wird. Genau das verdeckte den Befund: auf der
+     Startseite stand "sound". */
+  const tot = [];
+  for (const p of seiten) {
+    for (const key of list(p?.sections)) if (!BAUBAR.has(key)) tot.push(`${key} (${str(p.slug) ? "/" + str(p.slug) + "/" : "Startseite"})`);
+  }
+  if (tot.length) {
+    console.warn(
+      `[build] Eingeplant, aber nicht baubar: ${tot.join(", ")} — diese Abschnitte ` +
+        `erscheinen nicht und zaehlen auf ihrer Seite nicht mit.`
+    );
+  }
+}
+
 function meldeStilleTermine(content) {
   const items = list(content?.sections?.shows?.items);
   const ohneNamen = items.filter((i) => !str(i?.name).trim());
@@ -4473,6 +4645,9 @@ function meldeStilleTermine(content) {
 async function main() {
   const content = await loadContent();
   meldeStilleTermine(content);
+  meldeStartseiteOhneAuftritte(content);
+  meldeBilderOhneDatei(content);
+  meldeTexteInFremderSprache(content);
   BILDMASSE = await ladeBildmasse();
   if (!content.site || !content.site.domain) {
     throw new Error("content: site.domain fehlt");
@@ -4554,6 +4729,30 @@ async function main() {
   await writeFile(resolve(ROOT, "404.html"), render404(content, langs));
   console.log("[build] sitemap.xml, robots.txt, 404.html");
 
+  /* WELCHER STAND IST LIVE? — /stand.json
+     Anlass (13.09.2026): Der Build-Hook wird per no-cors gerufen; seine Antwort
+     ist im Browser nicht lesbar. Die Verwaltung konnte deshalb nur sagen "der
+     Aufruf ging raus" — ob die Aenderung wirklich oben ist, wusste niemand.
+     Diese kleine Datei sagt es: sie traegt den Zeitstempel des Inhalts, aus dem
+     die Seite gebaut wurde. Die Verwaltung liest sie nach dem Publizieren und
+     vergleicht mit dem, was sie eben gespeichert hat.
+     Nichts Geheimes: derselbe Zeitstempel steht ohnehin im ausgelieferten
+     Inhalt (content.json ist oeffentlich lesbar). */
+  await writeFile(
+    resolve(ROOT, "stand.json"),
+    JSON.stringify(
+      {
+        inhaltVon: str(content.updatedAt) || null,
+        inhaltVersion: Number(content.contentRevision) || null,
+        gebautAm: new Date().toISOString(),
+        quelle: AUS_DER_DATENBANK ? "verwaltung" : "schnappschuss",
+      },
+      null,
+      2
+    ) + "\n"
+  );
+  console.log("[build] stand.json (Inhalt vom " + (str(content.updatedAt) || "?") + ")");
+
   // Verzeichnisse aufräumen, die zu keiner Seite mehr gehören
   const wanted = new Set(written.map((r) => r.split("/")[0]).filter((d) => d !== "index.html"));
   langs.slice(1).forEach((l) => wanted.add(l));
@@ -4601,9 +4800,38 @@ async function main() {
   if (missing) console.log(`[build] Übersetzungen: ${missing}`);
 }
 
-// Nur bauen, wenn die Datei direkt aufgerufen wurde — beim Importieren aus
-// einem Test soll nichts geschrieben werden.
-if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+/* Nur bauen, wenn die Datei direkt aufgerufen wurde — beim Importieren aus
+   einem Test soll nichts geschrieben werden.
+
+   VERGLICHEN WIRD DER ECHTE PFAD, nicht der geschriebene.
+
+   BEFUND vom Mac (17.09.2026): Der Prüflauf meldete dort 15 Fehler, die keine
+   waren, und ging erst mit `TMPDIR=/private/tmp` durch. Die Ursache sass genau
+   hier. Die beiden Seiten des Vergleichs entstehen unterschiedlich:
+
+     process.argv[1]              der Pfad, wie er auf der Kommandozeile stand
+     fileURLToPath(import.meta.url)  der Pfad, den Node beim Laden AUFGELÖST hat
+
+   Node löst beim Laden eines Moduls Symlinks auf. Auf macOS liefert
+   `mkdtemp(tmpdir())` aber `/var/folders/…`, und `/var` ist eine Verknüpfung
+   auf `/private/var`. Der Testlauf startete also
+   `node /var/folders/…/scripts/build.mjs`, während Node drinnen
+   `/private/var/folders/…/scripts/build.mjs` sah — zwei Namen für dieselbe
+   Datei. Der Vergleich schlug fehl, `main()` lief nie, es wurde NICHTS gebaut,
+   und jede Prüfung, die eine gebaute Seite lesen wollte, fiel um.
+
+   `realpathSync` bringt beide Seiten auf denselben Namen. Wo es keinen Symlink
+   gibt, kommt derselbe Pfad zurück — die Prüfung wird also nirgends lockerer.
+   Kann der Pfad nicht aufgelöst werden (Datei weg, Rechte), bleibt es beim
+   bisherigen Vergleich, statt den Bau mit einer Ausnahme abzubrechen. */
+const echterPfad = (pfad) => {
+  try {
+    return realpathSync(resolve(pfad));
+  } catch {
+    return resolve(pfad);
+  }
+};
+if (process.argv[1] && echterPfad(process.argv[1]) === echterPfad(fileURLToPath(import.meta.url))) {
   main().catch((err) => {
     console.error("[build] FEHLER:", err.message);
     process.exit(1);

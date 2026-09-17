@@ -18,6 +18,26 @@
   # Die Website liegt hier in einem Unterverzeichnis, nicht an der Wurzel.
   SITE_BASE = "/site"
 
+  # VORFÜHRUNG. Dieselbe Website, dasselbe Inhaltsverzeichnis — aber nichts
+  # davon darf echt sein:
+  #
+  #   Befund 17.09.2026: Der Kauf-Knopf im Shop zeigte hier auf DIESELBEN
+  #   Stripe Payment Links wie die echte Website (buy.stripe.com/…). Wer in der
+  #   Vorführung darauf klickte, stand in einer ECHTEN Kasse. Dasselbe galt für
+  #   den Ticket-Knopf unter „Shows" und für den Ersatzweg „per E-Mail
+  #   bestellen"; das Booking-Formular sendete an /api/booking — hier gibt es
+  #   diese Funktion nicht, aber gäbe es sie, entstünden echte Anfragen in der
+  #   Datenbank.
+  #
+  # Mit diesem Schalter (s-mi, scripts/build.mjs) steht an der Stelle des
+  # Knopfes ein Vermerk, und nach draussen führt nichts mehr. Preise, Zustand
+  # und Abzeichen bleiben — die Vorführung soll zeigen, wie der Shop aussieht.
+  #
+  # ER GEHÖRT HIERHER UND NICHT ZUR ECHTEN WEBSITE: Dort darf die Kasse
+  # selbstverständlich funktionieren. Wird er hier entfernt, kassiert die
+  # Vorführung wieder echt.
+  VORFUEHRUNG = "1"
+
   # Inhaltsquelle: derselbe öffentlich lesbare Knoten, aus dem auch die echte
   # Website gebaut wird. Ist er nicht erreichbar, greift der eingecheckte
   # Stand site/content/site.json.
@@ -28,6 +48,23 @@
   # ist ein öffentlicher Projekt-Identifier und muss im Browser stehen. Der
   # Zugriff wird über die Datenbank- und Storage-Regeln geregelt.
   SECRETS_SCAN_SMART_DETECTION_OMIT_VALUES = "AIzaSyC6xVo-wmXC4JjG7qMQnOExIjU-UDvBluE"
+
+# Dieselben Sperren wie auf der echten Website (dort netlify.toml, /scripts/*
+# und /content/*). Hier wird das ganze Verzeichnis ausgeliefert — ohne diese
+# Regeln lägen der Quelltext des Generators, seine Tests und der komplette
+# Inhalt als Datei offen. Die Vorführung soll die Website zeigen, nicht ihr
+# Innenleben. `force = true`, sonst gewinnt die vorhandene Datei.
+[[redirects]]
+  from = "/site/scripts/*"
+  to = "/site/404.html"
+  status = 404
+  force = true
+
+[[redirects]]
+  from = "/site/content/*"
+  to = "/site/404.html"
+  status = 404
+  force = true
 
 # Bild-CDN wie auf der echten Website: Firebase-Storage-Bilder dürfen über
 # /.netlify/images verkleinert ausgeliefert werden.

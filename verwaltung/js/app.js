@@ -14,7 +14,9 @@ import {
   loadAll,
   saveContent,
   saveConfig,
+  istBuildHook,
   publish,
+  pruefeLive,
   listVersions,
   restoreVersion,
   resetToDefaults,
@@ -588,12 +590,27 @@ function renderSettings() {
         {
           class: "btn solid",
           onclick: async () => {
+            /* Die Adresse hier pruefen, nicht erst beim Publizieren. Der
+               Build-Hook geht spaeter per no-cors hinaus — seine Antwort ist
+               nicht lesbar, eine vertippte oder fremde Adresse faellt also
+               nirgends mehr auf. Hier ist die letzte Stelle, an der sich das
+               sagen laesst. */
+            const hook = hookInput.value.trim();
+            if (hook && !istBuildHook(hook)) {
+              toast(
+                "Das sieht nicht nach einem Netlify-Build-Hook aus. Erwartet wird " +
+                  "https://api.netlify.com/build_hooks/… — in Netlify unter " +
+                  "Site configuration → Build & deploy → Build hooks.",
+                "err"
+              );
+              return;
+            }
             try {
               await saveConfig({
-                buildHook: hookInput.value.trim(),
+                buildHook: hook,
                 siteUrl: siteInput.value.trim() || DEFAULT_SITE_URL,
               });
-              toast("Einstellungen gespeichert");
+              toast(hook ? "Einstellungen gespeichert" : "Einstellungen gespeichert — ohne Build-Hook");
               render();
             } catch (e) {
               toast("Nicht gespeichert: " + e.message, "err");
@@ -745,7 +762,31 @@ async function doPublish() {
        greift der Zeitplan im Website-Repo — seit 12.08.2026 alle fuenf Minuten
        statt stuendlich. Eine Website aus fertigen Dateien wird nie schneller
        als ihr Build; alles Kuerzere waere hier eine Behauptung. */
-    if (res.built) toast("Publiziert — die Website baut neu und ist in rund einer Minute aktuell");
+    if (res.built) {
+      /* „Angestossen" ist die Wahrheit, mehr weiss dieser Aufruf nicht: der
+         Build-Hook geht per no-cors hinaus, seine Antwort ist nicht lesbar.
+         Bestaetigt wird gleich — durch Nachsehen auf der Website selbst. */
+      toast("Build angestossen — ich sehe nach, wann der Stand oben ist …");
+      const stand = S.content?.updatedAt || null;
+      pruefeLive(stand).then((r) => {
+        if (r.ok) {
+          toast("Live bestätigt: die Website zeigt den Stand von " + relativeTime(stand) + ".");
+        } else if (r.grund === "keine-standdatei") {
+          toast(
+            "Build angestossen. Ob er oben ist, kann ich nicht nachsehen: die Website legt noch keine " +
+              "Stand-Datei ab (/stand.json). Im Netlify-Deploy-Log steht es sicher.",
+            "warn"
+          );
+        } else {
+          toast(
+            "Build angestossen — bis eben ist der neue Stand noch nicht oben. Netlify braucht rund eine " +
+              "Minute; sonst im Deploy-Log nachsehen.",
+            "warn"
+          );
+        }
+        if (currentId === "dashboard" || currentId === "publish") render();
+      });
+    }
     else if (/Build-Hook/.test(res.reason || ""))
       /* Kein Versprechen mehr auf eine Stunde: ohne Build-Hook haengt die
          Website am Zeitplan im Repo, und GitHub laesst geplante Laeufe unter
