@@ -1076,6 +1076,91 @@ export function nachziehen(live, korr) {
     if (n) getan.push(`${n} Shop-Angabe(n) ergaenzt`);
   }
 
+  /* DER WIDERSPRUCH IM SHOP-STREIFEN (Kundenbefund 15.09., Entscheid 17.09.2026)
+
+     Unter dem Katalog stand: „Der Versand wird nach der Bestellung persoenlich
+     abgesprochen." Die beiden Artikel des Kunden sagen daneben ausdruecklich
+     „Gratis Versand innerhalb der Schweiz!", und der Stripe-Checkout fuehrt
+     dasselbe. Der Streifen widersprach also der Ware, auf die er sich bezieht.
+     Beim Punkt „Zahlung" dasselbe: er verwies auf ein Bestellformular, das am
+     12.08.2026 entfernt wurde.
+
+     NEUE BEDINGUNGEN WERDEN HIER NICHT ERFUNDEN. Der Streifen ist der
+     GENERISCHE Hinweis und verweist ab jetzt neutral auf die Angaben beim
+     Artikel. Was der Kunde am Artikel und im Checkout hinterlegt hat, bleibt
+     unangetastet — das ist die Quelle.
+
+     ERSETZT WIRD NUR, WAS WOERTLICH EINEM DER BEKANNTEN ALTEN TEXTE ENTSPRICHT
+     (korr.shopHinweise.alt). Schreibt der Kunde selbst etwas hin, trifft der
+     Vergleich nicht mehr und hier passiert nichts — fuer immer.
+
+     UND ES GEHT UM ALLE DREI SPRACHEN: Grundsprache ist Deutsch
+     (site.lang = "de"), und der Generator zeigt auf der Hauptseite den
+     GRUNDTEXT. Der stand hier auf Englisch — die deutsche Seite zeigte also
+     den englischen Streifen, waehrend die deutsche Fassung ungenutzt unter
+     i18n.de lag. Deutsch wandert deshalb in den Grundtext, Englisch nach
+     i18n.en. Danach sagen de, en und fr dasselbe. */
+  if (!erledigt("shopHinweise") && korr.shopHinweise) {
+    const kh = korr.shopHinweise;
+    const stellen = list(kh.stellen).map((x) => Number(x)).filter((x) => Number.isInteger(x) && x >= 0);
+    const bekannt = new Set(list(kh.alt).map((t) => str(t).trim()));
+    const passt = (wert) => bekannt.has(str(wert).trim());
+    /* Schon umgestellt? Dann ist nichts zu tun — und vor allem NICHTS zu
+       melden. Ohne diese Frage schriebe der Punkt „Fragen" bei jedem Bau
+       erneut: sein Wortlaut ist vorher und nachher derselbe, er wechselt nur
+       den Platz, und `passt` traefe deshalb fuer immer zu. */
+    const schonSo = (wert, ziel) =>
+      !!wert && str(wert.title).trim() === str(ziel.title).trim()
+             && str(wert.text).trim() === str(ziel.text).trim();
+    let n = 0;
+    const steheneGelassen = [];
+
+    /* Der Grundtext — das ist, was die deutsche Seite zeigt. */
+    const grund = list(ls.shop?.info);
+    stellen.forEach((i, platz) => {
+      const eintrag = grund[i];
+      const neuText = list(kh.grund)[platz];
+      if (!eintrag || !neuText) return;
+      if (schonSo(eintrag, neuText)) return;
+      if (!passt(eintrag.text)) { steheneGelassen.push(`Grundtext ${i}`); return; }
+      eintrag.title = neuText.title;
+      eintrag.text = neuText.text;
+      n++;
+    });
+
+    /* Und jede Uebersetzung. Sie haengen am PLATZ in der Liste, nicht am
+       Namen — deshalb wird ueber denselben Index geschrieben. */
+    for (const [lang, texte] of Object.entries(kh.i18n || {})) {
+      const dort = (live.i18n || (live.i18n = {}))[lang] || ((live.i18n[lang] = {}));
+      const abschnitte = dort.sections || (dort.sections = {});
+      const shop = abschnitte.shop || (abschnitte.shop = {});
+      const info = shop.info || (shop.info = {});
+      stellen.forEach((i, platz) => {
+        const neuText = list(texte)[platz];
+        if (!neuText) return;
+        const vorhanden = info[String(i)];
+        if (schonSo(vorhanden, neuText)) return;
+        /* Noch gar keine Uebersetzung an dieser Stelle (so steht es bei en):
+           dann ist nichts zu ueberschreiben, es wird ergaenzt. */
+        if (vorhanden && str(vorhanden.text) && !passt(vorhanden.text)) {
+          steheneGelassen.push(`${lang} ${i}`);
+          return;
+        }
+        info[String(i)] = { ...(vorhanden || {}), title: neuText.title, text: neuText.text };
+        n++;
+      });
+    }
+
+    if (n) getan.push(`${n} Shop-Hinweis(e) auf die Angaben am Artikel umgestellt`);
+    if (steheneGelassen.length) {
+      console.log(
+        "[build] Shop-Streifen: " + steheneGelassen.length + " Stelle(n) unveraendert gelassen, "
+          + "weil dort etwas anderes steht als der bekannte alte Text (" + steheneGelassen.join(", ") + "). "
+          + "Das ist Absicht: was der Kunde selbst hineinschreibt, gewinnt."
+      );
+    }
+  }
+
   /* Zwei Ansichten des Shops (12.08.2026, zweiter Anlauf).
 
      Erst hatte der Shop nur eine eigene Seite /shop/ — der Kunde suchte sein
@@ -1212,6 +1297,11 @@ export function nachziehen(live, korr) {
       const ziel = zielS || (live.i18n[lang].sections = {});
       ziel.about = { ...ziel.about, facts: kopie(q.aboutFacts) };
     }
+    /* Die Seiten-Uebersetzungen tragen ihren SLUG (siehe i18n._warum_seiten in
+       korrekturen.json). Zugeordnet wird darueber, nicht ueber den Platz —
+       sonst verschiebt jede neu eingefuegte Seite alles dahinter, und genau
+       das war am 17.09.2026 auf /fr/ zu sehen. Die Nummern sind nur noch
+       Schluessel. */
     if (q.seiten && live.i18n?.[lang]) live.i18n[lang].pages = kopie(q.seiten);
     /* Im franzoesischen Menue stand "Kontakt" — der deutsche Wert war in die
        franzoesische Uebersetzung geraten. Ersetzt wird nur genau dieser
@@ -3237,7 +3327,7 @@ const looksTechnical = (v) =>
    Club den Namen. Genau so hiess "B9" auf /de/ und /fr/ noch "B9
    eventlocation", nachdem die Liste gewachsen war. */
 const NO_TRANSLATE_PATH =
-  /^layout\.|^pages\.\d+\.sections\.|^pages\.\d+\.hero$|^sections\.contact\.socials\.|^sections\.references\.items\.|^sections\.shows\.items\.|^imprint\./;
+  /^layout\.|^pages\.\d+\.sections\.|^pages\.\d+\.hero$|^pages\.\d+\.slug$|^sections\.contact\.socials\.|^sections\.references\.items\.|^sections\.shows\.items\.|^imprint\./;
 
 /** Alle übersetzbaren Textstellen als [pfad, text]. */
 export function collectStrings(node, prefix = "", out = []) {
@@ -3298,12 +3388,61 @@ export function flattenI18n(node, prefix = "", out = {}) {
 }
 
 /** Inhalt in eine Sprache übersetzen. Fehlende Stellen bleiben deutsch. */
+/**
+ * WELCHE SEITE IST GEMEINT? — der Platz allein genuegt nicht.
+ *
+ * BEFUND (Live-Sprachpruefung 17.09.2026): Auf /fr/ hiessen die Menuepunkte
+ *     ACCUEIL · BOOKING(→/fr/shows/) · BOUTIQUE(→/fr/gallery/) · BOOKING · SHOP
+ * Die Uebersetzungen der Seiten stehen unter `i18n.<lang>.pages.<NUMMER>` —
+ * also am PLATZ in der Liste. Als sie entstanden, hatte die Website drei
+ * Seiten: "", "booking", "shop". Heute sind es fuenf: "", "shows", "gallery",
+ * "booking", "shop". Die alten Platznummern zeigen seither auf die falschen
+ * Seiten, und zwei Seiten bekommen gar keine Uebersetzung mehr.
+ *
+ * Der Platz ist also die falsche Kennung: er verschiebt sich, sobald jemand
+ * eine Seite einfuegt oder umsortiert. Die Kennung, die bleibt, ist der SLUG.
+ * Traegt ein Uebersetzungseintrag einen (`slug`, von `nachziehen` gestempelt
+ * oder von der Verwaltung mitgeschrieben), wird er ueber ihn zugeordnet — der
+ * Platz zaehlt dann nicht mehr.
+ *
+ * Ohne `slug` bleibt es beim bisherigen Verhalten: sonst wuerde eine Fassung,
+ * die noch keinen Stempel hat, gar nicht mehr uebersetzt.
+ *
+ * Zurueck kommt eine Karte „alte Nummer -> heutige Nummer"; fehlt der Slug in
+ * der heutigen Seitenliste (Seite geloescht), fehlt der Eintrag — dann wird
+ * diese Uebersetzung nirgends eingesetzt, statt irgendwo zu landen.
+ */
+export function seitenZuordnung(content, tabelle) {
+  const seiten = list(content.pages).map((p, i) => (i === 0 ? "" : slugify(p?.slug)));
+  const karte = new Map();
+  for (const [nummer, eintrag] of Object.entries((tabelle && tabelle.pages) || {})) {
+    if (!/^\d+$/.test(String(nummer))) continue;
+    const slug = eintrag && eintrag.slug !== undefined ? (str(eintrag.slug) ? slugify(eintrag.slug) : "") : null;
+    if (slug === null) { karte.set(String(nummer), Number(nummer)); continue; }
+    const jetzt = seiten.indexOf(slug);
+    if (jetzt >= 0) karte.set(String(nummer), jetzt);
+    // Slug gibt es nicht mehr: bewusst KEIN Eintrag — die Uebersetzung faellt weg.
+  }
+  return karte;
+}
+
 export function localize(content, lang) {
   const master = String(content.site?.lang || "de");
   if (lang === master) return content;
-  const table = flattenI18n((content.i18n && content.i18n[lang]) || {});
+  const roh = (content.i18n && content.i18n[lang]) || {};
+  const table = flattenI18n(roh);
+  const seitenKarte = seitenZuordnung(content, roh);
   const copy = JSON.parse(JSON.stringify(content));
-  for (const [path, value] of Object.entries(table)) {
+  for (const [rohPfad, value] of Object.entries(table)) {
+    /* Seitenpfade laufen ueber die Zuordnung oben. `pages.1.navLabel` wird zu
+       `pages.3.navLabel`, wenn der Eintrag den Slug "booking" traegt und
+       "booking" heute an dritter Stelle steht. */
+    let path = rohPfad;
+    const m = /^pages\.(\d+)\.(.+)$/.exec(rohPfad);
+    if (m) {
+      if (!seitenKarte.has(m[1])) continue;     // Seite gibt es nicht mehr
+      path = `pages.${seitenKarte.get(m[1])}.${m[2]}`;
+    }
     // Dieselbe Sperre wie beim Einsammeln: was nie übersetzt werden durfte,
     // wird auch nicht eingesetzt. Ältere Stände in der Datenbank tragen solche
     // Einträge noch — sie dürfen die Kanäle nicht umbenennen.

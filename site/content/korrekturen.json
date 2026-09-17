@@ -63,13 +63,16 @@
       },
       "seiten": {
         "0": {
-          "navLabel": "Start"
+          "navLabel": "Start",
+          "slug": ""
         },
         "1": {
-          "navLabel": "Booking"
+          "navLabel": "Booking",
+          "slug": "booking"
         },
         "2": {
-          "navLabel": "Shop"
+          "navLabel": "Shop",
+          "slug": "shop"
         }
       }
     },
@@ -87,13 +90,16 @@
       },
       "seiten": {
         "0": {
-          "navLabel": "Accueil"
+          "navLabel": "Accueil",
+          "slug": ""
         },
         "1": {
-          "navLabel": "Booking"
+          "navLabel": "Booking",
+          "slug": "booking"
         },
         "2": {
-          "navLabel": "Boutique"
+          "navLabel": "Boutique",
+          "slug": "shop"
         }
       },
       "kontaktNavLabel": "Contact",
@@ -102,7 +108,27 @@
         "Uebersetzung des Abschnitts hatte den deutschen Wert geerbt.",
         "Gesetzt wird nur, solange dort genau 'Kontakt' steht."
       ]
-    }
+    },
+    "_warum_seiten": [
+      "DIE SEITEN-UEBERSETZUNGEN TRAGEN IHREN SLUG (Live-Befund 17.09.2026).",
+      "",
+      "Auf /fr/ standen die Menuepunkte an den falschen Seiten:",
+      "   ACCUEIL | BOOKING -> /fr/shows/ | BOUTIQUE -> /fr/gallery/ |",
+      "   BOOKING -> /fr/booking/ | SHOP -> /fr/shop/",
+      "",
+      "'seiten' haengt am PLATZ in der Liste. Als diese Eintraege entstanden, hatte",
+      "die Website DREI Seiten: 0='' 1='booking' 2='shop'. Heute sind es fuenf",
+      "('', shows, gallery, booking, shop) — die alten Nummern zeigten seither",
+      "daneben, und zwei Seiten bekamen gar keine Uebersetzung mehr.",
+      "",
+      "Jeder Eintrag traegt deshalb jetzt seinen SLUG. localize() ordnet darueber",
+      "zu, nicht mehr ueber den Platz; eine weitere Umsortierung kann nichts mehr",
+      "verschieben. Die Nummern bleiben nur als Schluessel stehen — sie bedeuten",
+      "nichts mehr.",
+      "",
+      "Gibt es einen Slug heute nicht mehr, faellt genau diese Uebersetzung weg,",
+      "statt irgendwo anders zu landen."
+    ]
   },
   "alteHeroStats": [
     "First set",
@@ -579,6 +605,113 @@
           }
         ]
       }
+    }
+  },
+  "shopHinweise": {
+    "_warum": [
+      "WIDERSPRUCH IM SHOP (Kundenbefund 15.09.2026, Entscheid 17.09.2026).",
+      "",
+      "Der Informationsstreifen unter dem Katalog sagte zwei Dinge, die nicht mehr",
+      "stimmen:",
+      "  · Versand: 'wird nach der Bestellung persoenlich abgesprochen' — waehrend",
+      "    beide Artikel des Kunden ausdruecklich 'Gratis Versand innerhalb der",
+      "    Schweiz!' sagen und der Stripe-Checkout dasselbe fuehrt.",
+      "  · Zahlung: 'Ist kein Zahlungslink hinterlegt, kommt die Bestellung ueber",
+      "    das Formular' — dieses Bestellformular ist am 12.08.2026 entfernt worden.",
+      "",
+      "Neue Bedingungen werden hier NICHT erfunden. Der Streifen ist der GENERISCHE",
+      "Hinweis; er verweist ab jetzt neutral auf die Angaben beim Artikel. Die",
+      "Angaben des Kunden am Artikel und im Checkout bleiben unangetastet — sie",
+      "sind die Quelle, und sie sagen 'Gratis Versand innerhalb der Schweiz'.",
+      "",
+      "ERSETZT WIRD NUR, WAS WOERTLICH EINEM DER BEKANNTEN ALTEN TEXTE ENTSPRICHT.",
+      "Schreibt der Kunde selbst etwas hin, gewinnt er sofort und fuer immer — der",
+      "Vergleich trifft dann nicht mehr, und hier passiert nichts.",
+      "",
+      "DIE GRUNDSPRACHE IST DEUTSCH (site.lang = 'de'). Der Generator zeigt auf der",
+      "Hauptseite den Grundtext; die deutsche Seite bekam deshalb bisher den",
+      "ENGLISCHEN Streifen zu sehen, waehrend die deutsche Fassung ungenutzt unter",
+      "i18n.de lag. Deshalb steht hier Deutsch im Grundtext und Englisch unter",
+      "i18n.en — damit alle drei Sprachen dasselbe sagen.",
+      "Der dritte Punkt ('Fragen') sagt nichts Falsches — er stand nur ebenfalls",
+      "auf Englisch im Grundtext und damit auf der deutschen Seite. Er wandert",
+      "mit, sonst stuenden im selben Streifen zwei deutsche Zeilen neben einer",
+      "englischen. Sein Wortlaut bleibt, er wechselt nur den Platz.",
+      "Marke: migrationen.shopHinweise"
+    ],
+    "stellen": [
+      0,
+      1,
+      2
+    ],
+    "alt": [
+      "How to pay is shown on the item itself. If no payment link is set, the order comes in through the form and is confirmed personally.",
+      "Shipping is agreed personally after the order. Nothing is sent before that is settled.",
+      "Wie bezahlt wird, steht am Artikel. Ist kein Zahlungslink hinterlegt, kommt die Bestellung über das Formular und wird persönlich bestätigt.",
+      "Der Versand wird nach der Bestellung persönlich abgesprochen. Vorher geht nichts raus.",
+      "Le mode de paiement est indiqué sur l'article. Sans lien de paiement, la commande passe par le formulaire et est confirmée personnellement.",
+      "L'expédition est convenue personnellement après la commande. Rien ne part avant.",
+      "Size, colour, availability — write to info@samsparking.ch.",
+      "Grösse, Farbe, Verfügbarkeit — schreib an info@samsparking.ch.",
+      "Taille, couleur, disponibilité — écris à info@samsparking.ch."
+    ],
+    "grund": [
+      {
+        "title": "Zahlung",
+        "text": "Wie bezahlt wird, steht beim jeweiligen Artikel. Bei Fragen: info@samsparking.ch."
+      },
+      {
+        "title": "Versand",
+        "text": "Die Versandbedingungen stehen beim jeweiligen Artikel. Bei Fragen: info@samsparking.ch."
+      },
+      {
+        "title": "Fragen",
+        "text": "Grösse, Farbe, Verfügbarkeit — schreib an info@samsparking.ch."
+      }
+    ],
+    "i18n": {
+      "de": [
+        {
+          "title": "Zahlung",
+          "text": "Wie bezahlt wird, steht beim jeweiligen Artikel. Bei Fragen: info@samsparking.ch."
+        },
+        {
+          "title": "Versand",
+          "text": "Die Versandbedingungen stehen beim jeweiligen Artikel. Bei Fragen: info@samsparking.ch."
+        },
+        {
+          "title": "Fragen",
+          "text": "Grösse, Farbe, Verfügbarkeit — schreib an info@samsparking.ch."
+        }
+      ],
+      "en": [
+        {
+          "title": "Payment",
+          "text": "How to pay is shown on the item itself. Questions: info@samsparking.ch."
+        },
+        {
+          "title": "Shipping",
+          "text": "Shipping terms are shown on the item itself. Questions: info@samsparking.ch."
+        },
+        {
+          "title": "Questions",
+          "text": "Size, colour, availability — write to info@samsparking.ch."
+        }
+      ],
+      "fr": [
+        {
+          "title": "Paiement",
+          "text": "Le mode de paiement est indiqué sur l'article. Questions : info@samsparking.ch."
+        },
+        {
+          "title": "Expédition",
+          "text": "Les conditions d'expédition sont indiquées sur l'article. Questions : info@samsparking.ch."
+        },
+        {
+          "title": "Questions",
+          "text": "Taille, couleur, disponibilité — écris à info@samsparking.ch."
+        }
+      ]
     }
   }
 }
