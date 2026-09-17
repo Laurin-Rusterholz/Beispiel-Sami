@@ -72,18 +72,44 @@ const QUELLEN = [
       "stand.json",
       // In der Demo auf /site/ umgestellt (start_url, scope, Icons)
       "manifest.webmanifest",
-      /* Diese beiden Pruefungen messen die Auslieferung des Originals gegen
-         dessen netlify.toml — welche Adresse 503 gibt, welche 200, welche
-         gesperrt ist. Die Vorführung laeuft aber nicht auf Netlify, sondern
-         auf GitHub Pages, und netlify.toml wird (eine Zeile weiter oben) gar
-         nicht erst mitkopiert. Ohne sie brechen beide Pruefungen ab; mit einer
-         mitkopierten netlify.toml wuerden sie eine Wegleitung behaupten, die
-         hier niemand ausliefert. Sie bleiben deshalb im Original. */
+      /* DIE PRUEFUNGEN DES ORIGINALS BLEIBEN IM ORIGINAL.
+         
+         Befund der Abnahme (17.09.2026): `node --test site/scripts/*.test.mjs`
+         fiel hier 3 von 22 — und riss 621 Folgefehler mit. Nicht, weil etwas
+         kaputt war, sondern weil diese Pruefungen etwas anderes messen als das,
+         was hier steht:
+         
+           · kette.test.mjs braucht site/netlify.toml — die gibt es hier nicht,
+             die Wegleitung dieser Fassung steht an der Wurzel;
+           · links.test.mjs erwartet die Adressen des Originals (/, nicht
+             /site/) und ECHTE Kaufwege — in der Vorfuehrung fuehrt aber
+             absichtlich kein Weg in eine Kasse;
+           · routen.test.mjs und api.test.mjs messen die Auslieferung gegen die
+             netlify.toml des Originals.
+         
+         Ein Test, der das Falsche misst, ist schlimmer als keiner: er ist
+         entweder immer rot (dann sieht niemand mehr hin) oder er wird
+         "passend" gemacht (dann prueft er nichts mehr).
+         
+         Diese Fassung hat deshalb EIGENE Pruefungen: scripts/vorfuehrung.test.mjs
+         an der Wurzel, gegen den wirklich gebauten Stand dieser Fassung —
+         `npm test`. Die Pruefungen des Originals laufen im Original.
+         
+         Ausgelassen werden nur die TESTDATEIEN — scripts/build.mjs ist der
+         Generator und muss selbstverstaendlich mitwandern. */
       "scripts/routen.test.mjs",
       "scripts/api.test.mjs",
+      "scripts/build.test.mjs",
+      "scripts/kette.test.mjs",
+      "scripts/links.test.mjs",
+      "scripts/vorfuehrung.test.mjs",
     ],
     eigen: [],
-    entfernen: ["scripts/routen.test.mjs", "scripts/api.test.mjs"],
+    entfernen: [
+      "scripts/routen.test.mjs", "scripts/api.test.mjs",
+      "scripts/build.test.mjs", "scripts/kette.test.mjs",
+      "scripts/links.test.mjs", "scripts/vorfuehrung.test.mjs",
+    ],
   },
   {
     name: "Verwaltung",

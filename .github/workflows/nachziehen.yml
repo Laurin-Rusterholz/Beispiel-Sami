@@ -9,19 +9,49 @@
 # Handy-Vorschau der Referenzen. Wer die Vorführung herzeigte, zeigte etwas
 # anderes als die öffentliche Website.
 #
-# Deshalb läuft das Nachziehen jetzt selbst: stündlich, und auf Zuruf.
+# ══ ZWEI REGELN VON GITHUB ACTIONS, DIE HIER ALLES ENTSCHEIDEN ══════════════
+#
+# 1. `schedule` LÄUFT NUR AUS DEM STANDARDZWEIG.
+#    GitHub nimmt für einen Zeitplan IMMER die Fassung dieser Datei, die im
+#    STANDARDZWEIG des Repos liegt — nicht die in `main`, wenn `main` nicht der
+#    Standardzweig ist. Steht der Standardzweig hier (Stand 17.09.2026) auf
+#    `claude/saemi-presentation-website-admin-f75sqz`, dann feuert dieser
+#    Zeitplan NICHT. Kein Fehler, keine Meldung — es passiert schlicht nichts.
+#
+#    Das ist keine Feinheit, sondern der Unterschied zwischen „zieht sich
+#    stündlich nach" und „zieht sich nie nach". Zu richten in einer Einstellung:
+#        GitHub → Settings → Branches → Default branch = main
+#    Danach läuft der Zeitplan ohne weiteres Zutun. Bis dahin bleibt der Weg
+#    von Hand: Actions → „Vorführung nachziehen" → Run workflow.
+#
+#    Der erste Schritt unten sagt beim Start, woran man gerade ist.
+#
+# 2. EIN PUSH MIT `GITHUB_TOKEN` LÖST KEINEN WEITEREN ACTIONS-WORKFLOW AUS.
+#    GitHub unterbindet das absichtlich (sonst liefen Workflows im Kreis). Was
+#    daraus folgt:
+#
+#      · NETLIFY baut trotzdem. Netlify hängt nicht an Actions, sondern am
+#        Push-Webhook von GitHub — der kommt an, egal wer gepusht hat. Die
+#        Vorführung auf `pre-present-djsamsparkling` ist damit nach jedem
+#        Nachziehen neu gebaut.
+#      · DER PAGES-WORKFLOW (veroeffentlichen.yml, `on: push`) läuft NICHT.
+#        Wer die Pages-Fassung braucht, startet ihn von Hand:
+#        Actions → „Präsentation veröffentlichen" → Run workflow.
+#        (Absichtlich nicht automatisiert: dafür bräuchte dieser Lauf
+#        `actions: write` an seinem Token — mehr Rechte, als er sonst hat.)
+#
+# ════════════════════════════════════════════════════════════════════════════
 #
 # Kein Geheimnis nötig: beide Quell-Repos sind öffentlich, und geschrieben wird
-# nur in dieses hier — dafür genügt das eingebaute GITHUB_TOKEN.
+# nur in dieses hier — dafür genügt das eingebaute GITHUB_TOKEN mit
+# `contents: write`.
 #
 # Was NICHT mitkopiert wird, steht in scripts/quellen-holen.mjs: die
 # Vorführ-Schalter (verwaltung/js/config.js mit DEMO = true), die
 # Demo-Speicherung in verwaltung/index.html und die Schrift-Adressen in
 # verwaltung/admin.css. Sie überleben jedes Nachziehen.
 #
-# Ein Push auf main stösst beides an, was danach kommt: den Netlify-Build und
-# den Pages-Workflow. Ändert sich nichts, wird auch nichts gepusht — dann
-# entsteht kein Deploy.
+# Ändert sich nichts, wird nichts gepusht — dann entsteht auch kein Deploy.
 name: Vorführung nachziehen
 
 on:
@@ -42,6 +72,23 @@ jobs:
   nachziehen:
     runs-on: ubuntu-latest
     steps:
+      # Sagt beim Start, ob der Zeitplan überhaupt greifen kann. Bei einem
+      # `schedule`-Lauf ist die Antwort zwangsläufig ja — sonst wäre dieser Lauf
+      # gar nicht gestartet. Bei „Run workflow" von Hand ist sie oft nein, und
+      # genau dann soll es hier stehen und nicht in einer Doku verschwinden.
+      - name: Läuft der Zeitplan überhaupt?
+        env:
+          STANDARD: ${{ github.event.repository.default_branch }}
+          ANLASS: ${{ github.event_name }}
+        run: |
+          echo "Standardzweig dieses Repos: ${STANDARD:-unbekannt}"
+          echo "Ausgelöst durch: $ANLASS"
+          if [ "$STANDARD" != "main" ]; then
+            echo "::warning title=Zeitplan inaktiv::GitHub startet einen Zeitplan nur aus dem STANDARDZWEIG. Der ist hier '${STANDARD:-unbekannt}', nicht 'main' — das stuendliche Nachziehen laeuft deshalb NICHT von selbst. Zu richten unter Settings → Branches → Default branch = main. Von Hand (Run workflow) funktioniert es unabhaengig davon."
+          else
+            echo "Standardzweig ist main — der Zeitplan greift."
+          fi
+
       - name: Vorführung auschecken
         uses: actions/checkout@v4
         with:
@@ -97,10 +144,14 @@ jobs:
         run: |
           node site/scripts/build.mjs
           test -f site/index.html || { echo "Der Bau hat keine Startseite erzeugt"; exit 1; }
-          if grep -rl "buy\.stripe\.com" --include='*.html' site/ ; then
-            echo "Der nachgezogene Stand führt in eine echte Stripe-Kasse — VORFUEHRUNG wirkt nicht."
-            exit 1
-          fi
+
+      # Die eigenen Prüfungen dieser Fassung — sie messen den NEUEN Stand gegen
+      # die Zusagen der Vorführung (keine echte Kasse, keine sendenden
+      # Formulare, alle Wege unter /site/, Verwaltung im Vorführ-Modus).
+      # Schlagen sie fehl, wird NICHT gepusht: lieber eine Vorführung, die alt
+      # ist, als eine, in der jemand wirklich bezahlen kann.
+      - name: Eigene Prüfungen der Vorführung
+        run: npm test
 
       # stand.json trägt den Bauzeitpunkt und wäre sonst der einzige
       # Unterschied — der Zeitplan schriebe stündlich einen Commit ohne Inhalt.
@@ -121,3 +172,7 @@ jobs:
                      -m "Stand der Originale: s-mi ${{ steps.stand.outputs.site }}, Verwaltung ${{ steps.stand.outputs.verwaltung }}." \
                      -m "Gezogen vom Zeitplan dieses Repos. Die Vorfuehr-Schalter (DEMO, Demo-Speicherung, Schriftpfade) bleiben unangetastet — siehe scripts/quellen-holen.mjs."
           git push
+          echo "Gepusht. Netlify baut die Vorfuehrung daraufhin neu (Push-Webhook)."
+          echo "Der Pages-Workflow laeuft NICHT mit: ein Push mit GITHUB_TOKEN"
+          echo "loest keinen weiteren Actions-Workflow aus. Wer die Pages-Fassung"
+          echo "braucht, startet 'Praesentation veroeffentlichen' von Hand."

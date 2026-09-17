@@ -65,18 +65,22 @@ jobs:
           grep -o 'href="[^"]*assets/site.css"' site/index.html
           grep -q "href=\"$BASIS/assets/site.css\"" site/index.html \
             || { echo "Website-Adressen zeigen nicht auf $BASIS"; exit 1; }
-          # Keine echte Kasse in der Vorführung. Lieber hier abbrechen als eine
-          # Vorführung online stellen, in der jemand wirklich bezahlen kann.
-          # Geprüft werden die AUSGELIEFERTEN SEITEN. In site/content/site.json
-          # steht der Zahlungslink weiterhin — das ist der Inhalt, nicht ein
-          # anklickbarer Knopf, und /site/content/* ist gesperrt (netlify.toml).
-          if grep -rl "buy\.stripe\.com" --include='*.html' site/ ; then
-            echo "Die Vorführung führt in eine echte Stripe-Kasse — VORFUEHRUNG=1 wirkt nicht."
-            exit 1
-          fi
-          grep -q 'data-demo="true"' site/booking/index.html \
-            || { echo "Das Booking-Formular ist nicht als Vorführung gekennzeichnet"; exit 1; }
           echo "Sieht gut aus."
+
+      # Die eigenen Prüfungen dieser Fassung (scripts/vorfuehrung.test.mjs):
+      # keine echte Kasse, keine sendenden Formulare, alle Wege unter /site/,
+      # alle Seiten in de/en/fr, Verwaltung im Vorführ-Modus. Sie bauen sich
+      # ihren eigenen Stand in einer Kopie; der Bau oben bleibt unberührt.
+      #
+      # Ausdrücklich NICHT die Prüfungen des Originals: die messen dessen
+      # Adressen (/… statt /site/…), dessen netlify.toml und ECHTE Kaufwege.
+      # Hierher kopiert fielen sie 3 von 22 (Abnahme 17.09.2026) — und rissen
+      # 621 Folgefehler mit, ohne dass irgendetwas kaputt war.
+      #
+      # Lieber hier abbrechen als eine Vorführung online stellen, in der
+      # jemand wirklich bezahlen kann.
+      - name: Eigene Prüfungen der Vorführung
+        run: npm test
 
       - uses: actions/upload-pages-artifact@v3
         with:
