@@ -3,3 +3,29 @@
    Verwaltung würde eine eigene Farbe hier nicht mehr dazu passen. */
 .demo-chip::after{content:" · lokal gespeichert"}
 @media(max-width:700px){.demo-chip::after{content:" · gespeichert"}}
+
+/* Der Hinweis auf einen ÄLTEREN lokalen Vorführ-Stand.
+
+   QA-Befund 17.09.2026: im Präsentationsrahmen stand die Website auf dem
+   aktuellen Stand, die Verwaltung daneben auf einem aus dem August — ohne
+   dass irgendetwas darauf hinwies. Der Balken sagt es jetzt, nennt beide
+   Daten und bietet den Weg zum aktuellen Stand an.
+
+   Unten statt oben: oben sitzt die Kopfzeile der Verwaltung mit dem
+   Speicher-Punkt, und ausgerechnet die soll sichtbar bleiben. */
+.demo-alt-hinweis{
+  position:fixed;left:16px;right:16px;bottom:16px;z-index:60;
+  display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center;justify-content:space-between;
+  padding:12px 16px;border-radius:10px;
+  background:#fff8e1;border:1px solid #e0b400;
+  box-shadow:0 6px 24px rgba(0,0,0,.14);
+  font-size:.86rem;line-height:1.45;color:#3a2f00;
+}
+.demo-alt-hinweis b{display:block;}
+.demo-alt-text{flex:1 1 320px;min-width:0;}
+.demo-alt-knoepfe{display:flex;gap:8px;flex-wrap:wrap;}
+@media(max-width:700px){
+  .demo-alt-hinweis{left:8px;right:8px;bottom:8px;padding:10px 12px;}
+  .demo-alt-knoepfe{width:100%;}
+  .demo-alt-knoepfe .btn{flex:1 1 auto;}
+}
