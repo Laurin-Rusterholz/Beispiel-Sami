@@ -40,8 +40,57 @@ const INBOX = "quantus_task_inbox";
 const PROJEKT = "PRJ-YWRM4";
 
 /** Adressen der beiden Ansichten, relativ zu dieser Seite. */
+/* ══ WELCHE SPRACHE WO LIEGT ═════════════════════════════════════════════════
+ *
+ * BEFUND (Live-Sprachpruefung 17.09.2026): Der Umschalter stand auf „English"
+ * und der Rahmen lud `site/` — dort liegt aber DEUTSCH. „Deutsch" fuehrte auf
+ * `site/de/`, und das gibt es gar nicht (404). Nur „Français" stimmte.
+ *
+ * Grund: Die Zuordnung stammt aus der Zeit, als Englisch die Grundsprache war.
+ * Am 07.09.2026 wurde auf Deutsch umgestellt — seither liegt die Grundsprache
+ * an der Wurzel (`site/`) und Englisch in `site/en/`. Hier blieb die alte
+ * Tabelle stehen.
+ *
+ * Damit das nicht wieder passiert, steht hier nur noch, WELCHE Sprache an der
+ * Wurzel liegt; die uebrigen bekommen ihr Kuerzel als Verzeichnis. Wechselt
+ * die Grundsprache erneut, ist es eine Zeile. */
+const GRUNDSPRACHE = "de";
+const SPRACHEN = ["de", "en", "fr"];
+const WEBSITE = "site/";
+
+/** Das Verzeichnis einer Sprache: "de" -> "", "en" -> "en/", "fr" -> "fr/" */
+const sprachOrdner = (sprache) =>
+  !sprache || sprache === GRUNDSPRACHE ? "" : `${sprache}/`;
+
+/**
+ * Die Adresse der Website in einer Sprache — und zwar auf DERSELBEN Seite.
+ *
+ * ZWEITER BEFUND vom 17.09.2026: Ein Sprachwechsel sprang immer auf die
+ * Startseite. Wer auf /shop/ stand und Französisch waehlte, landete auf der
+ * Startseite und musste sich neu durchklicken. Der Rahmen setzte schlicht die
+ * Wurzel der neuen Sprache.
+ *
+ * `jetzt` ist die Adresse, die im Rahmen gerade offen ist. Daraus wird das
+ * Sprachkuerzel herausgenommen und durch das neue ersetzt; der Rest des Weges
+ * bleibt. Ist nichts offen oder laesst sich die Adresse nicht lesen (fremdes
+ * Fenster), fuehrt es auf die Startseite der Sprache — also wie bisher, aber
+ * nur noch als Rueckfall.
+ */
+function websiteAdresse(sprache, jetzt = "") {
+  const ordner = sprachOrdner(sprache);
+  let rest = String(jetzt || "");
+  const i = rest.indexOf(WEBSITE);
+  rest = i >= 0 ? rest.slice(i + WEBSITE.length) : "";
+  rest = rest.replace(/^[?#].*$/, "");
+  // Ein vorhandenes Sprachkuerzel abstreifen — egal welches.
+  const teile = rest.split("/");
+  if (SPRACHEN.includes(teile[0]) && teile[0] !== GRUNDSPRACHE) teile.shift();
+  rest = teile.join("/").replace(/^\/+/, "");
+  return `${WEBSITE}${ordner}${rest}`;
+}
+
 const SEITEN = {
-  website: { "": "site/", de: "site/de/", fr: "site/fr/" },
+  website: Object.fromEntries(SPRACHEN.map((l) => [l, `${WEBSITE}${sprachOrdner(l)}`])),
   verwaltung: "verwaltung/",
 };
 
@@ -87,7 +136,8 @@ function vorWieLange(iso) {
 
 const Z = {
   ansicht: "website",
-  sprache: "",
+  /* Die Grundsprache, nicht der leere Wert von frueher: `site/` IST Deutsch. */
+  sprache: GRUNDSPRACHE,
   handy: false,
   wunschAn: false,
   genauigkeit: "element",
@@ -563,8 +613,16 @@ document.querySelectorAll(".fil-knopf").forEach((b) =>
 $("#wunsch-schalter").addEventListener("click", () => setzeWunschModus(!Z.wunschAn));
 
 $("#sprache").addEventListener("change", (e) => {
-  Z.sprache = e.target.value;
-  ansichten.website.frame.src = SEITEN.website[Z.sprache] || SEITEN.website[""];
+  Z.sprache = e.target.value || GRUNDSPRACHE;
+  /* Auf derselben Seite bleiben. Die Adresse im Rahmen ist gleicher Herkunft
+     und damit lesbar; scheitert es trotzdem, tut es die zuletzt gesetzte. */
+  let offen = "";
+  try {
+    offen = ansichten.website.frame.contentWindow.location.pathname || "";
+  } catch (fehler) {
+    offen = ansichten.website.frame.getAttribute("src") || "";
+  }
+  ansichten.website.frame.src = websiteAdresse(Z.sprache, offen);
 });
 
 $("#geraet").addEventListener("click", () => {

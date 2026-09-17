@@ -241,3 +241,69 @@ test("Gegenprobe: OHNE den Schalter stünde die echte Kasse wieder da", async (t
 test("aufräumen", async () => {
   if (DIR) await rm(DIR, { recursive: true, force: true });
 });
+
+/* ══════════════════════════════════════════════════════════════════════════
+   Der Umschalter im Rahmen muss die Sprache treffen, die er nennt
+
+   BEFUND (Live-Sprachprüfung 17.09.2026): Der Umschalter stand auf „English",
+   der Rahmen lud `site/` — dort liegt aber DEUTSCH. „Deutsch" führte auf
+   `site/de/`, und das gibt es gar nicht. Und ein Sprachwechsel sprang immer
+   auf die Startseite: wer auf /shop/ stand und Französisch wählte, musste
+   sich neu durchklicken.
+
+   Grund: Die Zuordnung stammte aus der Zeit, als Englisch die Grundsprache
+   war. Am 07.09.2026 wurde auf Deutsch umgestellt — hier blieb die alte
+   Tabelle stehen.
+   ══════════════════════════════════════════════════════════════════════════ */
+test("die Sprachauswahl nennt, was sie lädt", () => {
+  const rahmen = readFileSync(join(WURZEL, "index.html"), "utf8");
+  const auswahl = rahmen.match(/<select id="sprache">[\s\S]*?<\/select>/);
+  assert.ok(auswahl, "es gibt keine Sprachauswahl im Rahmen");
+
+  const werte = [...auswahl[0].matchAll(/<option value="([^"]*)">([^<]+)</g)]
+    .map((m) => [m[1], m[2].trim()]);
+  assert.deepEqual(werte, [["de", "Deutsch"], ["en", "English"], ["fr", "Français"]],
+    "die Sprachauswahl steht nicht auf de/en/fr — oder wieder auf dem leeren Wert von früher");
+
+  /* Die Grundsprache steht zuoberst und ist damit die Vorauswahl. Der Rahmen
+     startet auf `site/` — und `site/` IST die Grundsprache. */
+  assert.equal(werte[0][0], "de", "die Vorauswahl passt nicht zu dem, was der Rahmen lädt");
+  assert.match(rahmen, /<iframe id="frame-website" src="site\/"/,
+    "der Rahmen startet nicht auf der Wurzel der Website");
+
+  /* Und die Verzeichnisse gibt es wirklich. `site/de/` gab es nie. */
+  assert.ok(existsSync(join(WURZEL, "site/index.html")), "site/ fehlt");
+  assert.ok(existsSync(join(WURZEL, "site/en/index.html")), "site/en/ fehlt");
+  assert.ok(existsSync(join(WURZEL, "site/fr/index.html")), "site/fr/ fehlt");
+  assert.ok(!existsSync(join(WURZEL, "site/de")),
+    "es gibt ein site/de/ — dann stimmt die Annahme über die Grundsprache nicht mehr");
+});
+
+test("ein Sprachwechsel bleibt auf derselben Seite", () => {
+  /* Die echte Funktion aus dem Rahmen, ausgeschnitten und ausgeführt. */
+  const quelle = readFileSync(join(WURZEL, "praesentation/shell.js"), "utf8");
+  const i = quelle.indexOf("const GRUNDSPRACHE");
+  const j = quelle.indexOf("const SEITEN = {", i);
+  assert.ok(i >= 0 && j > i, "die Sprachzuordnung ist nicht zu finden");
+  const websiteAdresse = new Function(quelle.slice(i, j) + "; return websiteAdresse;")();
+
+  // Von der deutschen Shop-Seite nach Französisch — und wieder zurück.
+  assert.equal(websiteAdresse("fr", "/site/shop/"), "site/fr/shop/",
+    "der Wechsel nach Französisch springt auf die Startseite");
+  assert.equal(websiteAdresse("de", "/site/fr/shop/"), "site/shop/",
+    "der Wechsel zurück nach Deutsch springt auf die Startseite");
+  assert.equal(websiteAdresse("en", "/site/fr/booking/"), "site/en/booking/",
+    "der Wechsel zwischen zwei Fremdsprachen springt auf die Startseite");
+
+  // Die Grundsprache liegt an der Wurzel, nicht unter site/de/.
+  assert.equal(websiteAdresse("de", "/site/"), "site/", "die Grundsprache landet im falschen Ordner");
+  assert.equal(websiteAdresse("en", "/site/"), "site/en/", "Englisch landet im falschen Ordner");
+
+  // Ohne bekannte Adresse: Startseite der Sprache — der Rückfall von früher.
+  assert.equal(websiteAdresse("fr", ""), "site/fr/", "ohne Adresse führt der Wechsel nirgendwohin");
+  assert.equal(websiteAdresse("de", ""), "site/", "ohne Adresse führt der Wechsel nirgendwohin");
+
+  // Anker und Parameter gehören nicht in den Weg.
+  assert.equal(websiteAdresse("fr", "/site/shop/index.html"), "site/fr/shop/index.html",
+    "eine Datei im Weg wird nicht mitgenommen");
+});
